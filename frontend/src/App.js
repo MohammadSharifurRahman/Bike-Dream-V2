@@ -76,6 +76,137 @@ const StarRating = ({ rating, onRatingChange, readOnly = false }) => {
   );
 };
 
+// Vendor Pricing Component
+const VendorPricing = ({ motorcycle, region = "US" }) => {
+  const [vendorPrices, setVendorPrices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRegion, setSelectedRegion] = useState(region);
+  const [supportedRegions, setSupportedRegions] = useState([]);
+
+  useEffect(() => {
+    fetchSupportedRegions();
+  }, []);
+
+  useEffect(() => {
+    fetchVendorPrices();
+  }, [motorcycle.id, selectedRegion]);
+
+  const fetchSupportedRegions = async () => {
+    try {
+      const response = await axios.get(`${API}/pricing/regions`);
+      setSupportedRegions(response.data.regions);
+    } catch (error) {
+      console.error('Error fetching regions:', error);
+    }
+  };
+
+  const fetchVendorPrices = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API}/motorcycles/${motorcycle.id}/pricing?region=${selectedRegion}`);
+      setVendorPrices(response.data.vendor_prices);
+    } catch (error) {
+      console.error('Error fetching vendor prices:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatPrice = (price, currency) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency
+    }).format(price);
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-bold text-gray-800">Vendor Pricing</h3>
+        <select
+          value={selectedRegion}
+          onChange={(e) => setSelectedRegion(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          {supportedRegions.map(region => (
+            <option key={region.code} value={region.code}>
+              {region.name} ({region.currency})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {vendorPrices.map((vendor, index) => (
+            <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-3">
+                  <h4 className="font-semibold text-lg">{vendor.vendor_name}</h4>
+                  <div className="flex items-center space-x-1">
+                    <StarRating rating={Math.round(vendor.rating)} readOnly />
+                    <span className="text-sm text-gray-500">({vendor.reviews_count})</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-green-600">
+                    {formatPrice(vendor.price, vendor.currency)}
+                  </div>
+                  {index === 0 && (
+                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                      Best Price
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
+                <div>
+                  <span className="font-medium">Availability:</span> {vendor.availability}
+                </div>
+                <div>
+                  <span className="font-medium">Shipping:</span> {vendor.shipping}
+                </div>
+                <div>
+                  <span className="font-medium">Delivery:</span> {vendor.estimated_delivery}
+                </div>
+                {vendor.special_offer && (
+                  <div className="col-span-2">
+                    <span className="font-medium text-blue-600">Special Offer:</span> {vendor.special_offer}
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex space-x-3">
+                <a
+                  href={vendor.website_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                >
+                  Visit Store
+                </a>
+                {vendor.phone && (
+                  <a
+                    href={`tel:${vendor.phone}`}
+                    className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors text-sm"
+                  >
+                    Call {vendor.phone}
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Rating and Review Component
 const RatingSection = ({ motorcycle, onRatingSubmit }) => {
   const { user } = useAuth();
@@ -622,14 +753,17 @@ const MotorcycleCard = ({ motorcycle, onClick, showFavoriteButton = true }) => {
   );
 };
 
-const CategorySection = ({ category, onMotorcycleClick }) => (
+const CategorySection = ({ category, onMotorcycleClick, onViewAllClick }) => (
   <div className="mb-12">
     <div className="flex items-center justify-between mb-6">
       <div>
         <h2 className="text-3xl font-bold text-gray-800">{category.category}</h2>
         <p className="text-gray-600">{category.count} motorcycles available</p>
       </div>
-      <button className="text-blue-600 hover:text-blue-800 font-medium">
+      <button 
+        onClick={() => onViewAllClick(category.category)}
+        className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+      >
         View All {category.category} →
       </button>
     </div>
@@ -684,7 +818,7 @@ const MotorcycleDetail = ({ motorcycle, onClose }) => {
           {/* Tab Navigation */}
           <div className="border-b border-gray-200 mb-6">
             <nav className="flex space-x-8">
-              {['overview', 'ratings', 'discussion'].map((tab) => (
+              {['overview', 'pricing', 'ratings', 'discussion'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -768,6 +902,10 @@ const MotorcycleDetail = ({ motorcycle, onClose }) => {
             </div>
           )}
 
+          {activeTab === 'pricing' && (
+            <VendorPricing motorcycle={motorcycle} />
+          )}
+
           {activeTab === 'ratings' && (
             <RatingSection 
               motorcycle={motorcycle} 
@@ -786,7 +924,7 @@ const MotorcycleDetail = ({ motorcycle, onClose }) => {
   );
 };
 
-const FilterSidebar = ({ filters, onFilterChange, filterOptions, isOpen, onToggle }) => (
+const FilterSidebar = ({ filters, onFilterChange, filterOptions, availableFeatures, isOpen, onToggle }) => (
   <div className={`bg-white p-6 rounded-xl shadow-lg ${isOpen ? 'block' : 'hidden'} lg:block`}>
     <div className="flex items-center justify-between mb-6">
       <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
@@ -831,6 +969,20 @@ const FilterSidebar = ({ filters, onFilterChange, filterOptions, isOpen, onToggl
           <option value="">All Categories</option>
           {filterOptions.categories?.map(category => (
             <option key={category} value={category}>{category}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Features</label>
+        <select
+          value={filters.features || ''}
+          onChange={(e) => onFilterChange({ ...filters, features: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">All Features</option>
+          {availableFeatures?.map(feature => (
+            <option key={feature} value={feature}>{feature}</option>
           ))}
         </select>
       </div>
@@ -889,6 +1041,7 @@ function App() {
   const [currentView, setCurrentView] = useState('home'); // 'home', 'browse', or 'profile'
   const [motorcycles, setMotorcycles] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [availableFeatures, setAvailableFeatures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMotorcycle, setSelectedMotorcycle] = useState(null);
   const [filters, setFilters] = useState({});
@@ -910,7 +1063,7 @@ function App() {
       
       params.append('sort_by', sortBy);
       params.append('sort_order', sortOrder);
-      params.append('limit', '3000'); // Show all motorcycles
+      params.append('limit', '5000'); // Show all motorcycles
       
       const response = await axios.get(`${API}/motorcycles?${params.toString()}`);
       setMotorcycles(response.data);
@@ -939,6 +1092,15 @@ function App() {
     }
   };
 
+  const fetchAvailableFeatures = async () => {
+    try {
+      const response = await axios.get(`${API}/motorcycles/filters/features`);
+      setAvailableFeatures(response.data.features);
+    } catch (error) {
+      console.error('Error fetching features:', error);
+    }
+  };
+
   const seedDatabase = async () => {
     try {
       await axios.post(`${API}/motorcycles/seed`);
@@ -949,8 +1111,21 @@ function App() {
     }
   };
 
+  const handleViewAllCategory = (categoryName) => {
+    setCurrentView('browse');
+    setFilters({ category: categoryName });
+    window.history.pushState({}, '', '/browse');
+  };
+
+  const handleCategoryButtonClick = (categoryName) => {
+    setCurrentView('browse');
+    setFilters({ category: categoryName });
+    window.history.pushState({}, '', '/browse');
+  };
+
   useEffect(() => {
     fetchFilterOptions();
+    fetchAvailableFeatures();
     seedDatabase(); // Seed on first load
   }, []);
 
@@ -987,7 +1162,7 @@ function App() {
                   onClick={() => {setCurrentView('home'); window.history.pushState({}, '', '/');}}
                   className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
                 >
-                  Byke-Dream
+                  Bike-Dream
                 </button>
                 <span className="ml-2 text-sm text-gray-500">Motorcycle Database</span>
               </div>
@@ -1075,12 +1250,31 @@ function App() {
                       <div className="text-blue-100">Manufacturers</div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => {setCurrentView('browse'); window.history.pushState({}, '', '/browse');}}
-                    className="bg-white text-blue-900 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-50 transition-colors"
-                  >
-                    Explore All Motorcycles
-                  </button>
+                  
+                  <div className="flex flex-col items-center space-y-6">
+                    <button
+                      onClick={() => {setCurrentView('browse'); window.history.pushState({}, '', '/browse');}}
+                      className="bg-white text-blue-900 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-50 transition-colors"
+                    >
+                      Explore All Motorcycles
+                    </button>
+                    
+                    {/* Quick Category Buttons */}
+                    <div className="mt-8">
+                      <p className="text-blue-100 mb-4 text-lg">Or explore by category:</p>
+                      <div className="flex flex-wrap justify-center gap-3">
+                        {['Sport', 'Cruiser', 'Touring', 'Adventure', 'Naked', 'Vintage', 'Scooter', 'Standard', 'Enduro', 'Motocross'].map((category) => (
+                          <button
+                            key={category}
+                            onClick={() => handleCategoryButtonClick(category)}
+                            className="bg-blue-700 bg-opacity-50 text-white px-4 py-2 rounded-lg hover:bg-opacity-70 transition-colors text-sm font-medium"
+                          >
+                            {category}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1105,6 +1299,7 @@ function App() {
                       key={category.category}
                       category={category}
                       onMotorcycleClick={setSelectedMotorcycle}
+                      onViewAllClick={handleViewAllCategory}
                     />
                   ))}
                 </div>
@@ -1121,6 +1316,7 @@ function App() {
                   filters={filters}
                   onFilterChange={setFilters}
                   filterOptions={filterOptions}
+                  availableFeatures={availableFeatures}
                   isOpen={showFilters}
                   onToggle={() => setShowFilters(!showFilters)}
                 />
