@@ -723,6 +723,27 @@ class MotorcycleAPITester:
         self.test_filter_options_api()
         self.test_combined_filters()
         
+        # Database and category APIs
+        self.test_database_stats_api()
+        self.test_category_summary_api()
+        
+        # Daily Update System Tests
+        print("\n🤖 Testing Daily Update Bot System APIs...")
+        print("-" * 60)
+        
+        # Test daily update trigger and get job ID
+        success, job_id = self.test_trigger_daily_update()
+        
+        # Test job status monitoring if we have a job ID
+        if success and job_id:
+            self.test_job_status_monitoring(job_id)
+        
+        # Test update history
+        self.test_update_history()
+        
+        # Test regional customizations
+        self.test_regional_customizations()
+        
         # Summary
         print("\n" + "=" * 60)
         print("📊 TEST SUMMARY")
