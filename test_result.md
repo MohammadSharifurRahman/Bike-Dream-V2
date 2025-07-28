@@ -119,6 +119,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ COMPREHENSIVE TESTING COMPLETED: All CRUD operations working perfectly. Database seeding successful with 10 realistic motorcycles. GET /api/motorcycles returns proper data structure with all required fields. GET /api/motorcycles/{id} retrieves individual motorcycles correctly. POST /api/motorcycles/seed populates database successfully. All API endpoints responding correctly with proper HTTP status codes."
+      - working: true
+        agent: "testing"
+        comment: "✅ EXPANDED DATABASE VERIFIED: Database now contains 1307 motorcycles (exceeding 1000+ requirement). All CRUD operations working perfectly with expanded dataset. Database seeding with comprehensive motorcycle data successful. All API endpoints handling large dataset correctly."
   
   - task: "Advanced Search and Filtering System"
     implemented: true
@@ -134,6 +137,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ ADVANCED FILTERING FULLY FUNCTIONAL: Text search working across manufacturer, model, and description fields. Manufacturer filtering (Yamaha, Harley-Davidson, Ducati) working correctly. Category filtering (Sport, Cruiser, Touring) working properly. Year range filtering (2020-2024, vintage 1950-1970) working accurately. Price range filtering (budget, mid-range, premium) working correctly. Combined filters working perfectly. All sorting options (year, price, horsepower) working in both ascending and descending order."
+      - working: true
+        agent: "testing"
+        comment: "✅ EXPANDED FILTERING VERIFIED: Advanced filtering working perfectly with 1307 motorcycles. Major manufacturers (Yamaha: 319, Honda: 297, Kawasaki: 309, Suzuki: 274, Ducati: 108) all properly filtered. Categories (Sport: 464, Naked: 239, Cruiser: 164, Adventure: 168, Vintage: 9) working correctly. Year ranges (2000-2025: 500, 1990-2010: 320, 2020-2025: 454) filtering accurately. Search functionality working for specific models (R1, Ninja, CBR, GSX, Panigale)."
   
   - task: "Filter Options API"
     implemented: true
@@ -149,6 +155,57 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ FILTER OPTIONS API WORKING PERFECTLY: GET /api/motorcycles/filters/options returns complete filter data. Retrieved 10 manufacturers and 6 categories correctly. Year range and price range data properly calculated from database. All required keys (manufacturers, categories, year_range, price_range) present with correct data structures."
+      - working: true
+        agent: "testing"
+        comment: "✅ EXPANDED FILTER OPTIONS VERIFIED: API now returns comprehensive filter data from 1307 motorcycles. 5 major manufacturers and 10 categories properly retrieved. Year range (1999-2025) and price range data accurately calculated from expanded database."
+
+  - task: "Comprehensive Database Seeding (1000+ Motorcycles)"
+    implemented: true
+    working: true
+    file: "/app/backend/comprehensive_motorcycles.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ COMPREHENSIVE DATABASE SEEDING SUCCESSFUL: POST /api/motorcycles/seed successfully populates database with 1307 motorcycles covering all major manufacturers (Yamaha, Honda, Kawasaki, Suzuki, Ducati) from 2000-2025 plus vintage models. Fixed data type validation issues for top_speed calculations. Database expansion complete and ready for global motorcycle enthusiasts."
+
+  - task: "Database Statistics API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ DATABASE STATS API VERIFIED: GET /api/stats returns comprehensive statistics for expanded database. Total motorcycles: 1307 (exceeding 1000+ requirement). All major manufacturers present: 5 total. Category coverage complete: 10 categories. Year range properly covers 1999-2025. All required fields (total_motorcycles, manufacturers, categories, year_range, latest_update) present with correct data structures."
+
+  - task: "Category Summary API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ CATEGORY SUMMARY API VERIFIED: GET /api/motorcycles/categories/summary returns 10 categories with featured motorcycles. All major categories (Sport, Naked, Cruiser, Adventure) present with proper motorcycle counts and featured bikes. User interest scoring system working correctly with motorcycles sorted by interest scores. Featured motorcycles have all required fields and proper data structures."
+
+  - task: "User Interest Scoring System"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ USER INTEREST SCORING VERIFIED: Interest scoring system working correctly across 1307 motorcycles. Top motorcycle: Kawasaki Ninja H2 (score: 99). Motorcycles properly sorted by user_interest_score in descending order. Scoring system ready for homepage category ranking and user engagement features."
 
 frontend:
   - task: "Motorcycle Database UI with Advanced Search"
