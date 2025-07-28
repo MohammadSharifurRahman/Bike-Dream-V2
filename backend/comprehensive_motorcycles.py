@@ -103,7 +103,7 @@ def get_comprehensive_motorcycle_data():
                 "horsepower": model_data["horsepower"],
                 "torque": int(model_data["horsepower"] * 0.75),  # Approximate torque
                 "weight": 180 + (model_data["displacement"] // 10),  # Approximate weight
-                "top_speed": 120 + (model_data["horsepower"] * 1.2),
+                "top_speed": int(120 + (model_data["horsepower"] * 1.2)),
                 "fuel_capacity": 15.0 + (model_data["displacement"] // 100),
                 "price_usd": model_data["price_base"] + price_variation,
                 "availability": availability,
