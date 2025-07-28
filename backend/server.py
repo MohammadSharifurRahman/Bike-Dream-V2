@@ -210,6 +210,11 @@ async def get_update_history(limit: int = Query(10, le=50)):
     """Get history of daily updates"""
     history = await db.daily_update_logs.find().sort("start_time", -1).limit(limit).to_list(limit)
     
+    # Convert ObjectIds to strings for JSON serialization
+    for record in history:
+        if "_id" in record:
+            record["_id"] = str(record["_id"])
+    
     return {
         "update_history": history,
         "count": len(history)
