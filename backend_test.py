@@ -1095,6 +1095,31 @@ class MotorcycleAPITester:
         # Test regional customizations
         self.test_regional_customizations()
         
+        # NEW USER INTERACTION API TESTS
+        print("\n👤 Testing User Interaction APIs...")
+        print("-" * 60)
+        
+        # Authentication & User Management
+        self.test_user_authentication()
+        self.test_get_current_user()
+        
+        # Favorites System
+        self.test_add_to_favorites()
+        self.test_get_favorite_motorcycles()
+        self.test_remove_from_favorites()
+        
+        # Rating System
+        self.test_rate_motorcycle()
+        self.test_get_motorcycle_ratings()
+        
+        # Comments & Discussion
+        self.test_add_comment()
+        self.test_get_motorcycle_comments()
+        self.test_like_comment()
+        
+        # Browse Limit Fix
+        self.test_browse_limit_fix()
+        
         # Summary
         print("\n" + "=" * 60)
         print("📊 TEST SUMMARY")
