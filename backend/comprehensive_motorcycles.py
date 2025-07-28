@@ -206,7 +206,22 @@ def get_comprehensive_motorcycle_data():
                 "availability": availability,
                 "description": f"The Honda {model_data['model']} {year} exemplifies Honda's legendary reliability and engineering excellence. A perfect blend of performance, comfort, and dependability in the {model_data['category'].lower()} segment.",
                 "image_url": image_url,
-                "features": ["Honda Reliability", "VTEC Technology", "Advanced Safety", "Fuel Efficiency", "Build Quality"],
+                "specialisations": ["Honda Reliability", "VTEC Technology", "Advanced Safety", "Fuel Efficiency", "Build Quality"],
+                
+                # Technical Features
+                "mileage_kmpl": 40.0 if model_data["displacement"] < 200 else 30.0 if model_data["displacement"] < 500 else 22.0 if model_data["displacement"] < 1000 else 16.0,
+                "transmission_type": "Manual" if model_data["category"] not in ["Scooter", "Automatic"] else "CVT",
+                "number_of_gears": 6 if model_data["displacement"] > 500 else 5,
+                "ground_clearance_mm": 155 if model_data["category"] == "Sport" else 175 if model_data["category"] in ["Naked", "Standard"] else 190,
+                "seat_height_mm": 810 if model_data["category"] == "Sport" else 795 if model_data["category"] in ["Naked", "Standard"] else 770,
+                "abs_available": year >= 2014,
+                "braking_system": "Disc" if model_data["displacement"] > 125 else "Drum",
+                "suspension_type": "USD Fork" if model_data["category"] == "Sport" and model_data["displacement"] > 600 else "Telescopic",
+                "tyre_type": "Tubeless" if year >= 2012 else "Tube",
+                "wheel_size_inches": "17" if model_data["displacement"] > 250 else "16",
+                "headlight_type": "LED" if year >= 2017 else "Halogen",
+                "fuel_type": "Petrol",
+                
                 "user_interest_score": model_data["interest"]
             }
             comprehensive_motorcycles.append(motorcycle)
