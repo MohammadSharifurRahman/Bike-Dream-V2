@@ -327,6 +327,12 @@ async def get_motorcycle_ratings(motorcycle_id: str, limit: int = Query(10, le=5
     ]
     
     ratings = await db.ratings.aggregate(ratings_pipeline).to_list(limit)
+    
+    # Convert ObjectIds to strings for JSON serialization
+    for rating in ratings:
+        if "_id" in rating:
+            rating["_id"] = str(rating["_id"])
+    
     return ratings
 
 async def update_motorcycle_rating_stats(motorcycle_id: str):
