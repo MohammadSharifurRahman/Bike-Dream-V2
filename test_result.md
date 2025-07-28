@@ -247,15 +247,15 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Motorcycle Database API with CRUD operations"
-    - "Advanced Search and Filtering System"
-    - "Filter Options API"
-    - "Motorcycle Database UI with Advanced Search"
+    - "Comprehensive Database Seeding (1000+ Motorcycles)"
+    - "Database Statistics API"
+    - "Category Summary API"
+    - "User Interest Scoring System"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
