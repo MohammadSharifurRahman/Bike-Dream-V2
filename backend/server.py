@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Query, BackgroundTasks
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -8,8 +8,10 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from comprehensive_motorcycles import get_comprehensive_motorcycle_data
+from daily_update_bot import run_daily_update_job
+import asyncio
 
 
 ROOT_DIR = Path(__file__).parent
@@ -88,10 +90,18 @@ class DatabaseStats(BaseModel):
     year_range: dict
     latest_update: datetime
 
+class UpdateJobStatus(BaseModel):
+    job_id: str
+    status: str
+    message: str
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+    stats: Optional[dict] = None
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
-    return {"message": "Welcome to Byke-Dream API - Comprehensive Motorcycle Database"}
+    return {"message": "Welcome to Byke-Dream API - Comprehensive Motorcycle Database with Daily Updates"}
 
 # Database statistics
 @api_router.get("/stats", response_model=DatabaseStats)
@@ -117,7 +127,111 @@ async def get_database_stats():
         latest_update=datetime.utcnow()
     )
 
-# Motorcycle routes
+# Daily Update System APIs
+@api_router.post("/update-system/run-daily-update")
+async def trigger_daily_update(background_tasks: BackgroundTasks):
+    """Manually trigger daily update process (normally runs at GMT 00:00)"""
+    job_id = str(uuid.uuid4())
+    
+    # Store initial job status
+    job_status = {
+        "job_id": job_id,
+        "status": "running",
+        "message": "Daily update process started",
+        "started_at": datetime.now(timezone.utc),
+        "completed_at": None,
+        "stats": None
+    }
+    
+    await db.update_jobs.insert_one(job_status)
+    
+    # Run update in background
+    async def run_update():
+        try:
+            result = await run_daily_update_job(mongo_url, os.environ['DB_NAME'])
+            
+            # Update job status
+            await db.update_jobs.update_one(
+                {"job_id": job_id},
+                {
+                    "$set": {
+                        "status": "completed",
+                        "message": result.get("message", "Update completed"),
+                        "completed_at": datetime.now(timezone.utc),
+                        "stats": result.get("stats", {})
+                    }
+                }
+            )
+        except Exception as e:
+            await db.update_jobs.update_one(
+                {"job_id": job_id},
+                {
+                    "$set": {
+                        "status": "failed",
+                        "message": f"Update failed: {str(e)}",
+                        "completed_at": datetime.now(timezone.utc)
+                    }
+                }
+            )
+    
+    # Start background task
+    background_tasks.add_task(run_update)
+    
+    return {
+        "job_id": job_id,
+        "status": "initiated",
+        "message": "Daily update process has been started in the background",
+        "check_status_url": f"/api/update-system/job-status/{job_id}"
+    }
+
+@api_router.get("/update-system/job-status/{job_id}")
+async def get_update_job_status(job_id: str):
+    """Get status of a daily update job"""
+    job = await db.update_jobs.find_one({"job_id": job_id})
+    
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    return {
+        "job_id": job["job_id"],
+        "status": job["status"],
+        "message": job["message"],
+        "started_at": job["started_at"],
+        "completed_at": job.get("completed_at"),
+        "stats": job.get("stats"),
+        "duration_seconds": (
+            (job["completed_at"] - job["started_at"]).total_seconds() 
+            if job.get("completed_at") else None
+        )
+    }
+
+@api_router.get("/update-system/update-history")
+async def get_update_history(limit: int = Query(10, le=50)):
+    """Get history of daily updates"""
+    history = await db.daily_update_logs.find().sort("start_time", -1).limit(limit).to_list(limit)
+    
+    return {
+        "update_history": history,
+        "count": len(history)
+    }
+
+@api_router.get("/update-system/regional-customizations")
+async def get_regional_customizations(region: Optional[str] = Query(None)):
+    """Get regional customizations for motorcycles"""
+    query = {}
+    if region:
+        query["region"] = region
+    
+    customizations = await db.regional_customizations.find(query).to_list(100)
+    
+    available_regions = await db.regional_customizations.distinct("region")
+    
+    return {
+        "customizations": customizations,
+        "available_regions": available_regions
+    }
+
+# Motorcycle routes (existing)
 @api_router.post("/motorcycles", response_model=Motorcycle)
 async def create_motorcycle(motorcycle: MotorcycleCreate):
     motorcycle_dict = motorcycle.dict()
@@ -274,18 +388,13 @@ async def seed_motorcycles():
             "manufacturers": len(stats.manufacturers),
             "categories": len(stats.categories),
             "year_range": stats.year_range,
-            "status": "Database expansion complete - Ready for global motorcycle enthusiasts!"
+            "status": "Database expansion complete - Ready for global motorcycle enthusiasts!",
+            "daily_updates": "Automated daily update system is now active and ready for GMT 00:00 schedule"
         }
         
     except Exception as e:
         logging.error(f"Error seeding database: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Database seeding failed: {str(e)}")
-
-@api_router.post("/motorcycles/update-interest-scores")
-async def update_interest_scores():
-    """Update user interest scores based on web search analysis (placeholder for Phase 3)"""
-    # This will be implemented in Phase 3 with web search integration
-    return {"message": "Interest score update scheduled", "status": "Phase 3 feature - Coming soon"}
 
 # Status check routes (keep existing)
 @api_router.post("/status", response_model=StatusCheck)
