@@ -17,6 +17,13 @@ class MotorcycleAPITester:
         self.base_url = BACKEND_URL
         self.test_results = []
         self.motorcycle_ids = []
+        self.test_user_session = None
+        self.test_user_data = {
+            "email": "test.rider@bykedream.com",
+            "name": "Test Rider",
+            "picture": "https://example.com/avatar.jpg",
+            "session_token": "test_session_token_12345"
+        }
         
     def log_test(self, test_name: str, success: bool, details: str = ""):
         """Log test results"""
