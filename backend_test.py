@@ -462,6 +462,242 @@ class MotorcycleAPITester:
             self.log_test("Combined Filters", False, f"Error: {str(e)}")
             return False
     
+    def test_database_stats_api(self):
+        """Test GET /api/stats"""
+        try:
+            response = requests.get(f"{self.base_url}/stats", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                required_keys = ["total_motorcycles", "manufacturers", "categories", "year_range", "latest_update"]
+                missing_keys = [key for key in required_keys if key not in data]
+                
+                if missing_keys:
+                    self.log_test("Database Stats API", False, f"Missing keys: {missing_keys}")
+                    return False
+                
+                # Verify data structure
+                if (isinstance(data["manufacturers"], list) and 
+                    isinstance(data["categories"], list) and
+                    isinstance(data["year_range"], dict) and
+                    isinstance(data["total_motorcycles"], int)):
+                    
+                    total_count = data["total_motorcycles"]
+                    manufacturers_count = len(data["manufacturers"])
+                    categories_count = len(data["categories"])
+                    self.log_test("Database Stats API", True, 
+                                f"Total: {total_count}, Manufacturers: {manufacturers_count}, Categories: {categories_count}")
+                    return True
+                else:
+                    self.log_test("Database Stats API", False, "Invalid data structure")
+                    return False
+            else:
+                self.log_test("Database Stats API", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Database Stats API", False, f"Error: {str(e)}")
+            return False
+    
+    def test_category_summary_api(self):
+        """Test GET /api/motorcycles/categories/summary"""
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles/categories/summary", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list) and len(data) > 0:
+                    # Verify category structure
+                    first_category = data[0]
+                    required_keys = ["category", "count", "featured_motorcycles"]
+                    missing_keys = [key for key in required_keys if key not in first_category]
+                    
+                    if missing_keys:
+                        self.log_test("Category Summary API", False, f"Missing keys: {missing_keys}")
+                        return False
+                    
+                    # Verify featured motorcycles structure
+                    if (isinstance(first_category["featured_motorcycles"], list) and
+                        len(first_category["featured_motorcycles"]) > 0):
+                        
+                        categories_count = len(data)
+                        total_featured = sum(len(cat["featured_motorcycles"]) for cat in data)
+                        self.log_test("Category Summary API", True, 
+                                    f"Retrieved {categories_count} categories with {total_featured} featured motorcycles")
+                        return True
+                    else:
+                        self.log_test("Category Summary API", False, "No featured motorcycles found")
+                        return False
+                else:
+                    self.log_test("Category Summary API", False, "No categories returned or invalid format")
+                    return False
+            else:
+                self.log_test("Category Summary API", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Category Summary API", False, f"Error: {str(e)}")
+            return False
+
+    # Daily Update System Tests
+    def test_trigger_daily_update(self):
+        """Test POST /api/update-system/run-daily-update"""
+        try:
+            response = requests.post(f"{self.base_url}/update-system/run-daily-update", timeout=30)
+            if response.status_code == 200:
+                data = response.json()
+                required_keys = ["job_id", "status", "message", "check_status_url"]
+                missing_keys = [key for key in required_keys if key not in data]
+                
+                if missing_keys:
+                    self.log_test("Daily Update Trigger", False, f"Missing keys: {missing_keys}")
+                    return False, None
+                
+                if data.get("status") == "initiated":
+                    job_id = data.get("job_id")
+                    self.log_test("Daily Update Trigger", True, 
+                                f"Update job initiated with ID: {job_id[:8]}...")
+                    return True, job_id
+                else:
+                    self.log_test("Daily Update Trigger", False, f"Unexpected status: {data.get('status')}")
+                    return False, None
+            else:
+                self.log_test("Daily Update Trigger", False, f"Status: {response.status_code}")
+                return False, None
+        except Exception as e:
+            self.log_test("Daily Update Trigger", False, f"Error: {str(e)}")
+            return False, None
+    
+    def test_job_status_monitoring(self, job_id: str):
+        """Test GET /api/update-system/job-status/{job_id}"""
+        if not job_id:
+            self.log_test("Job Status Monitoring", False, "No job ID provided")
+            return False
+        
+        try:
+            # Wait a bit for the job to process
+            import time
+            time.sleep(3)
+            
+            response = requests.get(f"{self.base_url}/update-system/job-status/{job_id}", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                required_keys = ["job_id", "status", "message", "started_at"]
+                missing_keys = [key for key in required_keys if key not in data]
+                
+                if missing_keys:
+                    self.log_test("Job Status Monitoring", False, f"Missing keys: {missing_keys}")
+                    return False
+                
+                if data.get("job_id") == job_id:
+                    status = data.get("status")
+                    message = data.get("message", "")
+                    self.log_test("Job Status Monitoring", True, 
+                                f"Job status: {status} - {message}")
+                    return True
+                else:
+                    self.log_test("Job Status Monitoring", False, "Job ID mismatch")
+                    return False
+            elif response.status_code == 404:
+                self.log_test("Job Status Monitoring", False, "Job not found (404)")
+                return False
+            else:
+                self.log_test("Job Status Monitoring", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Job Status Monitoring", False, f"Error: {str(e)}")
+            return False
+    
+    def test_update_history(self):
+        """Test GET /api/update-system/update-history"""
+        try:
+            response = requests.get(f"{self.base_url}/update-system/update-history", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                required_keys = ["update_history", "count"]
+                missing_keys = [key for key in required_keys if key not in data]
+                
+                if missing_keys:
+                    self.log_test("Update History API", False, f"Missing keys: {missing_keys}")
+                    return False
+                
+                if isinstance(data["update_history"], list) and isinstance(data["count"], int):
+                    history_count = data["count"]
+                    self.log_test("Update History API", True, 
+                                f"Retrieved {history_count} update history records")
+                    return True
+                else:
+                    self.log_test("Update History API", False, "Invalid data structure")
+                    return False
+            else:
+                self.log_test("Update History API", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Update History API", False, f"Error: {str(e)}")
+            return False
+    
+    def test_regional_customizations(self):
+        """Test GET /api/update-system/regional-customizations"""
+        try:
+            # Test without region filter
+            response = requests.get(f"{self.base_url}/update-system/regional-customizations", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                required_keys = ["customizations", "available_regions"]
+                missing_keys = [key for key in required_keys if key not in data]
+                
+                if missing_keys:
+                    self.log_test("Regional Customizations API", False, f"Missing keys: {missing_keys}")
+                    return False
+                
+                if (isinstance(data["customizations"], list) and 
+                    isinstance(data["available_regions"], list)):
+                    
+                    customizations_count = len(data["customizations"])
+                    regions_count = len(data["available_regions"])
+                    self.log_test("Regional Customizations API", True, 
+                                f"Retrieved {customizations_count} customizations for {regions_count} regions")
+                    
+                    # Test with specific region filter if regions are available
+                    if data["available_regions"]:
+                        test_region = data["available_regions"][0]
+                        return self._test_regional_filter(test_region)
+                    return True
+                else:
+                    self.log_test("Regional Customizations API", False, "Invalid data structure")
+                    return False
+            else:
+                self.log_test("Regional Customizations API", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Regional Customizations API", False, f"Error: {str(e)}")
+            return False
+    
+    def _test_regional_filter(self, region: str):
+        """Test regional customizations with specific region filter"""
+        try:
+            response = requests.get(f"{self.base_url}/update-system/regional-customizations", 
+                                  params={"region": region}, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                # Verify all customizations are for the specified region
+                region_specific = all(
+                    custom.get("region") == region 
+                    for custom in data.get("customizations", [])
+                    if custom.get("region")
+                )
+                
+                if region_specific or len(data.get("customizations", [])) == 0:
+                    self.log_test(f"Regional Filter - {region}", True, 
+                                f"Found {len(data.get('customizations', []))} customizations for {region}")
+                    return True
+                else:
+                    self.log_test(f"Regional Filter - {region}", False, 
+                                "Some customizations don't match region filter")
+                    return False
+            else:
+                self.log_test(f"Regional Filter - {region}", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test(f"Regional Filter - {region}", False, f"Error: {str(e)}")
+            return False
+    
     def run_all_tests(self):
         """Run all tests in sequence"""
         print("🏍️  Starting Byke-Dream Backend API Tests")
