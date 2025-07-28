@@ -704,6 +704,350 @@ class MotorcycleAPITester:
         except Exception as e:
             self.log_test(f"Regional Filter - {region}", False, f"Error: {str(e)}")
             return False
+
+    # NEW USER INTERACTION API TESTS
+    def test_user_authentication(self):
+        """Test POST /api/auth/profile - User authentication with Emergent session data"""
+        try:
+            response = requests.post(f"{self.base_url}/auth/profile", 
+                                   json=self.test_user_data, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if (data.get("message") == "Authentication successful" and 
+                    "user" in data and 
+                    data["user"].get("email") == self.test_user_data["email"]):
+                    
+                    self.test_user_session = self.test_user_data["session_token"]
+                    self.log_test("User Authentication", True, 
+                                f"User authenticated: {data['user']['name']}")
+                    return True
+                else:
+                    self.log_test("User Authentication", False, f"Unexpected response: {data}")
+                    return False
+            else:
+                self.log_test("User Authentication", False, f"Status: {response.status_code}, Response: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("User Authentication", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_current_user(self):
+        """Test GET /api/auth/me - Get current user information"""
+        if not self.test_user_session:
+            self.log_test("Get Current User", False, "No user session available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.get(f"{self.base_url}/auth/me", headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data.get("email") == self.test_user_data["email"] and
+                    data.get("name") == self.test_user_data["name"]):
+                    
+                    self.log_test("Get Current User", True, 
+                                f"Retrieved user info: {data['name']} ({data['email']})")
+                    return True
+                else:
+                    self.log_test("Get Current User", False, f"User data mismatch: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Get Current User", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Get Current User", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get Current User", False, f"Error: {str(e)}")
+            return False
+
+    def test_add_to_favorites(self):
+        """Test POST /api/motorcycles/{motorcycle_id}/favorite - Add to favorites"""
+        if not self.test_user_session or not self.motorcycle_ids:
+            self.log_test("Add to Favorites", False, "No user session or motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.post(f"{self.base_url}/motorcycles/{motorcycle_id}/favorite", 
+                                   headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("favorited") is True:
+                    self.log_test("Add to Favorites", True, 
+                                f"Added motorcycle {motorcycle_id[:8]}... to favorites")
+                    return True
+                else:
+                    self.log_test("Add to Favorites", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Add to Favorites", False, "Authentication required (401)")
+                return False
+            elif response.status_code == 404:
+                self.log_test("Add to Favorites", False, "Motorcycle not found (404)")
+                return False
+            else:
+                self.log_test("Add to Favorites", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Add to Favorites", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_favorite_motorcycles(self):
+        """Test GET /api/motorcycles/favorites - Get user's favorite motorcycles"""
+        if not self.test_user_session:
+            self.log_test("Get Favorite Motorcycles", False, "No user session available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.get(f"{self.base_url}/motorcycles/favorites", 
+                                  headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list):
+                    self.log_test("Get Favorite Motorcycles", True, 
+                                f"Retrieved {len(data)} favorite motorcycles")
+                    return True
+                else:
+                    self.log_test("Get Favorite Motorcycles", False, "Invalid response format")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Get Favorite Motorcycles", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Get Favorite Motorcycles", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get Favorite Motorcycles", False, f"Error: {str(e)}")
+            return False
+
+    def test_remove_from_favorites(self):
+        """Test DELETE /api/motorcycles/{motorcycle_id}/favorite - Remove from favorites"""
+        if not self.test_user_session or not self.motorcycle_ids:
+            self.log_test("Remove from Favorites", False, "No user session or motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.delete(f"{self.base_url}/motorcycles/{motorcycle_id}/favorite", 
+                                     headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("favorited") is False:
+                    self.log_test("Remove from Favorites", True, 
+                                f"Removed motorcycle {motorcycle_id[:8]}... from favorites")
+                    return True
+                else:
+                    self.log_test("Remove from Favorites", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Remove from Favorites", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Remove from Favorites", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Remove from Favorites", False, f"Error: {str(e)}")
+            return False
+
+    def test_rate_motorcycle(self):
+        """Test POST /api/motorcycles/{motorcycle_id}/rate - Rate a motorcycle with review"""
+        if not self.test_user_session or not self.motorcycle_ids:
+            self.log_test("Rate Motorcycle", False, "No user session or motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            headers = {"X-Session-Id": self.test_user_session}
+            rating_data = {
+                "motorcycle_id": motorcycle_id,
+                "rating": 5,
+                "review_text": "Amazing bike! Love the performance and design."
+            }
+            
+            response = requests.post(f"{self.base_url}/motorcycles/{motorcycle_id}/rate", 
+                                   headers=headers, json=rating_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "Rating" in data.get("message", ""):
+                    self.log_test("Rate Motorcycle", True, 
+                                f"Successfully rated motorcycle: {data['message']}")
+                    return True
+                else:
+                    self.log_test("Rate Motorcycle", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Rate Motorcycle", False, "Authentication required (401)")
+                return False
+            elif response.status_code == 404:
+                self.log_test("Rate Motorcycle", False, "Motorcycle not found (404)")
+                return False
+            else:
+                self.log_test("Rate Motorcycle", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Rate Motorcycle", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_motorcycle_ratings(self):
+        """Test GET /api/motorcycles/{motorcycle_id}/ratings - Get motorcycle ratings"""
+        if not self.motorcycle_ids:
+            self.log_test("Get Motorcycle Ratings", False, "No motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            response = requests.get(f"{self.base_url}/motorcycles/{motorcycle_id}/ratings", 
+                                  timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list):
+                    self.log_test("Get Motorcycle Ratings", True, 
+                                f"Retrieved {len(data)} ratings for motorcycle")
+                    return True
+                else:
+                    self.log_test("Get Motorcycle Ratings", False, "Invalid response format")
+                    return False
+            else:
+                self.log_test("Get Motorcycle Ratings", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get Motorcycle Ratings", False, f"Error: {str(e)}")
+            return False
+
+    def test_add_comment(self):
+        """Test POST /api/motorcycles/{motorcycle_id}/comment - Add comment to motorcycle"""
+        if not self.test_user_session or not self.motorcycle_ids:
+            self.log_test("Add Comment", False, "No user session or motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            headers = {"X-Session-Id": self.test_user_session}
+            comment_data = {
+                "motorcycle_id": motorcycle_id,
+                "comment_text": "This is a fantastic motorcycle! I've been riding it for months and it never disappoints."
+            }
+            
+            response = requests.post(f"{self.base_url}/motorcycles/{motorcycle_id}/comment", 
+                                   headers=headers, json=comment_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("message") == "Comment added" and "comment_id" in data:
+                    self.comment_id = data["comment_id"]  # Store for like test
+                    self.log_test("Add Comment", True, 
+                                f"Comment added with ID: {data['comment_id'][:8]}...")
+                    return True
+                else:
+                    self.log_test("Add Comment", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Add Comment", False, "Authentication required (401)")
+                return False
+            elif response.status_code == 404:
+                self.log_test("Add Comment", False, "Motorcycle not found (404)")
+                return False
+            else:
+                self.log_test("Add Comment", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Add Comment", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_motorcycle_comments(self):
+        """Test GET /api/motorcycles/{motorcycle_id}/comments - Get motorcycle comments"""
+        if not self.motorcycle_ids:
+            self.log_test("Get Motorcycle Comments", False, "No motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            response = requests.get(f"{self.base_url}/motorcycles/{motorcycle_id}/comments", 
+                                  timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list):
+                    self.log_test("Get Motorcycle Comments", True, 
+                                f"Retrieved {len(data)} comments for motorcycle")
+                    return True
+                else:
+                    self.log_test("Get Motorcycle Comments", False, "Invalid response format")
+                    return False
+            else:
+                self.log_test("Get Motorcycle Comments", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get Motorcycle Comments", False, f"Error: {str(e)}")
+            return False
+
+    def test_like_comment(self):
+        """Test POST /comments/{comment_id}/like - Like/unlike comments"""
+        if not self.test_user_session or not hasattr(self, 'comment_id'):
+            self.log_test("Like Comment", False, "No user session or comment ID available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.post(f"{self.base_url}/comments/{self.comment_id}/like", 
+                                   headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "liked" in data:
+                    action = "liked" if data["liked"] else "unliked"
+                    self.log_test("Like Comment", True, 
+                                f"Comment {action}: {data['message']}")
+                    return True
+                else:
+                    self.log_test("Like Comment", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Like Comment", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Like Comment", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Like Comment", False, f"Error: {str(e)}")
+            return False
+
+    def test_browse_limit_fix(self):
+        """Test GET /api/motorcycles with limit=3000 - Verify all motorcycles are returned"""
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"limit": 3000}, timeout=15)
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list):
+                    total_count = len(data)
+                    if total_count >= 2614:  # Should return 2614+ motorcycles
+                        self.log_test("Browse Limit Fix", True, 
+                                    f"Successfully retrieved {total_count} motorcycles (exceeds 2614+ requirement)")
+                        return True
+                    else:
+                        self.log_test("Browse Limit Fix", False, 
+                                    f"Only retrieved {total_count} motorcycles, expected 2614+")
+                        return False
+                else:
+                    self.log_test("Browse Limit Fix", False, "Invalid response format")
+                    return False
+            else:
+                self.log_test("Browse Limit Fix", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Browse Limit Fix", False, f"Error: {str(e)}")
+            return False
     
     def run_all_tests(self):
         """Run all tests in sequence"""
