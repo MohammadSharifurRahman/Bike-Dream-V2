@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query, BackgroundTasks
+from fastapi import FastAPI, APIRouter, HTTPException, Query, BackgroundTasks, Depends, Header
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from comprehensive_motorcycles import get_comprehensive_motorcycle_data
 from daily_update_bot import run_daily_update_job
 import asyncio
+import aiohttp
 
 
 ROOT_DIR = Path(__file__).parent
@@ -38,6 +39,63 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
+class User(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: str
+    name: str
+    picture: str
+    session_token: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    favorite_motorcycles: List[str] = Field(default_factory=list)
+
+class UserCreate(BaseModel):
+    email: str
+    name: str
+    picture: str
+    session_token: str
+
+class Rating(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    motorcycle_id: str
+    rating: int = Field(ge=1, le=5)  # 1-5 stars
+    review_text: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class RatingCreate(BaseModel):
+    motorcycle_id: str
+    rating: int = Field(ge=1, le=5)
+    review_text: Optional[str] = None
+
+class Comment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    motorcycle_id: str
+    comment_text: str
+    parent_comment_id: Optional[str] = None  # For replies
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    likes: int = Field(default=0)
+
+class CommentCreate(BaseModel):
+    motorcycle_id: str
+    comment_text: str
+    parent_comment_id: Optional[str] = None
+
+class CommentWithUser(BaseModel):
+    id: str
+    user_id: str
+    user_name: str
+    user_picture: str
+    motorcycle_id: str
+    comment_text: str
+    parent_comment_id: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    likes: int
+    replies: List['CommentWithUser'] = Field(default_factory=list)
+
 class Motorcycle(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     manufacturer: str
@@ -57,6 +115,9 @@ class Motorcycle(BaseModel):
     image_url: str
     features: List[str]
     user_interest_score: int = Field(default=0)  # For homepage category ranking
+    average_rating: float = Field(default=0.0)
+    total_ratings: int = Field(default=0)
+    total_comments: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class MotorcycleCreate(BaseModel):
@@ -98,10 +159,312 @@ class UpdateJobStatus(BaseModel):
     completed_at: Optional[datetime] = None
     stats: Optional[dict] = None
 
+# Authentication helper
+async def get_current_user(x_session_id: str = Header(None)):
+    """Get current user from session ID"""
+    if not x_session_id:
+        return None
+    
+    user = await db.users.find_one({"session_token": x_session_id})
+    if user:
+        return User(**user)
+    return None
+
+async def require_auth(x_session_id: str = Header(None)):
+    """Require authentication"""
+    user = await get_current_user(x_session_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return user
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
-    return {"message": "Welcome to Byke-Dream API - Comprehensive Motorcycle Database with Daily Updates"}
+    return {"message": "Welcome to Byke-Dream API - Comprehensive Motorcycle Database with User Community"}
+
+# Authentication routes
+@api_router.post("/auth/profile")
+async def authenticate_user(user_data: dict):
+    """Authenticate user with Emergent session data"""
+    try:
+        # Check if user already exists
+        existing_user = await db.users.find_one({"email": user_data["email"]})
+        
+        if existing_user:
+            # Update session token for existing user
+            await db.users.update_one(
+                {"email": user_data["email"]},
+                {"$set": {"session_token": user_data["session_token"]}}
+            )
+            user = User(**existing_user)
+            user.session_token = user_data["session_token"]
+        else:
+            # Create new user
+            user_create = UserCreate(**user_data)
+            user = User(**user_create.dict())
+            await db.users.insert_one(user.dict())
+        
+        return {
+            "message": "Authentication successful",
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "picture": user.picture
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Authentication failed: {str(e)}")
+
+@api_router.get("/auth/me")
+async def get_current_user_info(current_user: User = Depends(require_auth)):
+    """Get current user information"""
+    return {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "picture": current_user.picture,
+        "favorite_count": len(current_user.favorite_motorcycles)
+    }
+
+# Favorites routes
+@api_router.post("/motorcycles/{motorcycle_id}/favorite")
+async def add_to_favorites(motorcycle_id: str, current_user: User = Depends(require_auth)):
+    """Add motorcycle to user's favorites"""
+    if motorcycle_id not in current_user.favorite_motorcycles:
+        await db.users.update_one(
+            {"id": current_user.id},
+            {"$push": {"favorite_motorcycles": motorcycle_id}}
+        )
+        return {"message": "Added to favorites", "favorited": True}
+    else:
+        return {"message": "Already in favorites", "favorited": True}
+
+@api_router.delete("/motorcycles/{motorcycle_id}/favorite")
+async def remove_from_favorites(motorcycle_id: str, current_user: User = Depends(require_auth)):
+    """Remove motorcycle from user's favorites"""
+    await db.users.update_one(
+        {"id": current_user.id},
+        {"$pull": {"favorite_motorcycles": motorcycle_id}}
+    )
+    return {"message": "Removed from favorites", "favorited": False}
+
+@api_router.get("/motorcycles/favorites")
+async def get_favorite_motorcycles(current_user: User = Depends(require_auth)):
+    """Get user's favorite motorcycles"""
+    favorites = await db.motorcycles.find(
+        {"id": {"$in": current_user.favorite_motorcycles}}
+    ).to_list(None)
+    
+    return [Motorcycle(**moto) for moto in favorites]
+
+# Rating routes
+@api_router.post("/motorcycles/{motorcycle_id}/rate")
+async def rate_motorcycle(motorcycle_id: str, rating_data: RatingCreate, current_user: User = Depends(require_auth)):
+    """Rate a motorcycle"""
+    # Check if motorcycle exists
+    motorcycle = await db.motorcycles.find_one({"id": motorcycle_id})
+    if not motorcycle:
+        raise HTTPException(status_code=404, detail="Motorcycle not found")
+    
+    # Check if user already rated this motorcycle
+    existing_rating = await db.ratings.find_one({
+        "user_id": current_user.id,
+        "motorcycle_id": motorcycle_id
+    })
+    
+    if existing_rating:
+        # Update existing rating
+        await db.ratings.update_one(
+            {"id": existing_rating["id"]},
+            {
+                "$set": {
+                    "rating": rating_data.rating,
+                    "review_text": rating_data.review_text,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        message = "Rating updated"
+    else:
+        # Create new rating
+        rating = Rating(
+            user_id=current_user.id,
+            motorcycle_id=motorcycle_id,
+            rating=rating_data.rating,
+            review_text=rating_data.review_text
+        )
+        await db.ratings.insert_one(rating.dict())
+        message = "Rating submitted"
+    
+    # Update motorcycle average rating
+    await update_motorcycle_rating_stats(motorcycle_id)
+    
+    return {"message": message}
+
+@api_router.get("/motorcycles/{motorcycle_id}/ratings")
+async def get_motorcycle_ratings(motorcycle_id: str, limit: int = Query(10, le=50)):
+    """Get ratings for a motorcycle"""
+    ratings_pipeline = [
+        {"$match": {"motorcycle_id": motorcycle_id}},
+        {"$lookup": {
+            "from": "users",
+            "localField": "user_id",
+            "foreignField": "id",
+            "as": "user"
+        }},
+        {"$unwind": "$user"},
+        {"$sort": {"created_at": -1}},
+        {"$limit": limit},
+        {"$project": {
+            "id": 1,
+            "rating": 1,
+            "review_text": 1,
+            "created_at": 1,
+            "user_name": "$user.name",
+            "user_picture": "$user.picture"
+        }}
+    ]
+    
+    ratings = await db.ratings.aggregate(ratings_pipeline).to_list(limit)
+    return ratings
+
+async def update_motorcycle_rating_stats(motorcycle_id: str):
+    """Update motorcycle rating statistics"""
+    stats_pipeline = [
+        {"$match": {"motorcycle_id": motorcycle_id}},
+        {"$group": {
+            "_id": "$motorcycle_id",
+            "average_rating": {"$avg": "$rating"},
+            "total_ratings": {"$sum": 1}
+        }}
+    ]
+    
+    stats = await db.ratings.aggregate(stats_pipeline).to_list(1)
+    if stats:
+        stat = stats[0]
+        await db.motorcycles.update_one(
+            {"id": motorcycle_id},
+            {
+                "$set": {
+                    "average_rating": round(stat["average_rating"], 1),
+                    "total_ratings": stat["total_ratings"]
+                }
+            }
+        )
+
+# Comment routes
+@api_router.post("/motorcycles/{motorcycle_id}/comment")
+async def add_comment(motorcycle_id: str, comment_data: CommentCreate, current_user: User = Depends(require_auth)):
+    """Add a comment to a motorcycle"""
+    # Check if motorcycle exists
+    motorcycle = await db.motorcycles.find_one({"id": motorcycle_id})
+    if not motorcycle:
+        raise HTTPException(status_code=404, detail="Motorcycle not found")
+    
+    comment = Comment(
+        user_id=current_user.id,
+        motorcycle_id=motorcycle_id,
+        comment_text=comment_data.comment_text,
+        parent_comment_id=comment_data.parent_comment_id
+    )
+    await db.comments.insert_one(comment.dict())
+    
+    # Update motorcycle comment count
+    await update_motorcycle_comment_count(motorcycle_id)
+    
+    return {"message": "Comment added", "comment_id": comment.id}
+
+@api_router.get("/motorcycles/{motorcycle_id}/comments")
+async def get_motorcycle_comments(motorcycle_id: str, limit: int = Query(20, le=100)):
+    """Get comments for a motorcycle with user information"""
+    comments_pipeline = [
+        {"$match": {"motorcycle_id": motorcycle_id, "parent_comment_id": None}},  # Top-level comments only
+        {"$lookup": {
+            "from": "users",
+            "localField": "user_id",
+            "foreignField": "id",
+            "as": "user"
+        }},
+        {"$unwind": "$user"},
+        {"$sort": {"created_at": -1}},
+        {"$limit": limit},
+        {"$project": {
+            "id": 1,
+            "user_id": 1,
+            "motorcycle_id": 1,
+            "comment_text": 1,
+            "parent_comment_id": 1,
+            "created_at": 1,
+            "updated_at": 1,
+            "likes": 1,
+            "user_name": "$user.name",
+            "user_picture": "$user.picture"
+        }}
+    ]
+    
+    comments = await db.comments.aggregate(comments_pipeline).to_list(limit)
+    
+    # Get replies for each comment
+    for comment in comments:
+        replies_pipeline = [
+            {"$match": {"parent_comment_id": comment["id"]}},
+            {"$lookup": {
+                "from": "users",
+                "localField": "user_id",
+                "foreignField": "id",
+                "as": "user"
+            }},
+            {"$unwind": "$user"},
+            {"$sort": {"created_at": 1}},
+            {"$project": {
+                "id": 1,
+                "user_id": 1,
+                "comment_text": 1,
+                "created_at": 1,
+                "likes": 1,
+                "user_name": "$user.name",
+                "user_picture": "$user.picture"
+            }}
+        ]
+        replies = await db.comments.aggregate(replies_pipeline).to_list(None)
+        comment["replies"] = replies
+    
+    return comments
+
+@api_router.post("/comments/{comment_id}/like")
+async def like_comment(comment_id: str, current_user: User = Depends(require_auth)):
+    """Like a comment"""
+    # Check if already liked
+    existing_like = await db.comment_likes.find_one({
+        "user_id": current_user.id,
+        "comment_id": comment_id
+    })
+    
+    if existing_like:
+        # Unlike
+        await db.comment_likes.delete_one({"id": existing_like["id"]})
+        await db.comments.update_one({"id": comment_id}, {"$inc": {"likes": -1}})
+        return {"message": "Comment unliked", "liked": False}
+    else:
+        # Like
+        like_data = {
+            "id": str(uuid.uuid4()),
+            "user_id": current_user.id,
+            "comment_id": comment_id,
+            "created_at": datetime.utcnow()
+        }
+        await db.comment_likes.insert_one(like_data)
+        await db.comments.update_one({"id": comment_id}, {"$inc": {"likes": 1}})
+        return {"message": "Comment liked", "liked": True}
+
+async def update_motorcycle_comment_count(motorcycle_id: str):
+    """Update motorcycle comment count"""
+    count = await db.comments.count_documents({"motorcycle_id": motorcycle_id})
+    await db.motorcycles.update_one(
+        {"id": motorcycle_id},
+        {"$set": {"total_comments": count}}
+    )
 
 # Database statistics
 @api_router.get("/stats", response_model=DatabaseStats)
@@ -115,6 +478,7 @@ async def get_database_stats():
     manufacturers = await db.motorcycles.aggregate(manufacturers_pipeline).to_list(None)
     categories = await db.motorcycles.aggregate(categories_pipeline).to_list(None)
     
+    # Get year range
     year_range = await db.motorcycles.aggregate([
         {"$group": {"_id": None, "min_year": {"$min": "$year"}, "max_year": {"$max": "$year"}}}
     ]).to_list(1)
@@ -127,7 +491,7 @@ async def get_database_stats():
         latest_update=datetime.utcnow()
     )
 
-# Daily Update System APIs
+# Daily Update System APIs (existing)
 @api_router.post("/update-system/run-daily-update")
 async def trigger_daily_update(background_tasks: BackgroundTasks):
     """Manually trigger daily update process (normally runs at GMT 00:00)"""
@@ -241,7 +605,7 @@ async def get_regional_customizations(region: Optional[str] = Query(None)):
         "available_regions": available_regions
     }
 
-# Motorcycle routes (existing)
+# Motorcycle routes with increased limits
 @api_router.post("/motorcycles", response_model=Motorcycle)
 async def create_motorcycle(motorcycle: MotorcycleCreate):
     motorcycle_dict = motorcycle.dict()
@@ -264,7 +628,7 @@ async def get_motorcycles(
     horsepower_max: Optional[int] = Query(None),
     sort_by: Optional[str] = Query("user_interest_score", description="Sort by: year, price, horsepower, model, user_interest_score"),
     sort_order: Optional[str] = Query("desc", description="asc or desc"),
-    limit: Optional[int] = Query(100, le=500),
+    limit: Optional[int] = Query(1000, le=3000),  # Increased limit to show all motorcycles
     skip: Optional[int] = Query(0)
 ):
     query = {}
