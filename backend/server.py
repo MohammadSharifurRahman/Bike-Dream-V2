@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from comprehensive_motorcycles import get_comprehensive_motorcycle_data
 from daily_update_bot import run_daily_update_job
+from vendor_pricing import vendor_pricing
 import asyncio
 import aiohttp
 
@@ -96,6 +97,20 @@ class CommentWithUser(BaseModel):
     likes: int
     replies: List['CommentWithUser'] = Field(default_factory=list)
 
+class VendorPrice(BaseModel):
+    vendor_name: str
+    price: float
+    currency: str
+    price_usd: float
+    availability: str
+    special_offer: Optional[str] = None
+    rating: float
+    reviews_count: int
+    shipping: str
+    estimated_delivery: str
+    website_url: str
+    phone: Optional[str] = None
+
 class Motorcycle(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     manufacturer: str
@@ -119,6 +134,31 @@ class Motorcycle(BaseModel):
     total_ratings: int = Field(default=0)
     total_comments: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class MotorcycleWithPricing(BaseModel):
+    id: str
+    manufacturer: str
+    model: str
+    year: int
+    category: str
+    engine_type: str
+    displacement: int
+    horsepower: int
+    torque: int
+    weight: int
+    top_speed: int
+    fuel_capacity: float
+    price_usd: int
+    availability: str
+    description: str
+    image_url: str
+    features: List[str]
+    user_interest_score: int = 0
+    average_rating: float = 0.0
+    total_ratings: int = 0
+    total_comments: int = 0
+    created_at: datetime
+    vendor_prices: List[VendorPrice] = Field(default_factory=list)
 
 class MotorcycleCreate(BaseModel):
     manufacturer: str
@@ -180,7 +220,52 @@ async def require_auth(x_session_id: str = Header(None)):
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
-    return {"message": "Welcome to Byke-Dream API - Comprehensive Motorcycle Database with User Community"}
+    return {"message": "Welcome to Bike-Dream API - Comprehensive Motorcycle Database with User Community"}
+
+# Vendor pricing routes
+@api_router.get("/motorcycles/{motorcycle_id}/pricing")
+async def get_motorcycle_pricing(motorcycle_id: str, region: str = Query("US")):
+    """Get vendor pricing for a motorcycle in a specific region"""
+    motorcycle = await db.motorcycles.find_one({"id": motorcycle_id})
+    if not motorcycle:
+        raise HTTPException(status_code=404, detail="Motorcycle not found")
+    
+    vendor_prices = vendor_pricing.get_vendor_prices(motorcycle, region)
+    
+    return {
+        "motorcycle_id": motorcycle_id,
+        "region": region,
+        "currency": vendor_pricing.regional_currencies.get(region, "USD"),
+        "vendor_prices": vendor_prices,
+        "last_updated": datetime.utcnow()
+    }
+
+@api_router.get("/pricing/regions")
+async def get_supported_regions():
+    """Get list of supported regions for pricing"""
+    return {
+        "regions": vendor_pricing.get_supported_regions(),
+        "default_region": "US"
+    }
+
+# Enhanced motorcycle routes with features filtering
+@api_router.get("/motorcycles/filters/features")
+async def get_available_features():
+    """Get all available motorcycle features for filtering"""
+    # Get all unique features from the database
+    features_pipeline = [
+        {"$unwind": "$features"},
+        {"$group": {"_id": "$features"}},
+        {"$sort": {"_id": 1}}
+    ]
+    
+    features = await db.motorcycles.aggregate(features_pipeline).to_list(None)
+    feature_list = [f["_id"] for f in features]
+    
+    return {
+        "features": feature_list,
+        "count": len(feature_list)
+    }
 
 # Authentication routes
 @api_router.post("/auth/profile")
@@ -622,7 +707,7 @@ async def get_regional_customizations(region: Optional[str] = Query(None)):
         "available_regions": available_regions
     }
 
-# Motorcycle routes with increased limits
+# Enhanced motorcycle routes with features filtering
 @api_router.post("/motorcycles", response_model=Motorcycle)
 async def create_motorcycle(motorcycle: MotorcycleCreate):
     motorcycle_dict = motorcycle.dict()
@@ -635,6 +720,7 @@ async def get_motorcycles(
     search: Optional[str] = Query(None, description="Search in manufacturer, model, or description"),
     manufacturer: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
+    features: Optional[str] = Query(None, description="Comma-separated list of required features"),
     year_min: Optional[int] = Query(None),
     year_max: Optional[int] = Query(None),
     price_min: Optional[int] = Query(None),
@@ -645,8 +731,9 @@ async def get_motorcycles(
     horsepower_max: Optional[int] = Query(None),
     sort_by: Optional[str] = Query("user_interest_score", description="Sort by: year, price, horsepower, model, user_interest_score"),
     sort_order: Optional[str] = Query("desc", description="asc or desc"),
-    limit: Optional[int] = Query(1000, le=3000),  # Increased limit to show all motorcycles
-    skip: Optional[int] = Query(0)
+    limit: Optional[int] = Query(3000, le=5000),  # Increased limit to show all motorcycles
+    skip: Optional[int] = Query(0),
+    region: Optional[str] = Query("US", description="Region for pricing")
 ):
     query = {}
     
@@ -663,6 +750,13 @@ async def get_motorcycles(
         query["manufacturer"] = {"$regex": manufacturer, "$options": "i"}
     if category:
         query["category"] = {"$regex": category, "$options": "i"}
+    
+    # Features filtering
+    if features and features.strip():
+        feature_list = [f.strip() for f in features.split(",") if f.strip()]
+        if feature_list:
+            query["features"] = {"$in": feature_list}
+    
     if year_min:
         query.setdefault("year", {})["$gte"] = year_min
     if year_max:
@@ -686,12 +780,22 @@ async def get_motorcycles(
     motorcycles = await db.motorcycles.find(query).sort(sort_by, sort_direction).skip(skip).limit(limit).to_list(limit)
     return [Motorcycle(**motorcycle) for motorcycle in motorcycles]
 
-@api_router.get("/motorcycles/{motorcycle_id}", response_model=Motorcycle)
-async def get_motorcycle(motorcycle_id: str):
+@api_router.get("/motorcycles/{motorcycle_id}", response_model=MotorcycleWithPricing)
+async def get_motorcycle(motorcycle_id: str, region: str = Query("US")):
     motorcycle = await db.motorcycles.find_one({"id": motorcycle_id})
     if not motorcycle:
         raise HTTPException(status_code=404, detail="Motorcycle not found")
-    return Motorcycle(**motorcycle)
+    
+    # Get vendor pricing for this region
+    vendor_prices = vendor_pricing.get_vendor_prices(motorcycle, region)
+    
+    motorcycle_data = Motorcycle(**motorcycle)
+    motorcycle_with_pricing = MotorcycleWithPricing(
+        **motorcycle_data.dict(),
+        vendor_prices=vendor_prices
+    )
+    
+    return motorcycle_with_pricing
 
 @api_router.get("/motorcycles/categories/summary", response_model=List[CategorySummary])
 async def get_categories_summary():
