@@ -411,6 +411,11 @@ async def get_motorcycle_comments(motorcycle_id: str, limit: int = Query(20, le=
     
     comments = await db.comments.aggregate(comments_pipeline).to_list(limit)
     
+    # Convert ObjectIds to strings for JSON serialization
+    for comment in comments:
+        if "_id" in comment:
+            comment["_id"] = str(comment["_id"])
+    
     # Get replies for each comment
     for comment in comments:
         replies_pipeline = [
@@ -434,6 +439,12 @@ async def get_motorcycle_comments(motorcycle_id: str, limit: int = Query(20, le=
             }}
         ]
         replies = await db.comments.aggregate(replies_pipeline).to_list(None)
+        
+        # Convert ObjectIds to strings for replies too
+        for reply in replies:
+            if "_id" in reply:
+                reply["_id"] = str(reply["_id"])
+        
         comment["replies"] = replies
     
     return comments
