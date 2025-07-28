@@ -224,6 +224,11 @@ async def get_regional_customizations(region: Optional[str] = Query(None)):
     
     customizations = await db.regional_customizations.find(query).to_list(100)
     
+    # Convert ObjectIds to strings for JSON serialization
+    for customization in customizations:
+        if "_id" in customization:
+            customization["_id"] = str(customization["_id"])
+    
     available_regions = await db.regional_customizations.distinct("region")
     
     return {
