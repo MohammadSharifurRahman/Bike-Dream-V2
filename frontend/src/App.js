@@ -19,6 +19,11 @@ const MotorcycleCard = ({ motorcycle, onClick }) => (
       <div className="absolute top-4 right-4 bg-black bg-opacity-75 text-white px-3 py-1 rounded-full text-sm">
         {motorcycle.availability}
       </div>
+      {motorcycle.user_interest_score > 90 && (
+        <div className="absolute top-4 left-4 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+          🔥 Popular
+        </div>
+      )}
     </div>
     <div className="p-6">
       <div className="flex items-center justify-between mb-2">
@@ -41,6 +46,29 @@ const MotorcycleCard = ({ motorcycle, onClick }) => (
   </div>
 );
 
+const CategorySection = ({ category, onMotorcycleClick }) => (
+  <div className="mb-12">
+    <div className="flex items-center justify-between mb-6">
+      <div>
+        <h2 className="text-3xl font-bold text-gray-800">{category.category}</h2>
+        <p className="text-gray-600">{category.count} motorcycles available</p>
+      </div>
+      <button className="text-blue-600 hover:text-blue-800 font-medium">
+        View All {category.category} →
+      </button>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {category.featured_motorcycles.map((motorcycle) => (
+        <MotorcycleCard
+          key={motorcycle.id}
+          motorcycle={motorcycle}
+          onClick={onMotorcycleClick}
+        />
+      ))}
+    </div>
+  </div>
+);
+
 const MotorcycleDetail = ({ motorcycle, onClose }) => (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
     <div className="bg-white rounded-xl max-w-4xl w-full max-h-screen overflow-y-auto">
@@ -56,6 +84,11 @@ const MotorcycleDetail = ({ motorcycle, onClose }) => (
         >
           ×
         </button>
+        {motorcycle.user_interest_score > 90 && (
+          <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-2 rounded-full text-sm font-bold">
+            🔥 Highly Popular ({motorcycle.user_interest_score}/100)
+          </div>
+        )}
       </div>
       <div className="p-8">
         <div className="flex items-center justify-between mb-4">
@@ -79,10 +112,12 @@ const MotorcycleDetail = ({ motorcycle, onClose }) => (
                 <span className="text-gray-600">Engine Type:</span>
                 <span className="font-medium">{motorcycle.engine_type}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Displacement:</span>
-                <span className="font-medium">{motorcycle.displacement}cc</span>
-              </div>
+              {motorcycle.displacement > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Displacement:</span>
+                  <span className="font-medium">{motorcycle.displacement}cc</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Horsepower:</span>
                 <span className="font-medium">{motorcycle.horsepower}hp</span>
@@ -105,9 +140,15 @@ const MotorcycleDetail = ({ motorcycle, onClose }) => (
                 <span className="text-gray-600">Weight:</span>
                 <span className="font-medium">{motorcycle.weight}kg</span>
               </div>
+              {motorcycle.fuel_capacity > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Fuel Capacity:</span>
+                  <span className="font-medium">{motorcycle.fuel_capacity}L</span>
+                </div>
+              )}
               <div className="flex justify-between">
-                <span className="text-gray-600">Fuel Capacity:</span>
-                <span className="font-medium">{motorcycle.fuel_capacity}L</span>
+                <span className="text-gray-600">User Interest:</span>
+                <span className="font-medium">{motorcycle.user_interest_score}/100</span>
               </div>
             </div>
           </div>
@@ -217,26 +258,6 @@ const FilterSidebar = ({ filters, onFilterChange, filterOptions, isOpen, onToggl
         </div>
       </div>
       
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Engine Size (cc)</label>
-        <div className="flex space-x-2">
-          <input
-            type="number"
-            placeholder="Min"
-            value={filters.displacement_min || ''}
-            onChange={(e) => onFilterChange({ ...filters, displacement_min: e.target.value ? parseInt(e.target.value) : null })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <input
-            type="number"
-            placeholder="Max"
-            value={filters.displacement_max || ''}
-            onChange={(e) => onFilterChange({ ...filters, displacement_max: e.target.value ? parseInt(e.target.value) : null })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-      
       <button
         onClick={() => onFilterChange({})}
         className="w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
@@ -248,12 +269,14 @@ const FilterSidebar = ({ filters, onFilterChange, filterOptions, isOpen, onToggl
 );
 
 function App() {
+  const [currentView, setCurrentView] = useState('home'); // 'home' or 'browse'
   const [motorcycles, setMotorcycles] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMotorcycle, setSelectedMotorcycle] = useState(null);
   const [filters, setFilters] = useState({});
   const [filterOptions, setFilterOptions] = useState({});
-  const [sortBy, setSortBy] = useState('year');
+  const [sortBy, setSortBy] = useState('user_interest_score');
   const [sortOrder, setSortOrder] = useState('desc');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -280,6 +303,15 @@ function App() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${API}/motorcycles/categories/summary`);
+      setCategories(response.data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
   const fetchFilterOptions = async () => {
     try {
       const response = await axios.get(`${API}/motorcycles/filters/options`);
@@ -292,6 +324,7 @@ function App() {
   const seedDatabase = async () => {
     try {
       await axios.post(`${API}/motorcycles/seed`);
+      fetchCategories();
       fetchMotorcycles();
     } catch (error) {
       console.error('Error seeding database:', error);
@@ -304,8 +337,13 @@ function App() {
   }, []);
 
   useEffect(() => {
-    fetchMotorcycles();
-  }, [filters, sortBy, sortOrder]);
+    if (currentView === 'browse') {
+      fetchMotorcycles();
+    }
+  }, [filters, sortBy, sortOrder, currentView]);
+
+  const totalMotorcycles = categories.reduce((sum, cat) => sum + cat.count, 0);
+  const totalManufacturers = filterOptions.manufacturers?.length || 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -314,105 +352,176 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">Byke-Dream</h1>
+              <button 
+                onClick={() => setCurrentView('home')}
+                className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
+              >
+                Byke-Dream
+              </button>
               <span className="ml-2 text-sm text-gray-500">Motorcycle Database</span>
             </div>
             <div className="flex items-center space-x-4">
-              <select
-                value={`${sortBy}-${sortOrder}`}
-                onChange={(e) => {
-                  const [newSortBy, newSortOrder] = e.target.value.split('-');
-                  setSortBy(newSortBy);
-                  setSortOrder(newSortOrder);
-                }}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="year-desc">Newest First</option>
-                <option value="year-asc">Oldest First</option>
-                <option value="price_usd-asc">Price: Low to High</option>
-                <option value="price_usd-desc">Price: High to Low</option>
-                <option value="horsepower-desc">Most Powerful</option>
-                <option value="model-asc">Name A-Z</option>
-              </select>
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="lg:hidden bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={() => setCurrentView('home')}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  currentView === 'home' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'
+                }`}
               >
-                Filters
+                Home
               </button>
+              <button
+                onClick={() => setCurrentView('browse')}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  currentView === 'browse' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'
+                }`}
+              >
+                Browse All
+              </button>
+              {currentView === 'browse' && (
+                <>
+                  <select
+                    value={`${sortBy}-${sortOrder}`}
+                    onChange={(e) => {
+                      const [newSortBy, newSortOrder] = e.target.value.split('-');
+                      setSortBy(newSortBy);
+                      setSortOrder(newSortOrder);
+                    }}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="user_interest_score-desc">Most Popular</option>
+                    <option value="year-desc">Newest First</option>
+                    <option value="year-asc">Oldest First</option>
+                    <option value="price_usd-asc">Price: Low to High</option>
+                    <option value="price_usd-desc">Price: High to Low</option>
+                    <option value="horsepower-desc">Most Powerful</option>
+                  </select>
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="lg:hidden bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Filters
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="text-center">
-            <h2 className="text-5xl font-bold mb-6">Discover Your Dream Motorcycle</h2>
-            <p className="text-xl mb-8 text-blue-100">Explore the world's most comprehensive motorcycle database from 1900 to present</p>
-            <div className="flex justify-center space-x-8 text-lg">
+      {currentView === 'home' ? (
+        // Home Page
+        <>
+          {/* Hero Section */}
+          <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
               <div className="text-center">
-                <div className="text-3xl font-bold text-blue-300">{motorcycles.length}+</div>
-                <div className="text-blue-100">Motorcycles</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-300">125+</div>
-                <div className="text-blue-100">Years of History</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-300">{filterOptions.manufacturers?.length || 0}+</div>
-                <div className="text-blue-100">Manufacturers</div>
+                <h2 className="text-5xl font-bold mb-6">Discover Your Dream Motorcycle</h2>
+                <p className="text-xl mb-8 text-blue-100">
+                  The world's most comprehensive motorcycle database spanning from 1900 to present day
+                </p>
+                <div className="flex justify-center space-x-12 text-lg mb-8">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-blue-300">{totalMotorcycles}+</div>
+                    <div className="text-blue-100">Motorcycles</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-blue-300">125+</div>
+                    <div className="text-blue-100">Years of History</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-blue-300">{totalManufacturers}+</div>
+                    <div className="text-blue-100">Manufacturers</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setCurrentView('browse')}
+                  className="bg-white text-blue-900 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-50 transition-colors"
+                >
+                  Explore All Motorcycles
+                </button>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar */}
-          <div className="lg:w-80 flex-shrink-0">
-            <FilterSidebar
-              filters={filters}
-              onFilterChange={setFilters}
-              filterOptions={filterOptions}
-              isOpen={showFilters}
-              onToggle={() => setShowFilters(!showFilters)}
-            />
-          </div>
+          {/* Categories Section */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold text-gray-800 mb-4">Motorcycles by Category</h2>
+              <p className="text-xl text-gray-600">
+                Curated collections based on user interest and popularity
+              </p>
+            </div>
 
-          {/* Motorcycle Grid */}
-          <div className="flex-1">
             {loading ? (
               <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
               </div>
-            ) : motorcycles.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-gray-500 text-lg">No motorcycles found matching your criteria</div>
-                <button
-                  onClick={() => setFilters({})}
-                  className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Clear Filters
-                </button>
-              </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {motorcycles.map((motorcycle) => (
-                  <MotorcycleCard
-                    key={motorcycle.id}
-                    motorcycle={motorcycle}
-                    onClick={setSelectedMotorcycle}
+              <div className="space-y-16">
+                {categories.map((category) => (
+                  <CategorySection
+                    key={category.category}
+                    category={category}
+                    onMotorcycleClick={setSelectedMotorcycle}
                   />
                 ))}
               </div>
             )}
           </div>
+        </>
+      ) : (
+        // Browse Page
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Sidebar */}
+            <div className="lg:w-80 flex-shrink-0">
+              <FilterSidebar
+                filters={filters}
+                onFilterChange={setFilters}
+                filterOptions={filterOptions}
+                isOpen={showFilters}
+                onToggle={() => setShowFilters(!showFilters)}
+              />
+            </div>
+
+            {/* Motorcycle Grid */}
+            <div className="flex-1">
+              <div className="mb-6">
+                <h1 className="text-3xl font-bold text-gray-800">
+                  All Motorcycles ({motorcycles.length})
+                </h1>
+                <p className="text-gray-600">Complete motorcycle database from 1900 to present</p>
+              </div>
+
+              {loading ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+                </div>
+              ) : motorcycles.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-gray-500 text-lg">No motorcycles found matching your criteria</div>
+                  <button
+                    onClick={() => setFilters({})}
+                    className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {motorcycles.map((motorcycle) => (
+                    <MotorcycleCard
+                      key={motorcycle.id}
+                      motorcycle={motorcycle}
+                      onClick={setSelectedMotorcycle}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Modal */}
       {selectedMotorcycle && (
