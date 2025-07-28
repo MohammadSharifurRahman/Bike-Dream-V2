@@ -312,10 +312,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Comprehensive Database Seeding (1000+ Motorcycles)"
-    - "Database Statistics API"
-    - "Category Summary API"
-    - "User Interest Scoring System"
+    - "Daily Update Bot System - Manual Trigger API"
+    - "Daily Update Bot System - Job Status Monitoring API"
+    - "Daily Update Bot System - Update History API"
+    - "Daily Update Bot System - Regional Customizations API"
+    - "Daily Update Bot System - Complete Workflow Integration"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
