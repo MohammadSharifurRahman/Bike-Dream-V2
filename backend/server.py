@@ -111,6 +111,28 @@ class VendorPrice(BaseModel):
     website_url: str
     phone: Optional[str] = None
 
+class MotorcycleFeatures(BaseModel):
+    # Technical Features
+    engine_capacity_cc: int = Field(alias="displacement")  # Engine capacity (cc)
+    mileage_kmpl: float  # Mileage (kmpl)
+    top_speed_kmh: int = Field(alias="top_speed")  # Top speed (km/h)
+    engine_type: str  # Engine type
+    torque_nm: int = Field(alias="torque")  # Torque (Nm)
+    horsepower_bhp: int = Field(alias="horsepower")  # Horsepower (bhp)
+    fuel_tank_capacity_l: float = Field(alias="fuel_capacity")  # Fuel tank capacity (L)
+    transmission_type: str  # Manual/Automatic/CVT
+    number_of_gears: int  # Number of gears
+    weight_kg: int = Field(alias="weight")  # Weight (kg)
+    ground_clearance_mm: int  # Ground clearance (mm)
+    seat_height_mm: int  # Seat height (mm)
+    abs_available: bool  # ABS (Anti-lock Braking System)
+    braking_system: str  # Disc/Drum/Combination
+    suspension_type: str  # Telescopic/USD/Mono-shock
+    tyre_type: str  # Tubeless/Tube
+    wheel_size_inches: str  # Wheel size (inches)
+    headlight_type: str  # LED/Halogen
+    fuel_type: str  # Petrol/Electric/Hybrid
+
 class Motorcycle(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     manufacturer: str
@@ -118,7 +140,7 @@ class Motorcycle(BaseModel):
     year: int
     category: str  # Sport, Cruiser, Touring, Adventure, etc.
     engine_type: str
-    displacement: int  # in cc
+    displacement: int  # in cc (same as engine_capacity_cc)
     horsepower: int
     torque: int  # in Nm
     weight: int  # in kg
@@ -128,7 +150,22 @@ class Motorcycle(BaseModel):
     availability: str  # Available, Discontinued, Limited
     description: str
     image_url: str
-    features: List[str]
+    specialisations: List[str] = Field(default_factory=list)  # Renamed from features
+    
+    # Technical Features
+    mileage_kmpl: float = Field(default=25.0)
+    transmission_type: str = Field(default="Manual")
+    number_of_gears: int = Field(default=6)
+    ground_clearance_mm: int = Field(default=180)
+    seat_height_mm: int = Field(default=800)
+    abs_available: bool = Field(default=True)
+    braking_system: str = Field(default="Disc")
+    suspension_type: str = Field(default="Telescopic")
+    tyre_type: str = Field(default="Tubeless")
+    wheel_size_inches: str = Field(default="17")
+    headlight_type: str = Field(default="LED")
+    fuel_type: str = Field(default="Petrol")
+    
     user_interest_score: int = Field(default=0)  # For homepage category ranking
     average_rating: float = Field(default=0.0)
     total_ratings: int = Field(default=0)
@@ -152,7 +189,22 @@ class MotorcycleWithPricing(BaseModel):
     availability: str
     description: str
     image_url: str
-    features: List[str]
+    specialisations: List[str] = Field(default_factory=list)
+    
+    # Technical Features
+    mileage_kmpl: float = 25.0
+    transmission_type: str = "Manual"
+    number_of_gears: int = 6
+    ground_clearance_mm: int = 180
+    seat_height_mm: int = 800
+    abs_available: bool = True
+    braking_system: str = "Disc"
+    suspension_type: str = "Telescopic"
+    tyre_type: str = "Tubeless"
+    wheel_size_inches: str = "17"
+    headlight_type: str = "LED"
+    fuel_type: str = "Petrol"
+    
     user_interest_score: int = 0
     average_rating: float = 0.0
     total_ratings: int = 0
@@ -176,7 +228,22 @@ class MotorcycleCreate(BaseModel):
     availability: str
     description: str
     image_url: str
-    features: List[str]
+    specialisations: List[str] = Field(default_factory=list)
+    
+    # Technical Features
+    mileage_kmpl: float = 25.0
+    transmission_type: str = "Manual"
+    number_of_gears: int = 6
+    ground_clearance_mm: int = 180
+    seat_height_mm: int = 800
+    abs_available: bool = True
+    braking_system: str = "Disc"
+    suspension_type: str = "Telescopic"
+    tyre_type: str = "Tubeless"
+    wheel_size_inches: str = "17"
+    headlight_type: str = "LED"
+    fuel_type: str = "Petrol"
+    
     user_interest_score: int = 0
 
 class CategorySummary(BaseModel):
@@ -248,23 +315,61 @@ async def get_supported_regions():
         "default_region": "US"
     }
 
-# Enhanced motorcycle routes with features filtering
-@api_router.get("/motorcycles/filters/features")
-async def get_available_features():
-    """Get all available motorcycle features for filtering"""
-    # Get all unique features from the database
-    features_pipeline = [
-        {"$unwind": "$features"},
-        {"$group": {"_id": "$features"}},
+# Enhanced motorcycle routes with specialisation and features filtering
+@api_router.get("/motorcycles/filters/specialisations")
+async def get_available_specialisations():
+    """Get all available motorcycle specialisations for filtering"""
+    # Get all unique specialisations from the database
+    specialisations_pipeline = [
+        {"$unwind": "$specialisations"},
+        {"$group": {"_id": "$specialisations"}},
         {"$sort": {"_id": 1}}
     ]
     
-    features = await db.motorcycles.aggregate(features_pipeline).to_list(None)
-    feature_list = [f["_id"] for f in features]
+    specialisations = await db.motorcycles.aggregate(specialisations_pipeline).to_list(None)
+    specialisation_list = [s["_id"] for s in specialisations]
     
     return {
-        "features": feature_list,
-        "count": len(feature_list)
+        "specialisations": specialisation_list,
+        "count": len(specialisation_list)
+    }
+
+@api_router.get("/motorcycles/filters/features")
+async def get_available_features():
+    """Get all available technical features for filtering"""
+    # Get distinct values for each technical feature
+    transmission_types = await db.motorcycles.distinct("transmission_type")
+    engine_types = await db.motorcycles.distinct("engine_type")
+    braking_systems = await db.motorcycles.distinct("braking_system")
+    suspension_types = await db.motorcycles.distinct("suspension_type")
+    tyre_types = await db.motorcycles.distinct("tyre_type")
+    headlight_types = await db.motorcycles.distinct("headlight_type")
+    fuel_types = await db.motorcycles.distinct("fuel_type")
+    
+    # Get ranges for numeric features
+    mileage_range = await db.motorcycles.aggregate([
+        {"$group": {"_id": None, "min_mileage": {"$min": "$mileage_kmpl"}, "max_mileage": {"$max": "$mileage_kmpl"}}}
+    ]).to_list(1)
+    
+    ground_clearance_range = await db.motorcycles.aggregate([
+        {"$group": {"_id": None, "min_gc": {"$min": "$ground_clearance_mm"}, "max_gc": {"$max": "$ground_clearance_mm"}}}
+    ]).to_list(1)
+    
+    seat_height_range = await db.motorcycles.aggregate([
+        {"$group": {"_id": None, "min_sh": {"$min": "$seat_height_mm"}, "max_sh": {"$max": "$seat_height_mm"}}}
+    ]).to_list(1)
+    
+    return {
+        "transmission_types": transmission_types,
+        "engine_types": engine_types,
+        "braking_systems": braking_systems,
+        "suspension_types": suspension_types,
+        "tyre_types": tyre_types,
+        "headlight_types": headlight_types,
+        "fuel_types": fuel_types,
+        "mileage_range": mileage_range[0] if mileage_range else {"min_mileage": 15, "max_mileage": 50},
+        "ground_clearance_range": ground_clearance_range[0] if ground_clearance_range else {"min_gc": 150, "max_gc": 250},
+        "seat_height_range": seat_height_range[0] if seat_height_range else {"min_sh": 700, "max_sh": 900}
     }
 
 # Authentication routes
@@ -707,7 +812,7 @@ async def get_regional_customizations(region: Optional[str] = Query(None)):
         "available_regions": available_regions
     }
 
-# Enhanced motorcycle routes with features filtering
+# Enhanced motorcycle routes with specialisation and features filtering
 @api_router.post("/motorcycles", response_model=Motorcycle)
 async def create_motorcycle(motorcycle: MotorcycleCreate):
     motorcycle_dict = motorcycle.dict()
@@ -720,7 +825,26 @@ async def get_motorcycles(
     search: Optional[str] = Query(None, description="Search in manufacturer, model, or description"),
     manufacturer: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
-    features: Optional[str] = Query(None, description="Comma-separated list of required features"),
+    specialisations: Optional[str] = Query(None, description="Comma-separated list of required specialisations"),
+    
+    # Technical Features Filters
+    transmission_type: Optional[str] = Query(None),
+    engine_type: Optional[str] = Query(None),
+    braking_system: Optional[str] = Query(None),
+    suspension_type: Optional[str] = Query(None),
+    tyre_type: Optional[str] = Query(None),
+    headlight_type: Optional[str] = Query(None),
+    fuel_type: Optional[str] = Query(None),
+    abs_available: Optional[bool] = Query(None),
+    
+    # Numeric Features Filters
+    mileage_min: Optional[float] = Query(None),
+    mileage_max: Optional[float] = Query(None),
+    ground_clearance_min: Optional[int] = Query(None),
+    ground_clearance_max: Optional[int] = Query(None),
+    seat_height_min: Optional[int] = Query(None),
+    seat_height_max: Optional[int] = Query(None),
+    
     year_min: Optional[int] = Query(None),
     year_max: Optional[int] = Query(None),
     price_min: Optional[int] = Query(None),
@@ -729,9 +853,9 @@ async def get_motorcycles(
     displacement_max: Optional[int] = Query(None),
     horsepower_min: Optional[int] = Query(None),
     horsepower_max: Optional[int] = Query(None),
-    sort_by: Optional[str] = Query("user_interest_score", description="Sort by: year, price, horsepower, model, user_interest_score"),
+    sort_by: Optional[str] = Query("user_interest_score", description="Sort by: year, price, horsepower, model, user_interest_score, mileage_kmpl, top_speed, weight"),
     sort_order: Optional[str] = Query("desc", description="asc or desc"),
-    limit: Optional[int] = Query(3000, le=5000),  # Increased limit to show all motorcycles
+    limit: Optional[int] = Query(5000, le=10000),  # Increased limit to show all motorcycles
     skip: Optional[int] = Query(0),
     region: Optional[str] = Query("US", description="Region for pricing")
 ):
@@ -751,11 +875,43 @@ async def get_motorcycles(
     if category:
         query["category"] = {"$regex": category, "$options": "i"}
     
-    # Features filtering
-    if features and features.strip():
-        feature_list = [f.strip() for f in features.split(",") if f.strip()]
-        if feature_list:
-            query["features"] = {"$in": feature_list}
+    # Specialisations filtering
+    if specialisations and specialisations.strip():
+        specialisation_list = [s.strip() for s in specialisations.split(",") if s.strip()]
+        if specialisation_list:
+            query["specialisations"] = {"$in": specialisation_list}
+    
+    # Technical Features filtering
+    if transmission_type:
+        query["transmission_type"] = transmission_type
+    if engine_type:
+        query["engine_type"] = {"$regex": engine_type, "$options": "i"}
+    if braking_system:
+        query["braking_system"] = braking_system
+    if suspension_type:
+        query["suspension_type"] = suspension_type
+    if tyre_type:
+        query["tyre_type"] = tyre_type
+    if headlight_type:
+        query["headlight_type"] = headlight_type
+    if fuel_type:
+        query["fuel_type"] = fuel_type
+    if abs_available is not None:
+        query["abs_available"] = abs_available
+    
+    # Numeric features filtering
+    if mileage_min:
+        query.setdefault("mileage_kmpl", {})["$gte"] = mileage_min
+    if mileage_max:
+        query.setdefault("mileage_kmpl", {})["$lte"] = mileage_max
+    if ground_clearance_min:
+        query.setdefault("ground_clearance_mm", {})["$gte"] = ground_clearance_min
+    if ground_clearance_max:
+        query.setdefault("ground_clearance_mm", {})["$lte"] = ground_clearance_max
+    if seat_height_min:
+        query.setdefault("seat_height_mm", {})["$gte"] = seat_height_min
+    if seat_height_max:
+        query.setdefault("seat_height_mm", {})["$lte"] = seat_height_max
     
     if year_min:
         query.setdefault("year", {})["$gte"] = year_min
