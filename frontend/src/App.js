@@ -1211,8 +1211,9 @@ function App() {
     }
   }, []);
 
-  const totalMotorcycles = categories.reduce((sum, cat) => sum + cat.count, 0);
-  const totalManufacturers = filterOptions.manufacturers?.length || 0;
+  // Calculate statistics from database stats API instead of categories sum
+  const totalMotorcycles = databaseStats.totalMotorcycles;
+  const totalManufacturers = databaseStats.totalManufacturers;
 
   return (
     <AuthProvider>
