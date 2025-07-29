@@ -95,17 +95,31 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginWithGoogle = async (googleData) => {
+  const loginWithGoogle = async () => {
     try {
-      const response = await axios.post(`${API}/auth/google`, googleData);
+      // Use Google OAuth 2.0 flow
+      const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || "your-google-client-id";
+      const redirectUri = encodeURIComponent(window.location.origin + '/auth/google/callback');
+      const scope = encodeURIComponent('https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email');
       
-      localStorage.setItem('auth_token', response.data.token);
-      setUser(response.data.user);
-      return { success: true };
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${clientId}&` +
+        `redirect_uri=${redirectUri}&` +
+        `response_type=code&` +
+        `scope=${scope}&` +
+        `access_type=offline`;
+      
+      // Store current location to redirect back after auth
+      localStorage.setItem('auth_redirect', window.location.pathname);
+      
+      // Redirect to Google OAuth
+      window.location.href = googleAuthUrl;
+      
     } catch (error) {
+      console.error('Google OAuth error:', error);
       return { 
         success: false, 
-        error: error.response?.data?.detail || 'Google login failed' 
+        error: 'Google login failed. Please try again.' 
       };
     }
   };
