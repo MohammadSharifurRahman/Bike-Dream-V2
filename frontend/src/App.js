@@ -1329,7 +1329,7 @@ const CAROUSEL_IMAGES = [
 ];
 
 // Hero Carousel Component
-const HeroCarousel = () => {
+const HeroCarousel = ({ onViewChange }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
@@ -1381,13 +1381,13 @@ const HeroCarousel = () => {
               </p>
               <div className="flex space-x-4">
                 <button 
-                  onClick={() => setCurrentView('browse')}
+                  onClick={() => onViewChange('browse')}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-300 shadow-lg"
                 >
                   Explore Motorcycles
                 </button>
                 <button 
-                  onClick={() => setCurrentView('browse')}
+                  onClick={() => onViewChange('browse')}
                   className="border-2 border-white text-white hover:bg-white hover:text-gray-900 px-8 py-3 rounded-lg font-semibold transition-all duration-300"
                 >
                   View Brands
