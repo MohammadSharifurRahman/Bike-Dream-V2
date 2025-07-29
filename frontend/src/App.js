@@ -17,6 +17,15 @@ const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('auth_token');
     const sessionId = localStorage.getItem('session_id');
     
+    // Handle Google OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code && window.location.pathname === '/auth/google/callback') {
+      handleGoogleCallback(code);
+      return;
+    }
+    
     if (token) {
       // Try JWT token first
       validateToken();
@@ -27,6 +36,28 @@ const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   }, []);
+
+  const handleGoogleCallback = async (code) => {
+    try {
+      setLoading(true);
+      const response = await axios.post(`${API}/auth/google/callback`, { code });
+      
+      localStorage.setItem('auth_token', response.data.token);
+      setUser(response.data.user);
+      
+      // Redirect back to original location
+      const redirectPath = localStorage.getItem('auth_redirect') || '/';
+      localStorage.removeItem('auth_redirect');
+      window.history.replaceState({}, '', redirectPath);
+      
+    } catch (error) {
+      console.error('Google OAuth callback error:', error);
+      // Redirect to login page with error
+      window.history.replaceState({}, '', '/?auth_error=google_failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const validateToken = async () => {
     try {
