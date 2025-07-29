@@ -4234,6 +4234,43 @@ class MotorcycleAPITester:
         self.test_admin_get_requests_with_filters()
         self.test_admin_update_request()
         
+        # ==================== VIRTUAL GARAGE AND PRICE ALERTS TESTS ====================
+        print("\n🏍️ Testing Virtual Garage System...")
+        print("-" * 60)
+        
+        # Virtual Garage Tests (require authentication)
+        if self.test_user_session:
+            self.test_add_to_garage()
+            self.test_get_user_garage()
+            self.test_garage_status_filtering()
+            self.test_update_garage_item()
+            self.test_get_garage_stats()
+            self.test_remove_from_garage()
+        
+        # Test authentication requirements for garage
+        self.test_garage_authentication_required()
+        
+        print("\n💰 Testing Price Alerts System...")
+        print("-" * 60)
+        
+        # Price Alerts Tests (require authentication)
+        if self.test_user_session:
+            self.test_create_price_alert()
+            self.test_price_alert_conditions()
+            self.test_get_user_price_alerts()
+            self.test_delete_price_alert()
+        
+        # Test authentication requirements for price alerts
+        self.test_price_alerts_authentication_required()
+        
+        print("\n🔒 Testing Data Validation...")
+        print("-" * 60)
+        
+        # Data Validation Tests (require authentication)
+        if self.test_user_session:
+            self.test_garage_data_validation()
+            self.test_price_alert_data_validation()
+        
         # Browse Limit Fix
         self.test_browse_limit_fix()
         
