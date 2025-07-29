@@ -1029,119 +1029,198 @@ async def update_motorcycle_rating_stats(motorcycle_id: str):
 
 # Comment routes
 @api_router.post("/motorcycles/{motorcycle_id}/comment")
-async def add_comment(motorcycle_id: str, comment_data: CommentCreate, current_user: User = Depends(require_auth)):
-    """Add a comment to a motorcycle"""
-    # Check if motorcycle exists
-    motorcycle = await db.motorcycles.find_one({"id": motorcycle_id})
-    if not motorcycle:
-        raise HTTPException(status_code=404, detail="Motorcycle not found")
-    
-    comment = Comment(
-        user_id=current_user.id,
-        motorcycle_id=motorcycle_id,
-        comment_text=comment_data.comment_text,
-        parent_comment_id=comment_data.parent_comment_id
-    )
-    await db.comments.insert_one(comment.dict())
-    
-    # Update motorcycle comment count
-    await update_motorcycle_comment_count(motorcycle_id)
-    
-    return {"message": "Comment added", "comment_id": comment.id}
+async def add_comment(motorcycle_id: str, comment_data: CommentCreate, user: User = Depends(require_auth)):
+    """Add a comment to a motorcycle with support for replies"""
+    try:
+        # Verify motorcycle exists
+        motorcycle = await db.motorcycles.find_one({"id": motorcycle_id})
+        if not motorcycle:
+            raise HTTPException(status_code=404, detail="Motorcycle not found")
+        
+        # If this is a reply, verify parent comment exists
+        if comment_data.parent_comment_id:
+            parent_comment = await db.comments.find_one({"id": comment_data.parent_comment_id})
+            if not parent_comment:
+                raise HTTPException(status_code=404, detail="Parent comment not found")
+            
+            # Increment replies count for parent comment
+            await db.comments.update_one(
+                {"id": comment_data.parent_comment_id},
+                {"$inc": {"replies_count": 1}}
+            )
+        
+        # Create comment
+        comment = Comment(
+            motorcycle_id=motorcycle_id,
+            user_id=user.id,
+            user_name=user.name,
+            user_picture=user.picture,
+            content=comment_data.content,
+            parent_comment_id=comment_data.parent_comment_id
+        )
+        
+        await db.comments.insert_one(comment.dict())
+        return {"message": "Comment added successfully", "comment": comment}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to add comment: {str(e)}")
 
 @api_router.get("/motorcycles/{motorcycle_id}/comments")
-async def get_motorcycle_comments(motorcycle_id: str, limit: int = Query(20, le=100)):
-    """Get comments for a motorcycle with user information"""
-    comments_pipeline = [
-        {"$match": {"motorcycle_id": motorcycle_id, "parent_comment_id": None}},  # Top-level comments only
-        {"$lookup": {
-            "from": "users",
-            "localField": "user_id",
-            "foreignField": "id",
-            "as": "user"
-        }},
-        {"$unwind": "$user"},
-        {"$sort": {"created_at": -1}},
-        {"$limit": limit},
-        {"$project": {
-            "id": 1,
-            "user_id": 1,
-            "motorcycle_id": 1,
-            "comment_text": 1,
-            "parent_comment_id": 1,
-            "created_at": 1,
-            "updated_at": 1,
-            "likes": 1,
-            "user_name": "$user.name",
-            "user_picture": "$user.picture"
-        }}
-    ]
-    
-    comments = await db.comments.aggregate(comments_pipeline).to_list(limit)
-    
-    # Convert ObjectIds to strings for JSON serialization
-    for comment in comments:
-        if "_id" in comment:
-            comment["_id"] = str(comment["_id"])
-    
-    # Get replies for each comment
-    for comment in comments:
-        replies_pipeline = [
-            {"$match": {"parent_comment_id": comment["id"]}},
-            {"$lookup": {
-                "from": "users",
-                "localField": "user_id",
-                "foreignField": "id",
-                "as": "user"
-            }},
-            {"$unwind": "$user"},
-            {"$sort": {"created_at": 1}},
-            {"$project": {
-                "id": 1,
-                "user_id": 1,
-                "comment_text": 1,
-                "created_at": 1,
-                "likes": 1,
-                "user_name": "$user.name",
-                "user_picture": "$user.picture"
-            }}
-        ]
-        replies = await db.comments.aggregate(replies_pipeline).to_list(None)
+async def get_comments(motorcycle_id: str, include_replies: bool = True):
+    """Get comments for a motorcycle with optional replies"""
+    try:
+        # Get all comments for this motorcycle
+        if include_replies:
+            # Get all comments (both top-level and replies)
+            all_comments = await db.comments.find({"motorcycle_id": motorcycle_id}).sort("created_at", 1).to_list(None)
+            
+            # Organize comments in a threaded structure
+            comments_dict = {}
+            top_level_comments = []
+            
+            # First pass: create comment objects and organize by ID
+            for comment_data in all_comments:
+                comment = Comment(**comment_data)
+                comments_dict[comment.id] = {
+                    **comment.dict(),
+                    "replies": []
+                }
+                
+                if not comment.parent_comment_id:
+                    top_level_comments.append(comment.id)
+            
+            # Second pass: nest replies under their parent comments
+            for comment_data in all_comments:
+                comment = Comment(**comment_data)
+                if comment.parent_comment_id and comment.parent_comment_id in comments_dict:
+                    comments_dict[comment.parent_comment_id]["replies"].append(
+                        comments_dict[comment.id]
+                    )
+            
+            # Return only top-level comments with nested replies
+            result = [comments_dict[comment_id] for comment_id in top_level_comments if comment_id in comments_dict]
+            
+        else:
+            # Get only top-level comments (no replies)
+            top_level_comments = await db.comments.find({
+                "motorcycle_id": motorcycle_id,
+                "parent_comment_id": None
+            }).sort("created_at", -1).to_list(None)
+            
+            result = [Comment(**comment).dict() for comment in top_level_comments]
         
-        # Convert ObjectIds to strings for replies too
-        for reply in replies:
-            if "_id" in reply:
-                reply["_id"] = str(reply["_id"])
+        return result
         
-        comment["replies"] = replies
-    
-    return comments
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to get comments: {str(e)}")
 
 @api_router.post("/comments/{comment_id}/like")
-async def like_comment(comment_id: str, current_user: User = Depends(require_auth)):
-    """Like a comment"""
-    # Check if already liked
-    existing_like = await db.comment_likes.find_one({
-        "user_id": current_user.id,
-        "comment_id": comment_id
-    })
-    
-    if existing_like:
-        # Unlike
-        await db.comment_likes.delete_one({"id": existing_like["id"]})
-        await db.comments.update_one({"id": comment_id}, {"$inc": {"likes": -1}})
-        return {"message": "Comment unliked", "liked": False}
-    else:
-        # Like
-        like_data = {
-            "id": str(uuid.uuid4()),
-            "user_id": current_user.id,
+async def toggle_comment_like(comment_id: str, user: User = Depends(require_auth)):
+    """Toggle like on a comment"""
+    try:
+        # Check if comment exists
+        comment = await db.comments.find_one({"id": comment_id})
+        if not comment:
+            raise HTTPException(status_code=404, detail="Comment not found")
+        
+        # Check if user already liked this comment
+        existing_like = await db.comment_likes.find_one({
             "comment_id": comment_id,
-            "created_at": datetime.utcnow()
+            "user_id": user.id
+        })
+        
+        if existing_like:
+            # Unlike: remove like and decrement count
+            await db.comment_likes.delete_one({
+                "comment_id": comment_id,
+                "user_id": user.id
+            })
+            await db.comments.update_one(
+                {"id": comment_id},
+                {"$inc": {"likes_count": -1}}
+            )
+            return {"message": "Comment unliked", "liked": False}
+        else:
+            # Like: add like and increment count
+            like = CommentLike(comment_id=comment_id, user_id=user.id)
+            await db.comment_likes.insert_one(like.dict())
+            await db.comments.update_one(
+                {"id": comment_id},
+                {"$inc": {"likes_count": 1}}
+            )
+            return {"message": "Comment liked", "liked": True}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to toggle like: {str(e)}")
+
+@api_router.delete("/comments/{comment_id}")
+async def delete_comment(comment_id: str, user: User = Depends(require_auth)):
+    """Delete a comment (only by the author)"""
+    try:
+        # Check if comment exists and user is the author
+        comment = await db.comments.find_one({"id": comment_id})
+        if not comment:
+            raise HTTPException(status_code=404, detail="Comment not found")
+        
+        if comment["user_id"] != user.id:
+            raise HTTPException(status_code=403, detail="You can only delete your own comments")
+        
+        # Delete the comment and all associated likes
+        await db.comments.delete_one({"id": comment_id})
+        await db.comment_likes.delete_many({"comment_id": comment_id})
+        
+        # If this comment had replies, also delete them
+        await db.comments.delete_many({"parent_comment_id": comment_id})
+        
+        # If this was a reply, decrement parent's reply count
+        if comment.get("parent_comment_id"):
+            await db.comments.update_one(
+                {"id": comment["parent_comment_id"]},
+                {"$inc": {"replies_count": -1}}
+            )
+        
+        return {"message": "Comment deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to delete comment: {str(e)}")
+
+@api_router.post("/comments/{comment_id}/flag")
+async def flag_comment(comment_id: str, user: User = Depends(require_auth)):
+    """Flag a comment for moderation"""
+    try:
+        # Check if comment exists
+        comment = await db.comments.find_one({"id": comment_id})
+        if not comment:
+            raise HTTPException(status_code=404, detail="Comment not found")
+        
+        # Flag the comment
+        await db.comments.update_one(
+            {"id": comment_id},
+            {"$set": {"is_flagged": True}}
+        )
+        
+        # Log the flag action for admin review
+        flag_log = {
+            "comment_id": comment_id,
+            "flagged_by": user.id,
+            "flagged_at": datetime.now(timezone.utc),
+            "comment_content": comment["content"],
+            "comment_author": comment["user_id"]
         }
-        await db.comment_likes.insert_one(like_data)
-        await db.comments.update_one({"id": comment_id}, {"$inc": {"likes": 1}})
-        return {"message": "Comment liked", "liked": True}
+        await db.flagged_comments.insert_one(flag_log)
+        
+        return {"message": "Comment flagged for review"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to flag comment: {str(e)}")
 
 async def update_motorcycle_comment_count(motorcycle_id: str):
     """Update motorcycle comment count"""
