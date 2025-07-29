@@ -376,7 +376,22 @@ def get_comprehensive_motorcycle_data():
                 "availability": availability,
                 "description": f"The Suzuki {model_data['model']} {year} represents Suzuki's passion for performance and innovation. Known for exceptional handling, power delivery, and advanced technology.",
                 "image_url": image_url,
-                "features": ["Suzuki Performance", "Lightweight Design", "Advanced Suspension", "Precise Handling", "Racing Heritage"],
+                "specialisations": ["Suzuki Performance", "Lightweight Design", "Advanced Suspension", "Precise Handling", "Racing Heritage"],
+                
+                # Technical Features
+                "mileage_kmpl": 34.0 if model_data["displacement"] < 200 else 22.0 if model_data["displacement"] < 500 else 17.0 if model_data["displacement"] < 1000 else 13.0,
+                "transmission_type": "Manual" if model_data["category"] != "Scooter" else "CVT",
+                "number_of_gears": 6 if model_data["displacement"] > 500 else 5,
+                "ground_clearance_mm": 145 if model_data["category"] == "Sport" else 165 if model_data["category"] in ["Naked", "Standard"] else 185,
+                "seat_height_mm": 825 if model_data["category"] == "Sport" else 800 if model_data["category"] in ["Naked", "Standard"] else 775,
+                "abs_available": year >= 2014,
+                "braking_system": "Disc" if model_data["displacement"] > 125 else "Drum",
+                "suspension_type": "USD Fork" if model_data["category"] == "Sport" and model_data["displacement"] > 650 else "Telescopic",
+                "tyre_type": "Tubeless" if year >= 2011 else "Tube",
+                "wheel_size_inches": "17" if model_data["displacement"] > 250 else "16",
+                "headlight_type": "LED" if year >= 2017 else "Halogen",
+                "fuel_type": "Petrol",
+                
                 "user_interest_score": model_data["interest"]
             }
             comprehensive_motorcycles.append(motorcycle)
