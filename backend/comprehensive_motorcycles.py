@@ -805,4 +805,87 @@ def get_comprehensive_motorcycle_data():
             }
             comprehensive_motorcycles.append(motorcycle)
     
+    # Generate motorcycles for all new brands
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("Bajaj", bajaj_models))
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("Hero", hero_models))
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("TVS", tvs_models))
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("Royal Enfield", royal_enfield_models))
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("KTM", ktm_models))
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("Harley-Davidson", harley_models))
+    
+    # Add some additional missing manufacturers with sample models
+    # CFMOTO
+    cfmoto_models = [
+        {"model": "300NK", "years": list(range(2018, 2026)), "category": "Naked", "displacement": 292, "horsepower": 29, "price_base": 4500, "interest": 82},
+        {"model": "650NK", "years": list(range(2017, 2026)), "category": "Naked", "displacement": 649, "horsepower": 61, "price_base": 7200, "interest": 85},
+        {"model": "300SR", "years": list(range(2019, 2026)), "category": "Sport", "displacement": 292, "horsepower": 29, "price_base": 5200, "interest": 84},
+    ]
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("CFMOTO", cfmoto_models))
+    
+    # Keeway
+    keeway_models = [
+        {"model": "K-Light 202", "years": list(range(2020, 2026)), "category": "Naked", "displacement": 202, "horsepower": 20, "price_base": 3200, "interest": 78},
+        {"model": "RKF 125", "years": list(range(2021, 2026)), "category": "Sport", "displacement": 124, "horsepower": 15, "price_base": 2800, "interest": 76},
+    ]
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("Keeway", keeway_models))
+    
+    # Lifan
+    lifan_models = [
+        {"model": "KP150", "years": list(range(2017, 2026)), "category": "Naked", "displacement": 150, "horsepower": 14, "price_base": 2200, "interest": 72},
+        {"model": "KPR 200", "years": list(range(2018, 2026)), "category": "Sport", "displacement": 200, "horsepower": 22, "price_base": 2800, "interest": 75},
+    ]
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("Lifan", lifan_models))
+    
+    # GPX
+    gpx_models = [
+        {"model": "Demon 150", "years": list(range(2019, 2026)), "category": "Naked", "displacement": 150, "horsepower": 16, "price_base": 2500, "interest": 79},
+        {"model": "Legend 250", "years": list(range(2020, 2026)), "category": "Cruiser", "displacement": 250, "horsepower": 25, "price_base": 3200, "interest": 81},
+    ]
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("GPX", gpx_models))
+    
+    # QJ Motor
+    qj_models = [
+        {"model": "SRK 400", "years": list(range(2021, 2026)), "category": "Naked", "displacement": 400, "horsepower": 40, "price_base": 4800, "interest": 83},
+        {"model": "SRV 300", "years": list(range(2020, 2026)), "category": "Adventure", "displacement": 300, "horsepower": 30, "price_base": 4200, "interest": 80},
+    ]
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("QJ Motor", qj_models))
+    
+    # Vespa
+    vespa_models = [
+        {"model": "Primavera 150", "years": list(range(2014, 2026)), "category": "Scooter", "displacement": 150, "horsepower": 12, "price_base": 4500, "interest": 85},
+        {"model": "GTS 300", "years": list(range(2008, 2026)), "category": "Scooter", "displacement": 278, "horsepower": 22, "price_base": 6500, "interest": 87},
+        {"model": "Sprint 150", "years": list(range(2018, 2026)), "category": "Scooter", "displacement": 150, "horsepower": 12, "price_base": 4200, "interest": 82},
+    ]
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("Vespa", vespa_models))
+    
+    # Runner
+    runner_models = [
+        {"model": "Bullet 100", "years": list(range(2015, 2026)), "category": "Commuter", "displacement": 100, "horsepower": 8, "price_base": 1200, "interest": 70},
+        {"model": "Knight Rider 165", "years": list(range(2018, 2026)), "category": "Naked", "displacement": 165, "horsepower": 15, "price_base": 1800, "interest": 74},
+    ]
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("Runner", runner_models))
+    
+    # Benelli
+    benelli_models = [
+        {"model": "302R", "years": list(range(2017, 2026)), "category": "Sport", "displacement": 300, "horsepower": 38, "price_base": 4800, "interest": 86},
+        {"model": "TNT 300", "years": list(range(2015, 2026)), "category": "Naked", "displacement": 300, "horsepower": 38, "price_base": 4500, "interest": 84},
+        {"model": "TRK 502", "years": list(range(2018, 2026)), "category": "Adventure", "displacement": 500, "horsepower": 47, "price_base": 6200, "interest": 88},
+    ]
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("Benelli", benelli_models))
+    
+    # Mahindra
+    mahindra_models = [
+        {"model": "Mojo", "years": list(range(2015, 2020)), "category": "Touring", "displacement": 295, "horsepower": 27, "price_base": 3800, "interest": 77},
+        {"model": "Centuro", "years": list(range(2013, 2018)), "category": "Commuter", "displacement": 106, "horsepower": 8, "price_base": 1400, "interest": 69},
+    ]
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("Mahindra", mahindra_models))
+    
+    # Jawa
+    jawa_models = [
+        {"model": "Classic 300", "years": list(range(2018, 2026)), "category": "Cruiser", "displacement": 293, "horsepower": 27, "price_base": 3500, "interest": 89},
+        {"model": "Forty Two", "years": list(range(2019, 2026)), "category": "Cruiser", "displacement": 293, "horsepower": 27, "price_base": 3300, "interest": 87},
+        {"model": "Perak", "years": list(range(2020, 2026)), "category": "Bobber", "displacement": 334, "horsepower": 30, "price_base": 4200, "interest": 91},
+    ]
+    comprehensive_motorcycles.extend(generate_motorcycles_for_brand("Jawa", jawa_models))
+    
     return comprehensive_motorcycles
