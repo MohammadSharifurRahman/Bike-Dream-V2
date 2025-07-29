@@ -468,7 +468,22 @@ def get_comprehensive_motorcycle_data():
                 "availability": availability,
                 "description": f"The Ducati {model_data['model']} {year} embodies Italian passion and engineering excellence. Features Ducati's signature L-Twin power delivery and racing-inspired design.",
                 "image_url": image_url,
-                "features": ["Ducati Performance", "Italian Design", "L-Twin Power", "Racing Heritage", "Premium Components"],
+                "specialisations": ["Ducati Performance", "Italian Design", "L-Twin Power", "Racing Heritage", "Premium Components"],
+                
+                # Technical Features
+                "mileage_kmpl": 28.0 if model_data["displacement"] < 200 else 18.0 if model_data["displacement"] < 500 else 14.0 if model_data["displacement"] < 1000 else 11.0,
+                "transmission_type": "Manual" if model_data["category"] != "Scooter" else "CVT",
+                "number_of_gears": 6 if model_data["displacement"] > 400 else 5,
+                "ground_clearance_mm": 140 if model_data["category"] == "Sport" else 160 if model_data["category"] in ["Naked", "Standard"] else 180,
+                "seat_height_mm": 840 if model_data["category"] == "Sport" else 815 if model_data["category"] in ["Naked", "Standard"] else 790,
+                "abs_available": year >= 2012,
+                "braking_system": "Disc" if model_data["displacement"] > 150 else "Drum",
+                "suspension_type": "USD Fork" if model_data["category"] == "Sport" else "Telescopic",
+                "tyre_type": "Tubeless" if year >= 2008 else "Tube",
+                "wheel_size_inches": "17" if model_data["displacement"] > 300 else "16",
+                "headlight_type": "LED" if year >= 2015 else "Halogen",
+                "fuel_type": "Petrol",
+                
                 "user_interest_score": model_data["interest"]
             }
             comprehensive_motorcycles.append(motorcycle)
