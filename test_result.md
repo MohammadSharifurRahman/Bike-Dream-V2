@@ -158,15 +158,18 @@ backend:
   
   - task: "Dual-Level Sorting Implementation"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented dual-level sorting system: primary sort by year descending (new bikes to old bikes), secondary sort by price ascending (low to high). Updated default sort behavior and added 'default' option to sort_by parameter. Custom single-field sorting still available for other fields."
+      - working: true
+        agent: "testing"
+        comment: "✅ DUAL-LEVEL SORTING IMPLEMENTATION VERIFIED: Default sorting (sort_by='default') correctly implements dual-level sorting with year descending (newest bikes first) as primary sort and price ascending (lowest price first) as secondary sort. Verified that default dual-level sorting produces different results than single-field sorting. Custom single-field sorting still functional for other fields (year, price, horsepower). Database count verification confirms 1307 motorcycles maintained. All major manufacturers (Yamaha: 319, Honda: 297, Kawasaki: 309, Suzuki: 274, Ducati: 108) properly counted."
   
   - task: "Filter Options API"
     implemented: true
