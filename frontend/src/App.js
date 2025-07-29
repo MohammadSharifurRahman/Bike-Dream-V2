@@ -1086,7 +1086,7 @@ function App() {
   const [selectedMotorcycle, setSelectedMotorcycle] = useState(null);
   const [filters, setFilters] = useState({});
   const [filterOptions, setFilterOptions] = useState({});
-  const [sortBy, setSortBy] = useState('user_interest_score');
+  const [sortBy, setSortBy] = useState('default');
   const [sortOrder, setSortOrder] = useState('desc');
   const [showFilters, setShowFilters] = useState(false);
   const [databaseStats, setDatabaseStats] = useState({ totalMotorcycles: 0, totalManufacturers: 0 });
