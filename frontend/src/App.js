@@ -3005,6 +3005,8 @@ function App() {
       setCurrentView('browse');
     } else if (path === '/requests') {
       setCurrentView('requests');
+    } else if (path === '/garage') {
+      setCurrentView('garage');
     } else {
       setCurrentView('home');
     }
