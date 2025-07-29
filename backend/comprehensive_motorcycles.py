@@ -29,6 +29,195 @@ def get_comprehensive_motorcycle_data():
         "https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg"
     ]
 
+    # BAJAJ - Complete Model Range (2000-2025)
+    bajaj_models = [
+        # Pulsar Series
+        {"model": "Pulsar 220F", "years": list(range(2007, 2026)), "category": "Sport", "displacement": 220, "horsepower": 21, "price_base": 2800, "interest": 88},
+        {"model": "Pulsar 200NS", "years": list(range(2012, 2026)), "category": "Naked", "displacement": 200, "horsepower": 23, "price_base": 2600, "interest": 85},
+        {"model": "Pulsar 150", "years": list(range(2001, 2026)), "category": "Naked", "displacement": 149, "horsepower": 14, "price_base": 1800, "interest": 82},
+        {"model": "Pulsar 180", "years": list(range(2005, 2026)), "category": "Sport", "displacement": 178, "horsepower": 17, "price_base": 2200, "interest": 80},
+        {"model": "Pulsar RS200", "years": list(range(2015, 2026)), "category": "Sport", "displacement": 200, "horsepower": 24, "price_base": 3200, "interest": 86},
+        
+        # Dominar Series
+        {"model": "Dominar 400", "years": list(range(2017, 2026)), "category": "Adventure", "displacement": 373, "horsepower": 40, "price_base": 4500, "interest": 84},
+        {"model": "Dominar 250", "years": list(range(2020, 2026)), "category": "Adventure", "displacement": 248, "horsepower": 27, "price_base": 3800, "interest": 79},
+        
+        # Avenger Series
+        {"model": "Avenger 220", "years": list(range(2008, 2026)), "category": "Cruiser", "displacement": 220, "horsepower": 19, "price_base": 2500, "interest": 75},
+        {"model": "Avenger 160", "years": list(range(2015, 2026)), "category": "Cruiser", "displacement": 160, "horsepower": 15, "price_base": 2200, "interest": 72},
+        
+        # Platina Series
+        {"model": "Platina 110", "years": list(range(2006, 2026)), "category": "Commuter", "displacement": 115, "horsepower": 8, "price_base": 1200, "interest": 65},
+        {"model": "Platina 100", "years": list(range(2003, 2026)), "category": "Commuter", "displacement": 102, "horsepower": 8, "price_base": 1100, "interest": 68},
+        
+        # CT Series
+        {"model": "CT 100", "years": list(range(2000, 2026)), "category": "Commuter", "displacement": 102, "horsepower": 7, "price_base": 1000, "interest": 70},
+        {"model": "CT 110", "years": list(range(2008, 2026)), "category": "Commuter", "displacement": 115, "horsepower": 8, "price_base": 1150, "interest": 69},
+        
+        # Chetak Electric
+        {"model": "Chetak Electric", "years": list(range(2020, 2026)), "category": "Electric", "displacement": 0, "horsepower": 6, "price_base": 3500, "interest": 76},
+    ]
+
+    # HERO - Complete Model Range (2000-2025)
+    hero_models = [
+        # Splendor Series
+        {"model": "Splendor Plus", "years": list(range(2000, 2026)), "category": "Commuter", "displacement": 97, "horsepower": 8, "price_base": 1100, "interest": 85},
+        {"model": "Splendor iSmart", "years": list(range(2013, 2026)), "category": "Commuter", "displacement": 113, "horsepower": 9, "price_base": 1300, "interest": 78},
+        {"model": "Super Splendor", "years": list(range(2003, 2026)), "category": "Commuter", "displacement": 124, "horsepower": 11, "price_base": 1500, "interest": 80},
+        
+        # Passion Series
+        {"model": "Passion Pro", "years": list(range(2006, 2026)), "category": "Commuter", "displacement": 113, "horsepower": 9, "price_base": 1200, "interest": 82},
+        {"model": "Passion XPro", "years": list(range(2012, 2026)), "category": "Commuter", "displacement": 113, "horsepower": 9, "price_base": 1400, "interest": 79},
+        
+        # Glamour Series
+        {"model": "Glamour", "years": list(range(2005, 2026)), "category": "Commuter", "displacement": 124, "horsepower": 11, "price_base": 1400, "interest": 77},
+        {"model": "Glamour i3S", "years": list(range(2017, 2026)), "category": "Commuter", "displacement": 124, "horsepower": 11, "price_base": 1600, "interest": 75},
+        
+        # HF Series
+        {"model": "HF Deluxe", "years": list(range(2006, 2026)), "category": "Commuter", "displacement": 97, "horsepower": 8, "price_base": 1000, "interest": 88},
+        {"model": "HF 100", "years": list(range(2007, 2026)), "category": "Commuter", "displacement": 97, "horsepower": 8, "price_base": 950, "interest": 86},
+        
+        # Xtreme Series
+        {"model": "Xtreme 200R", "years": list(range(2014, 2026)), "category": "Sport", "displacement": 199, "horsepower": 18, "price_base": 2200, "interest": 81},
+        {"model": "Xtreme 160R", "years": list(range(2020, 2026)), "category": "Sport", "displacement": 163, "horsepower": 15, "price_base": 1800, "interest": 83},
+        
+        # Maestro Series
+        {"model": "Maestro Edge 125", "years": list(range(2014, 2026)), "category": "Scooter", "displacement": 124, "horsepower": 9, "price_base": 1500, "interest": 74},
+        {"model": "Maestro Edge 110", "years": list(range(2016, 2026)), "category": "Scooter", "displacement": 110, "horsepower": 8, "price_base": 1300, "interest": 76},
+        
+        # Destini Series
+        {"model": "Destini 125", "years": list(range(2018, 2026)), "category": "Scooter", "displacement": 124, "horsepower": 9, "price_base": 1400, "interest": 73},
+        
+        # Pleasure Series
+        {"model": "Pleasure Plus", "years": list(range(2013, 2026)), "category": "Scooter", "displacement": 110, "horsepower": 8, "price_base": 1200, "interest": 71},
+        
+        # Xpulse Series
+        {"model": "Xpulse 200", "years": list(range(2019, 2026)), "category": "Adventure", "displacement": 199, "horsepower": 18, "price_base": 2500, "interest": 87},
+        {"model": "Xpulse 200T", "years": list(range(2019, 2026)), "category": "Adventure", "displacement": 199, "horsepower": 18, "price_base": 2400, "interest": 84},
+    ]
+
+    # TVS - Complete Model Range (2000-2025)
+    tvs_models = [
+        # Apache Series
+        {"model": "Apache RTR 160", "years": list(range(2006, 2026)), "category": "Sport", "displacement": 159, "horsepower": 17, "price_base": 1900, "interest": 85},
+        {"model": "Apache RTR 200 4V", "years": list(range(2016, 2026)), "category": "Sport", "displacement": 197, "horsepower": 20, "price_base": 2500, "interest": 87},
+        {"model": "Apache RR 310", "years": list(range(2017, 2026)), "category": "Sport", "displacement": 312, "horsepower": 34, "price_base": 4200, "interest": 89},
+        {"model": "Apache RTR 180", "years": list(range(2013, 2026)), "category": "Sport", "displacement": 177, "horsepower": 17, "price_base": 2100, "interest": 82},
+        {"model": "Apache RTR 310", "years": list(range(2022, 2026)), "category": "Naked", "displacement": 312, "horsepower": 34, "price_base": 3800, "interest": 86},
+        
+        # Star City Series
+        {"model": "Star City Plus", "years": list(range(2007, 2026)), "category": "Commuter", "displacement": 109, "horsepower": 8, "price_base": 1200, "interest": 78},
+        
+        # Radeon Series
+        {"model": "Radeon", "years": list(range(2018, 2026)), "category": "Commuter", "displacement": 109, "horsepower": 8, "price_base": 1100, "interest": 75},
+        
+        # Sport Series
+        {"model": "Sport 110", "years": list(range(2013, 2026)), "category": "Commuter", "displacement": 109, "horsepower": 8, "price_base": 1000, "interest": 73},
+        
+        # Jupiter Series
+        {"model": "Jupiter 125", "years": list(range(2013, 2026)), "category": "Scooter", "displacement": 124, "horsepower": 8, "price_base": 1400, "interest": 79},
+        {"model": "Jupiter Classic", "years": list(range(2014, 2026)), "category": "Scooter", "displacement": 109, "horsepower": 8, "price_base": 1300, "interest": 76},
+        
+        # Ntorq Series
+        {"model": "Ntorq 125", "years": list(range(2018, 2026)), "category": "Scooter", "displacement": 124, "horsepower": 9, "price_base": 1600, "interest": 81},
+        
+        # iQube Electric
+        {"model": "iQube Electric", "years": list(range(2020, 2026)), "category": "Electric", "displacement": 0, "horsepower": 6, "price_base": 2800, "interest": 77},
+        
+        # Ronin Series
+        {"model": "Ronin", "years": list(range(2022, 2026)), "category": "Cruiser", "displacement": 225, "horsepower": 20, "price_base": 2700, "interest": 83},
+    ]
+
+    # ROYAL ENFIELD - Complete Model Range (2000-2025)
+    royal_enfield_models = [
+        # Classic Series
+        {"model": "Classic 350", "years": list(range(2009, 2026)), "category": "Cruiser", "displacement": 346, "horsepower": 20, "price_base": 3500, "interest": 92},
+        {"model": "Classic 500", "years": list(range(2009, 2021)), "category": "Cruiser", "displacement": 499, "horsepower": 27, "price_base": 4200, "interest": 89},
+        {"model": "Classic 650", "years": list(range(2023, 2026)), "category": "Cruiser", "displacement": 648, "horsepower": 47, "price_base": 5500, "interest": 94},
+        
+        # Bullet Series
+        {"model": "Bullet 350", "years": list(range(2000, 2026)), "category": "Cruiser", "displacement": 346, "horsepower": 19, "price_base": 3200, "interest": 88},
+        {"model": "Bullet 500", "years": list(range(2000, 2021)), "category": "Cruiser", "displacement": 499, "horsepower": 27, "price_base": 3800, "interest": 85},
+        
+        # Hunter Series
+        {"model": "Hunter 350", "years": list(range(2022, 2026)), "category": "Roadster", "displacement": 346, "horsepower": 20, "price_base": 3300, "interest": 90},
+        
+        # Interceptor Series
+        {"model": "Interceptor 650", "years": list(range(2018, 2026)), "category": "Roadster", "displacement": 648, "horsepower": 47, "price_base": 5800, "interest": 95},
+        
+        # Continental GT Series
+        {"model": "Continental GT 650", "years": list(range(2018, 2026)), "category": "Sport", "displacement": 648, "horsepower": 47, "price_base": 6200, "interest": 93},
+        
+        # Himalayan Series
+        {"model": "Himalayan", "years": list(range(2016, 2026)), "category": "Adventure", "displacement": 411, "horsepower": 24, "price_base": 4500, "interest": 91},
+        {"model": "Himalayan 450", "years": list(range(2023, 2026)), "category": "Adventure", "displacement": 452, "horsepower": 40, "price_base": 5200, "interest": 96},
+        
+        # Meteor Series
+        {"model": "Meteor 350", "years": list(range(2020, 2026)), "category": "Cruiser", "displacement": 346, "horsepower": 20, "price_base": 3700, "interest": 87},
+        
+        # Thunderbird Series (Discontinued)
+        {"model": "Thunderbird 350", "years": list(range(2012, 2020)), "category": "Cruiser", "displacement": 346, "horsepower": 19, "price_base": 3400, "interest": 84},
+        {"model": "Thunderbird 500", "years": list(range(2012, 2020)), "category": "Cruiser", "displacement": 499, "horsepower": 27, "price_base": 4000, "interest": 86},
+        
+        # Scram Series
+        {"model": "Scram 411", "years": list(range(2022, 2026)), "category": "Adventure", "displacement": 411, "horsepower": 24, "price_base": 4200, "interest": 88},
+    ]
+
+    # KTM - Complete Model Range (2000-2025)
+    ktm_models = [
+        # Duke Series
+        {"model": "Duke 200", "years": list(range(2012, 2026)), "category": "Naked", "displacement": 199, "horsepower": 25, "price_base": 3200, "interest": 88},
+        {"model": "Duke 250", "years": list(range(2017, 2026)), "category": "Naked", "displacement": 248, "horsepower": 30, "price_base": 3800, "interest": 87},
+        {"model": "Duke 390", "years": list(range(2013, 2026)), "category": "Naked", "displacement": 373, "horsepower": 43, "price_base": 4800, "interest": 92},
+        {"model": "Duke 125", "years": list(range(2018, 2026)), "category": "Naked", "displacement": 124, "horsepower": 15, "price_base": 2800, "interest": 85},
+        {"model": "Duke 890", "years": list(range(2020, 2026)), "category": "Naked", "displacement": 889, "horsepower": 115, "price_base": 13000, "interest": 89},
+        {"model": "Duke 790", "years": list(range(2018, 2023)), "category": "Naked", "displacement": 799, "horsepower": 105, "price_base": 12000, "interest": 86},
+        
+        # RC Series
+        {"model": "RC 200", "years": list(range(2014, 2026)), "category": "Sport", "displacement": 199, "horsepower": 25, "price_base": 3500, "interest": 89},
+        {"model": "RC 390", "years": list(range(2014, 2026)), "category": "Sport", "displacement": 373, "horsepower": 43, "price_base": 5200, "interest": 93},
+        {"model": "RC 125", "years": list(range(2019, 2026)), "category": "Sport", "displacement": 124, "horsepower": 15, "price_base": 3100, "interest": 86},
+        
+        # Adventure Series
+        {"model": "Adventure 390", "years": list(range(2020, 2026)), "category": "Adventure", "displacement": 373, "horsepower": 43, "price_base": 5800, "interest": 91},
+        {"model": "Adventure 250", "years": list(range(2021, 2026)), "category": "Adventure", "displacement": 248, "horsepower": 30, "price_base": 4500, "interest": 88},
+        
+        # Supermoto Series
+        {"model": "SMC R 690", "years": list(range(2019, 2026)), "category": "Supermoto", "displacement": 693, "horsepower": 74, "price_base": 11000, "interest": 87},
+        
+        # High-End Models
+        {"model": "1290 Super Duke R", "years": list(range(2014, 2026)), "category": "Naked", "displacement": 1301, "horsepower": 177, "price_base": 18000, "interest": 94},
+        {"model": "1290 Super Adventure", "years": list(range(2015, 2026)), "category": "Adventure", "displacement": 1301, "horsepower": 160, "price_base": 19500, "interest": 90},
+    ]
+
+    # HARLEY-DAVIDSON - Complete Model Range (2000-2025)
+    harley_models = [
+        # Sportster Series
+        {"model": "Sportster Iron 883", "years": list(range(2009, 2023)), "category": "Cruiser", "displacement": 883, "horsepower": 50, "price_base": 9000, "interest": 88},
+        {"model": "Sportster 1200", "years": list(range(2000, 2023)), "category": "Cruiser", "displacement": 1202, "horsepower": 67, "price_base": 11000, "interest": 89},
+        {"model": "Sportster S", "years": list(range(2021, 2026)), "category": "Cruiser", "displacement": 1252, "horsepower": 121, "price_base": 14999, "interest": 92},
+        
+        # Street Series
+        {"model": "Street 750", "years": list(range(2014, 2023)), "category": "Cruiser", "displacement": 749, "horsepower": 47, "price_base": 7500, "interest": 85},
+        {"model": "Street Rod 750", "years": list(range(2017, 2020)), "category": "Cruiser", "displacement": 749, "horsepower": 55, "price_base": 8700, "interest": 83},
+        
+        # Softail Series
+        {"model": "Softail Standard", "years": list(range(2020, 2026)), "category": "Cruiser", "displacement": 1746, "horsepower": 86, "price_base": 15000, "interest": 91},
+        {"model": "Fat Bob", "years": list(range(2018, 2026)), "category": "Cruiser", "displacement": 1746, "horsepower": 86, "price_base": 17000, "interest": 89},
+        {"model": "Low Rider", "years": list(range(2018, 2026)), "category": "Cruiser", "displacement": 1746, "horsepower": 86, "price_base": 16500, "interest": 87},
+        
+        # Touring Series
+        {"model": "Road King", "years": list(range(2000, 2026)), "category": "Touring", "displacement": 1746, "horsepower": 86, "price_base": 20000, "interest": 90},
+        {"model": "Street Glide", "years": list(range(2006, 2026)), "category": "Touring", "displacement": 1746, "horsepower": 86, "price_base": 22000, "interest": 92},
+        {"model": "Electra Glide", "years": list(range(2000, 2026)), "category": "Touring", "displacement": 1746, "horsepower": 86, "price_base": 24000, "interest": 89},
+        
+        # Pan America Series
+        {"model": "Pan America 1250", "years": list(range(2021, 2026)), "category": "Adventure", "displacement": 1252, "horsepower": 150, "price_base": 17319, "interest": 94},
+        
+        # LiveWire Series
+        {"model": "LiveWire", "years": list(range(2019, 2026)), "category": "Electric", "displacement": 0, "horsepower": 105, "price_base": 29799, "interest": 86},
+    ]
+
     comprehensive_motorcycles = []
     
     # YAMAHA - Complete Model Range (2000-2025)
