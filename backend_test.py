@@ -2503,6 +2503,607 @@ class MotorcycleAPITester:
             self.log_test("Database Expansion - 2530+ Motorcycles", False, f"Error: {str(e)}")
             return False
 
+    # ==================== VIRTUAL GARAGE API TESTS ====================
+    
+    def test_add_to_garage(self):
+        """Test POST /api/garage - Add motorcycles to user's garage"""
+        if not self.test_user_session or not self.motorcycle_ids:
+            self.log_test("Add to Garage", False, "No user session or motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            headers = {"X-Session-Id": self.test_user_session}
+            garage_data = {
+                "motorcycle_id": motorcycle_id,
+                "status": "owned",
+                "purchase_date": "2023-01-15T00:00:00Z",
+                "purchase_price": 15000.0,
+                "current_mileage": 5000,
+                "modifications": ["Exhaust upgrade", "Custom seat"],
+                "notes": "Amazing bike, love the performance!",
+                "is_public": True
+            }
+            
+            response = requests.post(f"{self.base_url}/garage", 
+                                   headers=headers, json=garage_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "Added to garage successfully" in data.get("message", "") and "id" in data:
+                    self.garage_item_id = data["id"]  # Store for update/delete tests
+                    self.log_test("Add to Garage", True, 
+                                f"Added motorcycle to garage with ID: {data['id'][:8]}...")
+                    return True
+                else:
+                    self.log_test("Add to Garage", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 400:
+                # Check if it's already in garage
+                data = response.json()
+                if "already in garage" in data.get("detail", ""):
+                    self.log_test("Add to Garage", True, "Motorcycle already in garage (expected behavior)")
+                    return True
+                else:
+                    self.log_test("Add to Garage", False, f"Bad request: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Add to Garage", False, "Authentication required (401)")
+                return False
+            elif response.status_code == 404:
+                self.log_test("Add to Garage", False, "Motorcycle not found (404)")
+                return False
+            else:
+                self.log_test("Add to Garage", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Add to Garage", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_user_garage(self):
+        """Test GET /api/garage - Retrieve user's garage items"""
+        if not self.test_user_session:
+            self.log_test("Get User Garage", False, "No user session available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.get(f"{self.base_url}/garage", headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if ("garage_items" in data and "pagination" in data and 
+                    isinstance(data["garage_items"], list)):
+                    
+                    garage_count = len(data["garage_items"])
+                    pagination = data["pagination"]
+                    
+                    # Verify pagination structure
+                    required_pagination_keys = ["page", "limit", "total_count", "total_pages", "has_next", "has_previous"]
+                    missing_keys = [key for key in required_pagination_keys if key not in pagination]
+                    
+                    if missing_keys:
+                        self.log_test("Get User Garage", False, f"Missing pagination keys: {missing_keys}")
+                        return False
+                    
+                    self.log_test("Get User Garage", True, 
+                                f"Retrieved {garage_count} garage items with proper pagination")
+                    return True
+                else:
+                    self.log_test("Get User Garage", False, "Invalid response format")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Get User Garage", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Get User Garage", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get User Garage", False, f"Error: {str(e)}")
+            return False
+
+    def test_garage_status_filtering(self):
+        """Test GET /api/garage with status filtering"""
+        if not self.test_user_session:
+            self.log_test("Garage Status Filtering", False, "No user session available")
+            return False
+        
+        statuses = ["owned", "wishlist", "previously_owned", "test_ridden"]
+        all_passed = True
+        
+        for status in statuses:
+            try:
+                headers = {"X-Session-Id": self.test_user_session}
+                params = {"status": status}
+                response = requests.get(f"{self.base_url}/garage", 
+                                      headers=headers, params=params, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if "garage_items" in data:
+                        # Verify all items have the correct status
+                        valid_status = all(
+                            item.get("status") == status 
+                            for item in data["garage_items"]
+                        )
+                        
+                        if valid_status:
+                            self.log_test(f"Garage Filter - {status}", True, 
+                                        f"Found {len(data['garage_items'])} items with status '{status}'")
+                        else:
+                            self.log_test(f"Garage Filter - {status}", False, 
+                                        "Some items don't match status filter")
+                            all_passed = False
+                    else:
+                        self.log_test(f"Garage Filter - {status}", False, "Invalid response format")
+                        all_passed = False
+                else:
+                    self.log_test(f"Garage Filter - {status}", False, f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Garage Filter - {status}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_update_garage_item(self):
+        """Test PUT /api/garage/{item_id} - Update garage item details"""
+        if not self.test_user_session or not hasattr(self, 'garage_item_id'):
+            self.log_test("Update Garage Item", False, "No user session or garage item ID available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            update_data = {
+                "current_mileage": 7500,
+                "notes": "Updated notes: Still loving this bike after more miles!",
+                "modifications": ["Exhaust upgrade", "Custom seat", "LED headlights"]
+            }
+            
+            response = requests.put(f"{self.base_url}/garage/{self.garage_item_id}", 
+                                  headers=headers, json=update_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "updated successfully" in data.get("message", ""):
+                    self.log_test("Update Garage Item", True, "Garage item updated successfully")
+                    return True
+                else:
+                    self.log_test("Update Garage Item", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Update Garage Item", False, "Authentication required (401)")
+                return False
+            elif response.status_code == 404:
+                self.log_test("Update Garage Item", False, "Garage item not found (404)")
+                return False
+            else:
+                self.log_test("Update Garage Item", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Update Garage Item", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_garage_stats(self):
+        """Test GET /api/garage/stats - Get user's garage statistics"""
+        if not self.test_user_session:
+            self.log_test("Get Garage Stats", False, "No user session available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.get(f"{self.base_url}/garage/stats", headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                required_keys = ["total_items", "by_status", "estimated_value"]
+                missing_keys = [key for key in required_keys if key not in data]
+                
+                if missing_keys:
+                    self.log_test("Get Garage Stats", False, f"Missing keys: {missing_keys}")
+                    return False
+                
+                # Verify by_status structure
+                status_keys = ["owned", "wishlist", "previously_owned", "test_ridden"]
+                by_status = data["by_status"]
+                missing_status_keys = [key for key in status_keys if key not in by_status]
+                
+                if missing_status_keys:
+                    self.log_test("Get Garage Stats", False, f"Missing status keys: {missing_status_keys}")
+                    return False
+                
+                total_items = data["total_items"]
+                estimated_value = data["estimated_value"]
+                self.log_test("Get Garage Stats", True, 
+                            f"Stats: {total_items} items, ${estimated_value:.2f} estimated value")
+                return True
+            elif response.status_code == 401:
+                self.log_test("Get Garage Stats", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Get Garage Stats", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get Garage Stats", False, f"Error: {str(e)}")
+            return False
+
+    def test_remove_from_garage(self):
+        """Test DELETE /api/garage/{item_id} - Remove motorcycles from garage"""
+        if not self.test_user_session or not hasattr(self, 'garage_item_id'):
+            self.log_test("Remove from Garage", False, "No user session or garage item ID available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.delete(f"{self.base_url}/garage/{self.garage_item_id}", 
+                                     headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "Removed from garage successfully" in data.get("message", ""):
+                    self.log_test("Remove from Garage", True, "Garage item removed successfully")
+                    return True
+                else:
+                    self.log_test("Remove from Garage", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Remove from Garage", False, "Authentication required (401)")
+                return False
+            elif response.status_code == 404:
+                self.log_test("Remove from Garage", False, "Garage item not found (404)")
+                return False
+            else:
+                self.log_test("Remove from Garage", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Remove from Garage", False, f"Error: {str(e)}")
+            return False
+
+    # ==================== PRICE ALERTS API TESTS ====================
+    
+    def test_create_price_alert(self):
+        """Test POST /api/price-alerts - Create price alerts for motorcycles"""
+        if not self.test_user_session or not self.motorcycle_ids:
+            self.log_test("Create Price Alert", False, "No user session or motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[1] if len(self.motorcycle_ids) > 1 else self.motorcycle_ids[0]
+            headers = {"X-Session-Id": self.test_user_session}
+            alert_data = {
+                "motorcycle_id": motorcycle_id,
+                "target_price": 12000.0,
+                "condition": "below",
+                "region": "US"
+            }
+            
+            response = requests.post(f"{self.base_url}/price-alerts", 
+                                   headers=headers, json=alert_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "Price alert created successfully" in data.get("message", "") and "id" in data:
+                    self.price_alert_id = data["id"]  # Store for delete test
+                    self.log_test("Create Price Alert", True, 
+                                f"Price alert created with ID: {data['id'][:8]}...")
+                    return True
+                else:
+                    self.log_test("Create Price Alert", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 400:
+                # Check if alert already exists
+                data = response.json()
+                if "already exists" in data.get("detail", ""):
+                    self.log_test("Create Price Alert", True, "Price alert already exists (expected behavior)")
+                    return True
+                else:
+                    self.log_test("Create Price Alert", False, f"Bad request: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Create Price Alert", False, "Authentication required (401)")
+                return False
+            elif response.status_code == 404:
+                self.log_test("Create Price Alert", False, "Motorcycle not found (404)")
+                return False
+            else:
+                self.log_test("Create Price Alert", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Create Price Alert", False, f"Error: {str(e)}")
+            return False
+
+    def test_price_alert_conditions(self):
+        """Test price alert creation with different conditions"""
+        if not self.test_user_session or not self.motorcycle_ids:
+            self.log_test("Price Alert Conditions", False, "No user session or motorcycle IDs available")
+            return False
+        
+        conditions = ["below", "above", "equal"]
+        all_passed = True
+        
+        for i, condition in enumerate(conditions):
+            if i >= len(self.motorcycle_ids):
+                break  # Skip if we don't have enough motorcycle IDs
+                
+            try:
+                motorcycle_id = self.motorcycle_ids[i]
+                headers = {"X-Session-Id": self.test_user_session}
+                alert_data = {
+                    "motorcycle_id": motorcycle_id,
+                    "target_price": 10000.0 + (i * 1000),  # Different prices
+                    "condition": condition,
+                    "region": "US"
+                }
+                
+                response = requests.post(f"{self.base_url}/price-alerts", 
+                                       headers=headers, json=alert_data, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if "Price alert created successfully" in data.get("message", ""):
+                        self.log_test(f"Price Alert - {condition} condition", True, 
+                                    f"Alert created for condition '{condition}'")
+                    else:
+                        self.log_test(f"Price Alert - {condition} condition", False, 
+                                    f"Unexpected response: {data}")
+                        all_passed = False
+                elif response.status_code == 400:
+                    # Alert might already exist
+                    self.log_test(f"Price Alert - {condition} condition", True, 
+                                "Alert already exists (acceptable)")
+                else:
+                    self.log_test(f"Price Alert - {condition} condition", False, 
+                                f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Price Alert - {condition} condition", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_get_user_price_alerts(self):
+        """Test GET /api/price-alerts - Retrieve user's active price alerts"""
+        if not self.test_user_session:
+            self.log_test("Get User Price Alerts", False, "No user session available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.get(f"{self.base_url}/price-alerts", headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "price_alerts" in data and isinstance(data["price_alerts"], list):
+                    alerts_count = len(data["price_alerts"])
+                    
+                    # Verify alert structure if we have alerts
+                    if alerts_count > 0:
+                        first_alert = data["price_alerts"][0]
+                        required_keys = ["id", "motorcycle_id", "target_price", "condition", "is_active"]
+                        missing_keys = [key for key in required_keys if key not in first_alert]
+                        
+                        if missing_keys:
+                            self.log_test("Get User Price Alerts", False, f"Missing keys: {missing_keys}")
+                            return False
+                        
+                        # Check if motorcycle details are included
+                        if "motorcycle" in first_alert:
+                            self.log_test("Get User Price Alerts", True, 
+                                        f"Retrieved {alerts_count} price alerts with motorcycle details")
+                        else:
+                            self.log_test("Get User Price Alerts", True, 
+                                        f"Retrieved {alerts_count} price alerts")
+                    else:
+                        self.log_test("Get User Price Alerts", True, "No price alerts found (empty list)")
+                    
+                    return True
+                else:
+                    self.log_test("Get User Price Alerts", False, "Invalid response format")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Get User Price Alerts", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Get User Price Alerts", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get User Price Alerts", False, f"Error: {str(e)}")
+            return False
+
+    def test_delete_price_alert(self):
+        """Test DELETE /api/price-alerts/{alert_id} - Delete/deactivate price alerts"""
+        if not self.test_user_session or not hasattr(self, 'price_alert_id'):
+            self.log_test("Delete Price Alert", False, "No user session or price alert ID available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.delete(f"{self.base_url}/price-alerts/{self.price_alert_id}", 
+                                     headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "deleted successfully" in data.get("message", ""):
+                    self.log_test("Delete Price Alert", True, "Price alert deleted successfully")
+                    return True
+                else:
+                    self.log_test("Delete Price Alert", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Delete Price Alert", False, "Authentication required (401)")
+                return False
+            elif response.status_code == 404:
+                self.log_test("Delete Price Alert", False, "Price alert not found (404)")
+                return False
+            else:
+                self.log_test("Delete Price Alert", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Delete Price Alert", False, f"Error: {str(e)}")
+            return False
+
+    # ==================== AUTHENTICATION & AUTHORIZATION TESTS ====================
+    
+    def test_garage_authentication_required(self):
+        """Test that garage endpoints require proper authentication"""
+        try:
+            # Test without authentication
+            response = requests.get(f"{self.base_url}/garage", timeout=10)
+            if response.status_code == 401:
+                self.log_test("Garage Auth Required", True, "Garage endpoint properly requires authentication")
+                return True
+            else:
+                self.log_test("Garage Auth Required", False, f"Expected 401, got {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Garage Auth Required", False, f"Error: {str(e)}")
+            return False
+
+    def test_price_alerts_authentication_required(self):
+        """Test that price alert endpoints require proper authentication"""
+        try:
+            # Test without authentication
+            response = requests.get(f"{self.base_url}/price-alerts", timeout=10)
+            if response.status_code == 401:
+                self.log_test("Price Alerts Auth Required", True, "Price alerts endpoint properly requires authentication")
+                return True
+            else:
+                self.log_test("Price Alerts Auth Required", False, f"Expected 401, got {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Price Alerts Auth Required", False, f"Error: {str(e)}")
+            return False
+
+    # ==================== DATA VALIDATION TESTS ====================
+    
+    def test_garage_data_validation(self):
+        """Test garage item creation with valid/invalid data"""
+        if not self.test_user_session or not self.motorcycle_ids:
+            self.log_test("Garage Data Validation", False, "No user session or motorcycle IDs available")
+            return False
+        
+        validation_tests = [
+            # Valid data
+            ({
+                "motorcycle_id": self.motorcycle_ids[0],
+                "status": "owned",
+                "purchase_price": 15000.0,
+                "current_mileage": 5000
+            }, True, "Valid garage data"),
+            
+            # Invalid status
+            ({
+                "motorcycle_id": self.motorcycle_ids[0],
+                "status": "invalid_status",
+                "purchase_price": 15000.0
+            }, False, "Invalid status validation"),
+            
+            # Negative purchase price
+            ({
+                "motorcycle_id": self.motorcycle_ids[0],
+                "status": "owned",
+                "purchase_price": -1000.0
+            }, False, "Negative price validation"),
+            
+            # Invalid motorcycle ID
+            ({
+                "motorcycle_id": "invalid_motorcycle_id",
+                "status": "owned"
+            }, False, "Invalid motorcycle ID validation")
+        ]
+        
+        all_passed = True
+        headers = {"X-Session-Id": self.test_user_session}
+        
+        for test_data, should_succeed, description in validation_tests:
+            try:
+                response = requests.post(f"{self.base_url}/garage", 
+                                       headers=headers, json=test_data, timeout=10)
+                
+                if should_succeed:
+                    if response.status_code in [200, 400]:  # 400 if already exists
+                        self.log_test(f"Validation - {description}", True, "Validation passed")
+                    else:
+                        self.log_test(f"Validation - {description}", False, 
+                                    f"Expected success, got {response.status_code}")
+                        all_passed = False
+                else:
+                    if response.status_code in [400, 404, 422]:  # Validation errors
+                        self.log_test(f"Validation - {description}", True, "Validation properly rejected")
+                    else:
+                        self.log_test(f"Validation - {description}", False, 
+                                    f"Expected validation error, got {response.status_code}")
+                        all_passed = False
+            except Exception as e:
+                self.log_test(f"Validation - {description}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_price_alert_data_validation(self):
+        """Test price alert creation with valid/invalid data"""
+        if not self.test_user_session or not self.motorcycle_ids:
+            self.log_test("Price Alert Data Validation", False, "No user session or motorcycle IDs available")
+            return False
+        
+        validation_tests = [
+            # Valid data
+            ({
+                "motorcycle_id": self.motorcycle_ids[0],
+                "target_price": 12000.0,
+                "condition": "below"
+            }, True, "Valid price alert data"),
+            
+            # Invalid condition
+            ({
+                "motorcycle_id": self.motorcycle_ids[0],
+                "target_price": 12000.0,
+                "condition": "invalid_condition"
+            }, False, "Invalid condition validation"),
+            
+            # Zero/negative price
+            ({
+                "motorcycle_id": self.motorcycle_ids[0],
+                "target_price": 0.0,
+                "condition": "below"
+            }, False, "Zero price validation"),
+            
+            # Invalid motorcycle ID
+            ({
+                "motorcycle_id": "invalid_motorcycle_id",
+                "target_price": 12000.0,
+                "condition": "below"
+            }, False, "Invalid motorcycle ID validation")
+        ]
+        
+        all_passed = True
+        headers = {"X-Session-Id": self.test_user_session}
+        
+        for test_data, should_succeed, description in validation_tests:
+            try:
+                response = requests.post(f"{self.base_url}/price-alerts", 
+                                       headers=headers, json=test_data, timeout=10)
+                
+                if should_succeed:
+                    if response.status_code in [200, 400]:  # 400 if already exists
+                        self.log_test(f"Price Alert Validation - {description}", True, "Validation passed")
+                    else:
+                        self.log_test(f"Price Alert Validation - {description}", False, 
+                                    f"Expected success, got {response.status_code}")
+                        all_passed = False
+                else:
+                    if response.status_code in [400, 404, 422]:  # Validation errors
+                        self.log_test(f"Price Alert Validation - {description}", True, "Validation properly rejected")
+                    else:
+                        self.log_test(f"Price Alert Validation - {description}", False, 
+                                    f"Expected validation error, got {response.status_code}")
+                        all_passed = False
+            except Exception as e:
+                self.log_test(f"Price Alert Validation - {description}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
     # NEW TESTS FOR REVIEW REQUEST REQUIREMENTS
     def test_google_oauth_callback_endpoint(self):
         """Test POST /api/auth/google/callback - Google OAuth callback endpoint"""
