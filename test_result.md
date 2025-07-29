@@ -141,6 +141,30 @@ backend:
         agent: "testing"
         comment: "✅ EXPANDED FILTERING VERIFIED: Advanced filtering working perfectly with 1307 motorcycles. Major manufacturers (Yamaha: 319, Honda: 297, Kawasaki: 309, Suzuki: 274, Ducati: 108) all properly filtered. Categories (Sport: 464, Naked: 239, Cruiser: 164, Adventure: 168, Vintage: 9) working correctly. Year ranges (2000-2025: 500, 1990-2010: 320, 2020-2025: 454) filtering accurately. Search functionality working for specific models (R1, Ninja, CBR, GSX, Panigale)."
   
+  - task: "Technical Features Database Enhancement"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/comprehensive_motorcycles.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Updated Suzuki and Ducati motorcycles to include detailed technical features: mileage_kmpl, transmission_type, number_of_gears, ground_clearance_mm, seat_height_mm, abs_available, braking_system, suspension_type, tyre_type, wheel_size_inches, headlight_type, fuel_type. Renamed 'features' to 'specialisations' for consistency. All manufacturers (Yamaha, Honda, Kawasaki, Suzuki, Ducati) now have complete technical specifications."
+  
+  - task: "Dual-Level Sorting Implementation"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented dual-level sorting system: primary sort by year descending (new bikes to old bikes), secondary sort by price ascending (low to high). Updated default sort behavior and added 'default' option to sort_by parameter. Custom single-field sorting still available for other fields."
+  
   - task: "Filter Options API"
     implemented: true
     working: true
