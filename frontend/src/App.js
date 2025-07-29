@@ -1268,6 +1268,7 @@ function App() {
                       }}
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
+                      <option value="default-desc">Default (New → Old, Low → High Price)</option>
                       <option value="user_interest_score-desc">Most Popular</option>
                       <option value="year-desc">Newest First</option>
                       <option value="year-asc">Oldest First</option>
