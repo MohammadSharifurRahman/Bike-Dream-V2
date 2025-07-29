@@ -1134,26 +1134,74 @@ const ProfilePage = () => {
 const MotorcycleCard = ({ motorcycle, onClick, showFavoriteButton = true }) => {
   const { user } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isCheckingFavorite, setIsCheckingFavorite] = useState(false);
+
+  // Check if motorcycle is in user's favorites when component mounts or user changes
+  useEffect(() => {
+    if (user && motorcycle.id) {
+      checkIfFavorite();
+    } else {
+      setIsFavorite(false); // Reset if no user
+    }
+  }, [user, motorcycle.id]);
+
+  const checkIfFavorite = async () => {
+    if (!user) return;
+    
+    try {
+      setIsCheckingFavorite(true);
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+
+      const response = await axios.get(`${API}/motorcycles/favorites`, { headers });
+      const favorites = response.data;
+      const isInFavorites = favorites.some(fav => fav.id === motorcycle.id);
+      setIsFavorite(isInFavorites);
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+      setIsFavorite(false);
+    } finally {
+      setIsCheckingFavorite(false);
+    }
+  };
 
   const handleFavoriteToggle = async (e) => {
     e.stopPropagation();
-    if (!user) return;
+    
+    if (!user) {
+      // Prompt user to login
+      alert('Please login to add motorcycles to your favorites');
+      return;
+    }
 
     try {
+      const token = localStorage.getItem('auth_token');
       const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+
       if (isFavorite) {
-        await axios.delete(`${API}/motorcycles/${motorcycle.id}/favorite`, {
-          headers: { 'X-Session-ID': sessionId }
-        });
+        await axios.delete(`${API}/motorcycles/${motorcycle.id}/favorite`, { headers });
         setIsFavorite(false);
       } else {
-        await axios.post(`${API}/motorcycles/${motorcycle.id}/favorite`, {}, {
-          headers: { 'X-Session-ID': sessionId }
-        });
+        await axios.post(`${API}/motorcycles/${motorcycle.id}/favorite`, {}, { headers });
         setIsFavorite(true);
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
+      alert('Error updating favorites. Please try again.');
     }
   };
 
@@ -1189,11 +1237,25 @@ const MotorcycleCard = ({ motorcycle, onClick, showFavoriteButton = true }) => {
         {showFavoriteButton && user && (
           <button
             onClick={handleFavoriteToggle}
+            disabled={isCheckingFavorite}
             className={`absolute top-4 left-1/2 transform -translate-x-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-              isFavorite ? 'bg-red-500 text-white' : 'bg-white text-gray-400 hover:text-red-500'
-            }`}
+              isFavorite 
+                ? 'bg-red-500 text-white' 
+                : 'bg-white bg-opacity-90 text-gray-400 hover:text-red-500 hover:bg-opacity-100'
+            } ${isCheckingFavorite ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            ❤️
+            {isCheckingFavorite ? '...' : (isFavorite ? '❤️' : '🤍')}
+          </button>
+        )}
+        {showFavoriteButton && !user && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              alert('Please login to add motorcycles to your favorites');
+            }}
+            className="absolute top-4 left-1/2 transform -translate-x-1/2 w-10 h-10 rounded-full flex items-center justify-center bg-white bg-opacity-90 text-gray-400 hover:text-red-500 hover:bg-opacity-100 transition-colors"
+          >
+            🤍
           </button>
         )}
       </div>
