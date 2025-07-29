@@ -2693,6 +2693,14 @@ function App() {
                 >
                   Profile
                 </button>
+                <button
+                  onClick={() => {setCurrentView('requests'); window.history.pushState({}, '', '/requests');}}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    currentView === 'requests' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  Requests
+                </button>
                 <AuthButton />
                 {currentView === 'browse' && (
                   <>
