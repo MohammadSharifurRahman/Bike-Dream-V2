@@ -1752,7 +1752,7 @@ function App() {
               <div className="flex-1">
                 <div className="mb-6">
                   <h1 className="text-3xl font-bold text-gray-800">
-                    All Motorcycles ({motorcycles.length})
+                    All Motorcycles ({pagination.total_count || 0})
                   </h1>
                   <p className="text-gray-600">Complete motorcycle database from 1900 to present</p>
                 </div>
@@ -1765,22 +1765,32 @@ function App() {
                   <div className="text-center py-12">
                     <div className="text-gray-500 text-lg">No motorcycles found matching your criteria</div>
                     <button
-                      onClick={() => setFilters({})}
+                      onClick={() => {setFilters({}); setCurrentPage(1);}}
                       className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       Clear Filters
                     </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {motorcycles.map((motorcycle) => (
-                      <MotorcycleCard
-                        key={motorcycle.id}
-                        motorcycle={motorcycle}
-                        onClick={setSelectedMotorcycle}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {motorcycles.map((motorcycle) => (
+                        <MotorcycleCard
+                          key={motorcycle.id}
+                          motorcycle={motorcycle}
+                          onClick={setSelectedMotorcycle}
+                        />
+                      ))}
+                    </div>
+                    
+                    <PaginationControls
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                      totalCount={pagination.total_count || 0}
+                      limit={pagination.limit || 25}
+                    />
+                  </>
                 )}
               </div>
             </div>
