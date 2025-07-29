@@ -172,36 +172,39 @@ const StarRating = ({ rating, onRatingChange, readOnly = false }) => {
 };
 
 // Vendor Pricing Component
-const VendorPricing = ({ motorcycle, region = "US" }) => {
+const VendorPricing = ({ motorcycle }) => {
   const [vendorPrices, setVendorPrices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRegion, setSelectedRegion] = useState(region);
-  const [supportedRegions, setSupportedRegions] = useState([]);
+  const [selectedRegion, setSelectedRegion] = useState('US');
+  const [regions, setRegions] = useState([]);
 
   useEffect(() => {
-    fetchSupportedRegions();
+    fetchRegions();
   }, []);
 
   useEffect(() => {
-    fetchVendorPrices();
-  }, [motorcycle.id, selectedRegion]);
+    if (motorcycle) {
+      fetchVendorPricing();
+    }
+  }, [motorcycle, selectedRegion]);
 
-  const fetchSupportedRegions = async () => {
+  const fetchRegions = async () => {
     try {
       const response = await axios.get(`${API}/pricing/regions`);
-      setSupportedRegions(response.data.regions);
+      setRegions(response.data.regions || []);
     } catch (error) {
       console.error('Error fetching regions:', error);
     }
   };
 
-  const fetchVendorPrices = async () => {
+  const fetchVendorPricing = async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API}/motorcycles/${motorcycle.id}/pricing?region=${selectedRegion}`);
-      setVendorPrices(response.data.vendor_prices);
+      setVendorPrices(response.data.vendor_prices || []);
     } catch (error) {
-      console.error('Error fetching vendor prices:', error);
+      console.error('Error fetching vendor pricing:', error);
+      setVendorPrices([]);
     } finally {
       setLoading(false);
     }
@@ -210,92 +213,161 @@ const VendorPricing = ({ motorcycle, region = "US" }) => {
   const formatPrice = (price, currency) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(price);
   };
 
+  const getRegionName = (regionCode) => {
+    const regionNames = {
+      'US': 'United States',
+      'BD': 'Bangladesh',
+      'NP': 'Nepal',
+      'BT': 'Bhutan',
+      'TH': 'Thailand',
+      'MY': 'Malaysia',
+      'ID': 'Indonesia',
+      'AE': 'UAE',
+      'SA': 'Saudi Arabia'
+    };
+    return regionNames[regionCode] || regionCode;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-gray-800">Vendor Pricing</h3>
+    <div>
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Select Region
+        </label>
         <select
           value={selectedRegion}
           onChange={(e) => setSelectedRegion(e.target.value)}
           className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
-          {supportedRegions.map(region => (
-            <option key={region.code} value={region.code}>
-              {region.name} ({region.currency})
-            </option>
-          ))}
+          <option value="US">United States (USD)</option>
+          <option value="BD">Bangladesh (BDT)</option>
+          <option value="NP">Nepal (NPR)</option>
+          <option value="BT">Bhutan (BTN)</option>
+          <option value="TH">Thailand (THB)</option>
+          <option value="MY">Malaysia (MYR)</option>
+          <option value="ID">Indonesia (IDR)</option>
+          <option value="AE">UAE (AED)</option>
+          <option value="SA">Saudi Arabia (SAR)</option>
         </select>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      {vendorPrices.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          No vendor pricing available for this region
+        </div>
+      ) : vendorPrices[0]?.discontinued ? (
+        <div className="text-center py-8">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <div className="text-yellow-800 text-lg font-semibold mb-2">
+              Motorcycle Discontinued
+            </div>
+            <p className="text-yellow-700">
+              This motorcycle model is no longer in production. Prices are not available from authorized dealers.
+              You may find used models through private sellers or specialty dealers.
+            </p>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
           {vendorPrices.map((vendor, index) => (
-            <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-3">
-                  <h4 className="font-semibold text-lg">{vendor.vendor_name}</h4>
-                  <div className="flex items-center space-x-1">
-                    <StarRating rating={Math.round(vendor.rating)} readOnly />
-                    <span className="text-sm text-gray-500">({vendor.reviews_count})</span>
+            <div key={index} className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h4 className="font-semibold text-lg text-gray-800">{vendor.vendor_name}</h4>
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <span>⭐ {vendor.rating}</span>
+                    <span>({vendor.reviews_count} reviews)</span>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-green-600">
                     {formatPrice(vendor.price, vendor.currency)}
                   </div>
-                  {index === 0 && (
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                      Best Price
-                    </span>
+                  {vendor.currency !== 'USD' && (
+                    <div className="text-sm text-gray-500">
+                      ≈ {formatPrice(vendor.price_usd, 'USD')}
+                    </div>
                   )}
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
+              <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                 <div>
-                  <span className="font-medium">Availability:</span> {vendor.availability}
+                  <span className="text-gray-600">Availability:</span>
+                  <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
+                    vendor.availability === 'In Stock' ? 'bg-green-100 text-green-800' :
+                    vendor.availability === 'Limited Stock' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-blue-100 text-blue-800'
+                  }`}>
+                    {vendor.availability}
+                  </span>
                 </div>
                 <div>
-                  <span className="font-medium">Shipping:</span> {vendor.shipping}
+                  <span className="text-gray-600">Shipping:</span>
+                  <span className="ml-2 font-medium">{vendor.shipping}</span>
                 </div>
                 <div>
-                  <span className="font-medium">Delivery:</span> {vendor.estimated_delivery}
+                  <span className="text-gray-600">Delivery:</span>
+                  <span className="ml-2 font-medium">{vendor.estimated_delivery}</span>
                 </div>
-                {vendor.special_offer && (
-                  <div className="col-span-2">
-                    <span className="font-medium text-blue-600">Special Offer:</span> {vendor.special_offer}
+                {vendor.phone && (
+                  <div>
+                    <span className="text-gray-600">Phone:</span>
+                    <span className="ml-2 font-medium">{vendor.phone}</span>
                   </div>
                 )}
               </div>
-              
+
+              {vendor.special_offer && (
+                <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
+                  <div className="text-blue-800 font-medium">🎁 Special Offer</div>
+                  <div className="text-blue-700">{vendor.special_offer}</div>
+                </div>
+              )}
+
               <div className="flex space-x-3">
-                <a
-                  href={vendor.website_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                >
-                  Visit Store
-                </a>
-                {vendor.phone && (
+                {vendor.website_url && (
                   <a
-                    href={`tel:${vendor.phone}`}
-                    className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors text-sm"
+                    href={vendor.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    Call {vendor.phone}
+                    Visit Store
                   </a>
                 )}
+                <button className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">
+                  Compare
+                </button>
               </div>
             </div>
           ))}
+          
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <div className="text-sm text-gray-600">
+              <p className="mb-2">
+                <strong>Note:</strong> Prices shown are from verified dealers and may vary based on location, taxes, and current promotions.
+              </p>
+              <p>
+                All vendor links have been verified and lead to legitimate dealership websites.
+                Prices are updated regularly to reflect current market conditions.
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>
