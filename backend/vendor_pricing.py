@@ -8,21 +8,66 @@ class VendorPricingSystem:
         # Currency exchange rates (mock data - in production this would come from a real API)
         self.exchange_rates = {
             "USD": 1.0,
+            # South Asian countries
             "BDT": 110.0,   # Bangladesh Taka
             "NPR": 133.0,   # Nepalese Rupee
             "BTN": 83.0,    # Bhutanese Ngultrum
+            "INR": 83.0,    # Indian Rupee
+            "PKR": 280.0,   # Pakistani Rupee
+            "LKR": 325.0,   # Sri Lankan Rupee
+            # Southeast Asian countries
             "THB": 36.0,    # Thai Baht
             "MYR": 4.7,     # Malaysian Ringgit
             "IDR": 15800.0, # Indonesian Rupiah
+            "PHP": 56.0,    # Philippine Peso
+            "VND": 24300.0, # Vietnamese Dong
+            "SGD": 1.35,    # Singapore Dollar
+            # Middle Eastern countries
             "AED": 3.67,    # UAE Dirham
             "SAR": 3.75,    # Saudi Riyal
-            "EUR": 0.85,
-            "GBP": 0.73,
-            "CAD": 1.25,
-            "AUD": 1.45,
-            "INR": 83.0,
-            "JPY": 110.0,
-            "CNY": 7.0
+            "QAR": 3.64,    # Qatari Riyal
+            "KWD": 0.31,    # Kuwaiti Dinar
+            "BHD": 0.38,    # Bahraini Dinar
+            "OMR": 0.38,    # Omani Rial
+            "JOD": 0.71,    # Jordanian Dinar
+            "TRY": 32.0,    # Turkish Lira
+            # East Asian countries
+            "JPY": 150.0,   # Japanese Yen
+            "KRW": 1320.0,  # South Korean Won
+            "TWD": 32.0,    # Taiwan Dollar
+            "CNY": 7.3,     # Chinese Yuan
+            "HKD": 7.8,     # Hong Kong Dollar
+            # European countries
+            "EUR": 0.92,    # Euro
+            "GBP": 0.79,    # British Pound
+            "CHF": 0.89,    # Swiss Franc
+            "NOK": 10.8,    # Norwegian Krone
+            "SEK": 10.9,    # Swedish Krona
+            "DKK": 6.9,     # Danish Krone
+            "PLN": 4.0,     # Polish Zloty
+            "CZK": 23.0,    # Czech Koruna
+            "HUF": 360.0,   # Hungarian Forint
+            "RON": 4.6,     # Romanian Leu
+            # Americas
+            "CAD": 1.36,    # Canadian Dollar
+            "BRL": 5.2,     # Brazilian Real
+            "MXN": 17.8,    # Mexican Peso
+            "ARS": 890.0,   # Argentine Peso
+            "CLP": 950.0,   # Chilean Peso
+            "COP": 4100.0,  # Colombian Peso
+            "PEN": 3.7,     # Peruvian Sol
+            # Oceania
+            "AUD": 1.52,    # Australian Dollar
+            "NZD": 1.68,    # New Zealand Dollar
+            # African countries
+            "ZAR": 18.5,    # South African Rand
+            "EGP": 48.5,    # Egyptian Pound
+            "NGN": 1480.0,  # Nigerian Naira
+            "KES": 128.0,   # Kenyan Shilling
+            # Other regions
+            "RUB": 92.0,    # Russian Ruble
+            "UAH": 37.0,    # Ukrainian Hryvnia
+            "ILS": 3.7      # Israeli Shekel
         }
         
         # Verified vendors with real information (no fake/placeholder links)
