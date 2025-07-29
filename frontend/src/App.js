@@ -1299,6 +1299,141 @@ const ProfilePage = () => {
   );
 };
 
+// Carousel Images for Homepage Banner
+const CAROUSEL_IMAGES = [
+  {
+    url: "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHxtb3RvcmN5Y2xlfGVufDB8fHx8MTc1MzgxMjgyMXww&ixlib=rb-4.1.0&q=85",
+    title: "Performance Unleashed",
+    subtitle: "Discover the latest sport motorcycles"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwyfHxtb3RvcmN5Y2xlfGVufDB8fHx8MTc1MzgxMjgyMXww&ixlib=rb-4.1.0&q=85",
+    title: "Freedom on Two Wheels", 
+    subtitle: "Experience the open road"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1531327431456-837da4b1d562?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwzfHxtb3RvcmN5Y2xlfGVufDB8fHx8MTc1MzgxMjgyMXww&ixlib=rb-4.1.0&q=85",
+    title: "Premium Engineering",
+    subtitle: "Luxury meets performance"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHw0fHxtb3RvcmN5Y2xlfGVufDB8fHx8MTc1MzgxMjgyMXww&ixlib=rb-4.1.0&q=85",
+    title: "Adventure Awaits",
+    subtitle: "Built for every journey"
+  },
+  {
+    url: "https://images.pexels.com/photos/1416169/pexels-photo-1416169.jpeg",
+    title: "Explore Without Limits",
+    subtitle: "Your next adventure starts here"
+  }
+];
+
+// Hero Carousel Component
+const HeroCarousel = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % CAROUSEL_IMAGES.length);
+    }, 5000); // Change slide every 5 seconds
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const goToSlide = (index) => {
+    setCurrentSlide(index);
+  };
+
+  const goToPrevious = () => {
+    setCurrentSlide((prev) => (prev - 1 + CAROUSEL_IMAGES.length) % CAROUSEL_IMAGES.length);
+  };
+
+  const goToNext = () => {
+    setCurrentSlide((prev) => (prev + 1) % CAROUSEL_IMAGES.length);
+  };
+
+  return (
+    <div className="relative h-96 md:h-[500px] overflow-hidden rounded-2xl shadow-2xl">
+      {/* Image Slides */}
+      {CAROUSEL_IMAGES.map((image, index) => (
+        <div
+          key={index}
+          className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+            index === currentSlide ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <img
+            src={image.url}
+            alt={image.title}
+            className="w-full h-full object-cover"
+          />
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent"></div>
+          
+          {/* Content Overlay */}
+          <div className="absolute inset-0 flex flex-col justify-center px-8 md:px-16">
+            <div className="text-white max-w-2xl">
+              <h1 className="text-4xl md:text-6xl font-bold mb-4 leading-tight">
+                {image.title}
+              </h1>
+              <p className="text-xl md:text-2xl mb-8 opacity-90">
+                {image.subtitle}
+              </p>
+              <div className="flex space-x-4">
+                <button 
+                  onClick={() => setCurrentView('browse')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-300 shadow-lg"
+                >
+                  Explore Motorcycles
+                </button>
+                <button 
+                  onClick={() => setCurrentView('browse')}
+                  className="border-2 border-white text-white hover:bg-white hover:text-gray-900 px-8 py-3 rounded-lg font-semibold transition-all duration-300"
+                >
+                  View Brands
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* Navigation Arrows */}
+      <button
+        onClick={goToPrevious}
+        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-all duration-300 backdrop-blur-sm"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <button
+        onClick={goToNext}
+        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-all duration-300 backdrop-blur-sm"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      {/* Slide Indicators */}
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2">
+        {CAROUSEL_IMAGES.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => goToSlide(index)}
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              index === currentSlide 
+                ? 'bg-white scale-125' 
+                : 'bg-white/50 hover:bg-white/75'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // Enhanced Image Component with Error Handling
 const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true }) => {
   const [imgSrc, setImgSrc] = useState(src);
