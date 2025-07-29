@@ -1142,6 +1142,25 @@ function App() {
     }
   };
 
+  const fetchDatabaseStats = async () => {
+    try {
+      const response = await axios.get(`${API}/stats`);
+      setDatabaseStats({
+        totalMotorcycles: response.data.total_motorcycles,
+        totalManufacturers: response.data.manufacturers
+      });
+    } catch (error) {
+      console.error('Error fetching database stats:', error);
+      // Fallback to calculating from categories if stats API fails
+      const totalFromCategories = categories.reduce((sum, cat) => sum + cat.count, 0);
+      const totalManufacturersFromFilter = filterOptions.manufacturers?.length || 0;
+      setDatabaseStats({
+        totalMotorcycles: totalFromCategories,
+        totalManufacturers: totalManufacturersFromFilter
+      });
+    }
+  };
+
   const seedDatabase = async () => {
     try {
       await axios.post(`${API}/motorcycles/seed`);
