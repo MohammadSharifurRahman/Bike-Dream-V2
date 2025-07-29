@@ -421,6 +421,27 @@ const VendorPricing = ({ motorcycle }) => {
             </p>
           </div>
         </div>
+      ) : vendorPrices[0]?.not_available_in_region ? (
+        <div className="text-center py-8">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div className="text-blue-800 text-lg font-semibold mb-2">
+              Not Available in This Region
+            </div>
+            <p className="text-blue-700 mb-3">
+              {vendorPrices[0].availability}
+            </p>
+            {vendorPrices[0].reason && (
+              <p className="text-blue-600 text-sm">
+                <strong>Reason:</strong> {vendorPrices[0].reason}
+              </p>
+            )}
+            <div className="mt-4 p-3 bg-blue-100 rounded">
+              <p className="text-blue-800 text-sm">
+                💡 <strong>Tip:</strong> Try selecting a different region or contact local importers for availability.
+              </p>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="space-y-4">
           {vendorPrices.map((vendor, index) => (
