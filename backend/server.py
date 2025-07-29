@@ -933,7 +933,13 @@ async def get_motorcycles(
     # Sort direction
     sort_direction = 1 if sort_order == "asc" else -1
     
-    motorcycles = await db.motorcycles.find(query).sort(sort_by, sort_direction).skip(skip).limit(limit).to_list(limit)
+    # Implement dual-level sorting: new bikes to old bikes (year desc), then low to high price (price asc)
+    if sort_by == "default" or sort_by == "user_interest_score":
+        # Default sorting: year descending (new to old), then price ascending (low to high)
+        motorcycles = await db.motorcycles.find(query).sort([("year", -1), ("price_usd", 1)]).skip(skip).limit(limit).to_list(limit)
+    else:
+        # Single field sorting with custom sort direction
+        motorcycles = await db.motorcycles.find(query).sort(sort_by, sort_direction).skip(skip).limit(limit).to_list(limit)
     return [Motorcycle(**motorcycle) for motorcycle in motorcycles]
 
 @api_router.get("/motorcycles/{motorcycle_id}", response_model=MotorcycleWithPricing)
