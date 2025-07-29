@@ -930,13 +930,13 @@ const MotorcycleDetail = ({ motorcycle, onClose }) => {
               </div>
               
               <div className="bg-blue-50 p-6 rounded-lg">
-                <h3 className="text-lg font-semibold mb-4 text-gray-800">Key Features</h3>
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">Key Specialisations</h3>
                 <div className="flex flex-wrap gap-2">
-                  {motorcycle.features.map((feature, index) => (
+                  {motorcycle.specialisations?.map((feature, index) => (
                     <span key={index} className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm">
                       {feature}
                     </span>
-                  ))}
+                  )) || <span className="text-gray-500">No specialisations available</span>}
                 </div>
               </div>
             </div>
