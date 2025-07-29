@@ -506,6 +506,57 @@ async def login_user(user_data: UserLogin):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Login failed: {str(e)}")
 
+@api_router.post("/auth/google/callback")
+async def google_oauth_callback(callback_data: dict):
+    """Handle Google OAuth callback with authorization code"""
+    try:
+        code = callback_data.get("code")
+        if not code:
+            raise HTTPException(status_code=400, detail="Authorization code not provided")
+        
+        # Exchange authorization code for access token
+        token_url = "https://oauth2.googleapis.com/token"
+        token_data = {
+            "client_id": os.environ.get("GOOGLE_CLIENT_ID", "your-google-client-id"),
+            "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET", "your-google-client-secret"),
+            "code": code,
+            "grant_type": "authorization_code",
+            "redirect_uri": os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:3000/auth/google/callback")
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(token_url, data=token_data) as response:
+                if response.status != 200:
+                    raise HTTPException(status_code=400, detail="Failed to exchange authorization code")
+                token_response = await response.json()
+        
+        access_token = token_response.get("access_token")
+        if not access_token:
+            raise HTTPException(status_code=400, detail="No access token received")
+        
+        # Get user info from Google
+        user_info_url = f"https://www.googleapis.com/oauth2/v2/userinfo?access_token={access_token}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(user_info_url) as response:
+                if response.status != 200:
+                    raise HTTPException(status_code=400, detail="Failed to get user info from Google")
+                user_info = await response.json()
+        
+        # Create or update user
+        google_data = GoogleOAuthData(
+            email=user_info["email"],
+            name=user_info["name"],
+            picture=user_info.get("picture", ""),
+            google_id=user_info["id"]
+        )
+        
+        return await google_oauth(google_data)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Google OAuth callback failed: {str(e)}")
+
 @api_router.post("/auth/google")
 async def google_oauth(oauth_data: GoogleOAuthData):
     """Authenticate user with Google OAuth"""
