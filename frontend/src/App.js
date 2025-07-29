@@ -1597,6 +1597,248 @@ const HeroCarousel = ({ onViewChange }) => {
   );
 };
 
+// User Activity Analytics Page
+const UserActivityPage = ({ onBack }) => {
+  const { user } = useAuth();
+  const [activityStats, setActivityStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchActivityStats();
+    }
+  }, [user]);
+
+  const fetchActivityStats = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+
+      const response = await axios.get(`${API}/users/${user.id}/activity-stats`, { headers });
+      setActivityStats(response.data);
+    } catch (error) {
+      console.error('Error fetching activity stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Login Required</h2>
+          <p className="text-gray-600 mb-6">Please login to view your activity statistics</p>
+          <AuthButton />
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  const StatCard = ({ title, value, subtitle, icon, color = "blue" }) => (
+    <div className="bg-white p-6 rounded-xl shadow-lg">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-600">{title}</p>
+          <p className={`text-3xl font-bold text-${color}-600`}>{value}</p>
+          {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+        </div>
+        <div className={`text-4xl opacity-20`}>{icon}</div>
+      </div>
+    </div>
+  );
+
+  const AchievementBadge = ({ achievement }) => (
+    <div className="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-400">
+      <div className="flex items-center space-x-3">
+        <span className="text-2xl">{achievement.icon}</span>
+        <div>
+          <h4 className="font-semibold text-gray-800">{achievement.title}</h4>
+          <p className="text-sm text-gray-600">{achievement.description}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={onBack}
+                className="flex items-center text-gray-600 hover:text-blue-600 transition-colors"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Home
+              </button>
+              <h1 className="text-2xl font-bold text-gray-800">My Activity Dashboard</h1>
+            </div>
+            <div className="flex items-center space-x-3">
+              <img 
+                src={user.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=0D8ABC&color=fff`}
+                alt={user.name}
+                className="w-10 h-10 rounded-full"
+              />
+              <span className="font-medium text-gray-800">{user.name}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activityStats && (
+          <>
+            {/* Main Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <StatCard
+                title="Motorcycles Favorited"
+                value={activityStats.total_stats.favorites_count}
+                icon="❤️"
+                color="red"
+              />
+              <StatCard
+                title="Ratings Given"
+                value={activityStats.total_stats.ratings_given}
+                icon="⭐"
+                color="yellow"
+              />
+              <StatCard
+                title="Comments Posted"
+                value={activityStats.total_stats.comments_posted}
+                icon="💬"
+                color="green"
+              />
+              <StatCard
+                title="Discussions Started"
+                value={activityStats.total_stats.discussion_threads}
+                icon="🚀"
+                color="purple"
+              />
+            </div>
+
+            {/* Engagement Score */}
+            <div className="bg-white p-6 rounded-xl shadow-lg mb-8">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Engagement Score</h3>
+              <div className="flex items-center space-x-4">
+                <div className="flex-1">
+                  <div className="bg-gray-200 rounded-full h-4">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-purple-600 h-4 rounded-full transition-all duration-1000"
+                      style={{ width: `${Math.min(100, activityStats.total_stats.engagement_score)}%` }}
+                    ></div>
+                  </div>
+                </div>
+                <span className="text-2xl font-bold text-blue-600">
+                  {activityStats.total_stats.engagement_score}%
+                </span>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                Based on your interactions with motorcycles, ratings, and community participation
+              </p>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Recent Activity (30 Days)</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Comments Posted</span>
+                    <span className="font-semibold text-blue-600">
+                      {activityStats.recent_activity.comments_last_30_days}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Ratings Given</span>
+                    <span className="font-semibold text-blue-600">
+                      {activityStats.recent_activity.ratings_last_30_days}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Favorite Manufacturers</h3>
+                <div className="space-y-3">
+                  {activityStats.preferences.top_manufacturers.length > 0 ? (
+                    activityStats.preferences.top_manufacturers.map(([manufacturer, count], index) => (
+                      <div key={manufacturer} className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium text-gray-500">#{index + 1}</span>
+                          <span className="text-gray-800">{manufacturer}</span>
+                        </div>
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
+                          {count}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-sm">No favorites yet</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Rating Distribution */}
+            {Object.keys(activityStats.preferences.rating_distribution).length > 0 && (
+              <div className="bg-white p-6 rounded-xl shadow-lg mb-8">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Your Rating Distribution</h3>
+                <div className="grid grid-cols-5 gap-4">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <div key={star} className="text-center">
+                      <div className="text-yellow-400 text-2xl mb-2">
+                        {'⭐'.repeat(star)}
+                      </div>
+                      <div className="text-2xl font-bold text-gray-800">
+                        {activityStats.preferences.rating_distribution[star] || 0}
+                      </div>
+                      <div className="text-sm text-gray-500">{star} stars</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Achievements */}
+            {activityStats.achievements && activityStats.achievements.length > 0 && (
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-xl font-bold text-gray-800 mb-6">Achievements</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {activityStats.achievements.map((achievement, index) => (
+                    <AchievementBadge key={index} achievement={achievement} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Enhanced Image Component with Error Handling
 const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true }) => {
   const [imgSrc, setImgSrc] = useState(src);
