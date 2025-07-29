@@ -220,6 +220,134 @@ def get_comprehensive_motorcycle_data():
 
     comprehensive_motorcycles = []
     
+    # Helper function to generate motorcycle data
+    def generate_motorcycles_for_brand(brand_name, models_list, brand_specialisations=None):
+        """Generate comprehensive motorcycle data for a brand"""
+        brand_motorcycles = []
+        
+        # Default specialisations for each brand
+        if brand_specialisations is None:
+            brand_specialisations = {
+                "Yamaha": ["Sport Performance", "Reliability", "Advanced Electronics"],
+                "Honda": ["Fuel Efficiency", "Reliability", "Innovation"],
+                "Kawasaki": ["Raw Power", "Sport Performance", "Track Ready"],
+                "Suzuki": ["Value Engineering", "Reliability", "Performance"],
+                "Ducati": ["Italian Design", "Racing Heritage", "Premium Performance"],
+                "Bajaj": ["Affordability", "Indian Engineering", "Value for Money"],
+                "Hero": ["Fuel Efficiency", "Reliability", "Low Maintenance"],
+                "TVS": ["Innovation", "Sport Performance", "Value Engineering"],
+                "Royal Enfield": ["Classic Design", "Thumper Sound", "Heritage"],
+                "KTM": ["Ready to Race", "Lightweight", "Austrian Engineering"],
+                "Harley-Davidson": ["American Heritage", "V-Twin Sound", "Cruising Comfort"],
+                "CFMOTO": ["Chinese Engineering", "Value", "Modern Design"],
+                "Keeway": ["Affordable Sport", "European Style", "Entry Level"],
+                "Lifan": ["Budget Friendly", "Basic Transport", "Chinese Manufacturing"],
+                "GPX": ["Thai Engineering", "Affordable Performance", "Local Design"],
+                "QJ Motor": ["Modern Chinese", "Advanced Features", "Value Pricing"],
+                "Vespa": ["Italian Style", "Classic Design", "Urban Mobility"],
+                "Runner": ["Bangladeshi Brand", "Local Assembly", "Affordable"],
+                "Benelli": ["Italian Heritage", "Performance", "Design"],
+                "Mahindra": ["Indian Manufacturing", "Rugged Build", "Value"],
+                "Jawa": ["Classic Revival", "Retro Style", "Nostalgia"]
+            }.get(brand_name, ["Performance", "Reliability", "Value"])
+        
+        for model_data in models_list:
+            for year in model_data["years"]:
+                # Calculate price variation by year and availability
+                base_price = model_data["price_base"]
+                price_variation = (year - 2000) * (base_price * 0.02)  # 2% increase per year
+                final_price = int(base_price + price_variation)
+                
+                # Determine availability
+                if year >= 2023:
+                    availability = "Available"
+                elif year >= 2020:
+                    availability = "Limited Stock"
+                elif year >= 2015:
+                    availability = "Discontinued"
+                else:
+                    availability = "Collector Item"
+                
+                # Select appropriate image based on category
+                if model_data["category"] in ["Sport", "Supersport"]:
+                    image_url = SPORT_BIKE_IMAGES[hash(model_data["model"]) % len(SPORT_BIKE_IMAGES)]
+                elif model_data["category"] in ["Naked", "Roadster"]:
+                    image_url = NAKED_IMAGES[0]
+                elif model_data["category"] in ["Cruiser", "Touring"]:
+                    image_url = CRUISER_IMAGES[hash(model_data["model"]) % len(CRUISER_IMAGES)]
+                elif model_data["category"] in ["Adventure", "Enduro", "Dual Sport"]:
+                    image_url = ADVENTURE_IMAGES[0]
+                elif model_data["category"] in ["Vintage", "Classic"]:
+                    image_url = VINTAGE_IMAGES[0]
+                else:
+                    image_url = SPORT_BIKE_IMAGES[0]
+                
+                # Generate detailed technical specifications
+                displacement = model_data["displacement"]
+                horsepower = model_data["horsepower"]
+                
+                # Engine configuration based on displacement
+                if displacement == 0:  # Electric
+                    engine_type = "Electric Motor"
+                elif displacement <= 125:
+                    engine_type = "Single Cylinder"
+                elif displacement <= 400:
+                    engine_type = "Single Cylinder" if brand_name in ["KTM", "Bajaj"] else "Parallel Twin"
+                elif displacement <= 600:
+                    engine_type = "Parallel Twin"
+                elif displacement <= 1000:
+                    engine_type = "Inline-4" if model_data["category"] == "Sport" else "Parallel Twin"
+                else:
+                    engine_type = "V-Twin" if brand_name == "Harley-Davidson" else "Inline-4"
+                
+                motorcycle = {
+                    "manufacturer": brand_name,
+                    "model": model_data["model"],
+                    "year": year,
+                    "category": model_data["category"],
+                    "engine_type": engine_type,
+                    "displacement": displacement,
+                    "horsepower": horsepower,
+                    "torque": int(horsepower * 0.75) if horsepower > 0 else 25,  # Approximate torque
+                    "weight": max(120, 140 + (displacement // 10)),  # Approximate weight
+                    "top_speed": int(90 + (horsepower * 1.5)) if horsepower > 0 else 80,
+                    "fuel_capacity": max(10.0, 12.0 + (displacement // 150)),
+                    "price_usd": final_price,
+                    "availability": availability,
+                    "description": f"The {brand_name} {model_data['model']} {year} represents {brand_name}'s commitment to excellence in the {model_data['category'].lower()} segment. This model showcases the brand's engineering prowess and dedication to rider satisfaction.",
+                    "image_url": image_url,
+                    "user_interest_score": model_data["interest"],
+                    "specialisations": brand_specialisations[:3],  # Take first 3 specialisations
+                    
+                    # Detailed technical features
+                    "mileage_kmpl": max(15, 45 - (displacement // 20)) if displacement > 0 else 0,  # Electric bikes handled separately
+                    "transmission_type": "Manual" if displacement > 125 else "Automatic",
+                    "number_of_gears": 6 if displacement > 400 else 5 if displacement > 125 else 1,
+                    "ground_clearance_mm": 160 + (20 if model_data["category"] == "Adventure" else 0),
+                    "seat_height_mm": 750 + (displacement // 20) + (30 if model_data["category"] == "Adventure" else 0),
+                    "abs_available": year >= 2019 and displacement >= 125,
+                    "braking_system": "Disc" if displacement >= 125 else "Drum",
+                    "suspension_type": "Telescopic" if displacement >= 200 else "Conventional",
+                    "tyre_type": "Tubeless" if year >= 2015 and displacement >= 150 else "Tube",
+                    "wheel_size_inches": 17 if displacement >= 200 else 18,
+                    "headlight_type": "LED" if year >= 2020 else "Halogen",
+                    "fuel_type": "Electric" if displacement == 0 else "Petrol"
+                }
+                
+                # Special handling for electric vehicles
+                if displacement == 0:
+                    motorcycle.update({
+                        "mileage_kmpl": 0,  # Not applicable
+                        "top_speed": 60,  # Typical electric scooter speed
+                        "fuel_capacity": 0,  # Battery capacity instead
+                        "transmission_type": "Automatic",
+                        "number_of_gears": 1
+                    })
+                
+                brand_motorcycles.append(motorcycle)
+        
+        return brand_motorcycles
+    
     # YAMAHA - Complete Model Range (2000-2025)
     yamaha_models = [
         # YZF-R Series (Sport)
