@@ -543,6 +543,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "❌ DATA ACCURACY STILL BROKEN: Homepage continues to show incorrect statistics - 2614+ motorcycles instead of 1307+, and manufacturer count shows incorrect values. Browse page also shows 2614 motorcycles instead of expected 1307. This indicates the frontend is not properly using the stats API data or there's a calculation error in the statistics display logic. The data inconsistency persists despite backend having correct 1307 motorcycles. Frontend statistics calculation needs debugging."
+      - working: false
+        agent: "testing"
+        comment: "❌ DATA DISPLAY ACCURACY STILL CRITICAL ISSUE: Final comprehensive testing confirms data accuracy problems persist. Homepage shows 2614+ motorcycles instead of expected 1307+ from backend. Browse page also displays 2614 motorcycles count. Manufacturer count shows 2614+ instead of expected 5+ manufacturers. This indicates frontend statistics API integration is not working correctly - either the stats API is returning wrong data or frontend is not properly processing the API response. Backend has confirmed 1307 motorcycles but frontend consistently shows 2614+. This creates significant user confusion about database size and content."
 
 metadata:
   created_by: "main_agent"
