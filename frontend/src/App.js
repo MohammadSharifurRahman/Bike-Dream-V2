@@ -1089,6 +1089,7 @@ function App() {
   const [sortBy, setSortBy] = useState('user_interest_score');
   const [sortOrder, setSortOrder] = useState('desc');
   const [showFilters, setShowFilters] = useState(false);
+  const [databaseStats, setDatabaseStats] = useState({ totalMotorcycles: 0, totalManufacturers: 0 });
 
   const fetchMotorcycles = async () => {
     try {
