@@ -3610,6 +3610,29 @@ class MotorcycleAPITester:
         self.test_get_motorcycle_comments()
         self.test_like_comment()
         
+        # ==================== USER REQUEST SYSTEM TESTS ====================
+        print("\n📝 Testing User Request Submission System...")
+        print("-" * 60)
+        
+        # User Request Tests (require authentication)
+        if self.test_user_session:
+            self.test_submit_user_request()
+            self.test_submit_multiple_request_types()
+            self.test_get_user_requests()
+            self.test_get_user_requests_with_filters()
+            self.test_get_specific_user_request()
+            self.test_get_request_stats()
+            self.test_request_data_validation()
+            self.test_request_workflow_complete()
+        
+        # Test authentication requirements (without auth)
+        self.test_request_authentication_required()
+        
+        # Admin endpoint tests (no auth required in current implementation)
+        self.test_admin_get_all_requests()
+        self.test_admin_get_requests_with_filters()
+        self.test_admin_update_request()
+        
         # Browse Limit Fix
         self.test_browse_limit_fix()
         
