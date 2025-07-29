@@ -2643,6 +2643,8 @@ function App() {
       setCurrentView('profile');
     } else if (path === '/browse') {
       setCurrentView('browse');
+    } else if (path === '/requests') {
+      setCurrentView('requests');
     } else {
       setCurrentView('home');
     }
