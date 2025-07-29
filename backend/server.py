@@ -2206,6 +2206,224 @@ async def update_user_request(request_id: str, update_data: UserRequestUpdate):
     
     return {"message": "Request updated successfully"}
 
+# ==================== VIRTUAL GARAGE API ENDPOINTS ====================
+
+@api_router.post("/garage")
+async def add_to_garage(garage_data: GarageItemCreate, current_user: User = Depends(require_auth)):
+    """Add motorcycle to user's virtual garage"""
+    # Check if motorcycle exists
+    motorcycle = await db.motorcycles.find_one({"id": garage_data.motorcycle_id})
+    if not motorcycle:
+        raise HTTPException(status_code=404, detail="Motorcycle not found")
+    
+    # Check if already in garage
+    existing = await db.garage_items.find_one({
+        "user_id": current_user.id,
+        "motorcycle_id": garage_data.motorcycle_id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Motorcycle already in garage")
+    
+    # Create garage item
+    garage_item = GarageItem(
+        user_id=current_user.id,
+        **garage_data.dict()
+    )
+    
+    await db.garage_items.insert_one(garage_item.dict())
+    return {"message": "Added to garage successfully", "id": garage_item.id}
+
+@api_router.get("/garage")
+async def get_user_garage(
+    current_user: User = Depends(require_auth),
+    status: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100)
+):
+    """Get user's virtual garage"""
+    query = {"user_id": current_user.id}
+    if status:
+        query["status"] = status
+    
+    # Calculate pagination
+    skip = (page - 1) * limit
+    total_count = await db.garage_items.count_documents(query)
+    
+    # Get garage items with motorcycle details
+    pipeline = [
+        {"$match": query},
+        {"$sort": {"created_at": -1}},
+        {"$skip": skip},
+        {"$limit": limit},
+        {"$lookup": {
+            "from": "motorcycles",
+            "localField": "motorcycle_id",
+            "foreignField": "id",
+            "as": "motorcycle"
+        }},
+        {"$addFields": {
+            "motorcycle": {"$arrayElemAt": ["$motorcycle", 0]}
+        }}
+    ]
+    
+    garage_items = await db.garage_items.aggregate(pipeline).to_list(limit)
+    
+    # Calculate pagination info
+    total_pages = (total_count + limit - 1) // limit
+    has_next = page < total_pages
+    has_previous = page > 1
+    
+    return {
+        "garage_items": garage_items,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "has_next": has_next,
+            "has_previous": has_previous
+        }
+    }
+
+@api_router.put("/garage/{item_id}")
+async def update_garage_item(item_id: str, update_data: GarageItemUpdate, current_user: User = Depends(require_auth)):
+    """Update garage item"""
+    # Check if item exists and belongs to user
+    item = await db.garage_items.find_one({"id": item_id, "user_id": current_user.id})
+    if not item:
+        raise HTTPException(status_code=404, detail="Garage item not found")
+    
+    # Prepare update data
+    update_fields = {}
+    for field, value in update_data.dict(exclude_unset=True).items():
+        if value is not None:
+            update_fields[field] = value
+    
+    update_fields["updated_at"] = datetime.utcnow()
+    
+    # Update the item
+    await db.garage_items.update_one(
+        {"id": item_id},
+        {"$set": update_fields}
+    )
+    
+    return {"message": "Garage item updated successfully"}
+
+@api_router.delete("/garage/{item_id}")
+async def remove_from_garage(item_id: str, current_user: User = Depends(require_auth)):
+    """Remove motorcycle from garage"""
+    # Check if item exists and belongs to user
+    result = await db.garage_items.delete_one({"id": item_id, "user_id": current_user.id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Garage item not found")
+    
+    return {"message": "Removed from garage successfully"}
+
+@api_router.get("/garage/stats")
+async def get_garage_stats(current_user: User = Depends(require_auth)):
+    """Get user's garage statistics"""
+    # Aggregate garage stats
+    pipeline = [
+        {"$match": {"user_id": current_user.id}},
+        {"$group": {
+            "_id": "$status",
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    status_counts = await db.garage_items.aggregate(pipeline).to_list(None)
+    
+    # Format the results
+    stats = {
+        "owned": 0,
+        "wishlist": 0,
+        "previously_owned": 0,
+        "test_ridden": 0
+    }
+    
+    for status_count in status_counts:
+        if status_count["_id"] in stats:
+            stats[status_count["_id"]] = status_count["count"]
+    
+    # Get total value (for owned bikes with purchase price)
+    value_pipeline = [
+        {"$match": {"user_id": current_user.id, "status": "owned", "purchase_price": {"$exists": True, "$ne": None}}},
+        {"$group": {
+            "_id": None,
+            "total_value": {"$sum": "$purchase_price"}
+        }}
+    ]
+    
+    value_result = await db.garage_items.aggregate(value_pipeline).to_list(1)
+    total_value = value_result[0]["total_value"] if value_result else 0
+    
+    return {
+        "total_items": sum(stats.values()),
+        "by_status": stats,
+        "estimated_value": total_value
+    }
+
+# ==================== PRICE ALERTS API ENDPOINTS ====================
+
+@api_router.post("/price-alerts")
+async def create_price_alert(alert_data: PriceAlertCreate, current_user: User = Depends(require_auth)):
+    """Create a price alert for a motorcycle"""
+    # Check if motorcycle exists
+    motorcycle = await db.motorcycles.find_one({"id": alert_data.motorcycle_id})
+    if not motorcycle:
+        raise HTTPException(status_code=404, detail="Motorcycle not found")
+    
+    # Check if user already has an alert for this motorcycle
+    existing = await db.price_alerts.find_one({
+        "user_id": current_user.id,
+        "motorcycle_id": alert_data.motorcycle_id,
+        "is_active": True
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Price alert already exists for this motorcycle")
+    
+    # Create price alert
+    price_alert = PriceAlert(
+        user_id=current_user.id,
+        **alert_data.dict()
+    )
+    
+    await db.price_alerts.insert_one(price_alert.dict())
+    return {"message": "Price alert created successfully", "id": price_alert.id}
+
+@api_router.get("/price-alerts")
+async def get_user_price_alerts(current_user: User = Depends(require_auth)):
+    """Get user's price alerts"""
+    # Get active price alerts with motorcycle details
+    pipeline = [
+        {"$match": {"user_id": current_user.id, "is_active": True}},
+        {"$sort": {"created_at": -1}},
+        {"$lookup": {
+            "from": "motorcycles",
+            "localField": "motorcycle_id",
+            "foreignField": "id",
+            "as": "motorcycle"
+        }},
+        {"$addFields": {
+            "motorcycle": {"$arrayElemAt": ["$motorcycle", 0]}
+        }}
+    ]
+    
+    alerts = await db.price_alerts.aggregate(pipeline).to_list(None)
+    return {"price_alerts": alerts}
+
+@api_router.delete("/price-alerts/{alert_id}")
+async def delete_price_alert(alert_id: str, current_user: User = Depends(require_auth)):
+    """Delete a price alert"""
+    result = await db.price_alerts.update_one(
+        {"id": alert_id, "user_id": current_user.id},
+        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Price alert not found")
+    
+    return {"message": "Price alert deleted successfully"}
+
 @api_router.get("/status", response_model=List[StatusCheck])
 async def get_status_checks():
     status_checks = await db.status_checks.find().to_list(1000)
