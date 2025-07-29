@@ -275,15 +275,18 @@ backend:
 
   - task: "Price Alerts API - Get User Price Alerts"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL ISSUE: GET /api/price-alerts returns 500 server error when retrieving user's active price alerts. The endpoint exists and requires proper authentication, but fails during database aggregation or lookup operations. This prevents users from viewing their active price alerts. MongoDB aggregation pipeline for joining price_alerts with motorcycles collection may have issues."
+      - working: true
+        agent: "testing"
+        comment: "✅ PRICE ALERTS GET ENDPOINT FIXED: GET /api/price-alerts now successfully retrieves user's active price alerts with complete motorcycle details. The aggregation pipeline has been fixed and properly joins price_alerts with motorcycles collection. Retrieved 3 active price alerts with complete motorcycle information including manufacturer, model, year, category, and price_usd. All returned alerts are properly filtered to show only active alerts (is_active: true). ObjectId conversion working properly - all _id fields converted to strings for JSON serialization. Alert structure includes all required fields: id, user_id, motorcycle_id, target_price, condition, is_active, created_at."
 
   - task: "Price Alerts API - Delete Price Alert"
     implemented: true
