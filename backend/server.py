@@ -299,6 +299,36 @@ class UpdateJobStatus(BaseModel):
     completed_at: Optional[datetime] = None
     stats: Optional[dict] = None
 
+# User Request Models
+class UserRequest(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    title: str
+    description: str
+    request_type: str  # "feature_request", "bug_report", "motorcycle_addition", "general_feedback"
+    priority: str = "medium"  # "low", "medium", "high", "critical"
+    status: str = "pending"  # "pending", "in_progress", "resolved", "rejected"
+    category: Optional[str] = None  # Additional categorization
+    motorcycle_related: Optional[str] = None  # Motorcycle ID if related to specific bike
+    admin_response: Optional[str] = None
+    admin_user_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
+    resolved_at: Optional[datetime] = None
+
+class UserRequestCreate(BaseModel):
+    title: str = Field(min_length=5, max_length=200)
+    description: str = Field(min_length=10, max_length=2000)
+    request_type: str = Field(regex="^(feature_request|bug_report|motorcycle_addition|general_feedback)$")
+    priority: str = Field(default="medium", regex="^(low|medium|high|critical)$")
+    category: Optional[str] = Field(max_length=100)
+    motorcycle_related: Optional[str] = None
+
+class UserRequestUpdate(BaseModel):
+    status: Optional[str] = Field(regex="^(pending|in_progress|resolved|rejected)$")
+    admin_response: Optional[str] = Field(max_length=1000)
+    priority: Optional[str] = Field(regex="^(low|medium|high|critical)$")
+
 # Daily Update Scheduler
 class DailyUpdateScheduler:
     def __init__(self):
