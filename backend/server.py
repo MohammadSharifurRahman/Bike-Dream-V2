@@ -1190,7 +1190,137 @@ async def delete_comment(comment_id: str, user: User = Depends(require_auth)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to delete comment: {str(e)}")
 
-@api_router.post("/comments/{comment_id}/flag")
+@api_router.get("/users/{user_id}/activity-stats")
+async def get_user_activity_stats(user_id: str, user: User = Depends(require_auth)):
+    """Get comprehensive user activity statistics"""
+    try:
+        # Ensure user can only access their own stats or admin can access any
+        if user.id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Get favorites count
+        favorites_count = await db.users.aggregate([
+            {"$match": {"id": user_id}},
+            {"$project": {"favorites_count": {"$size": {"$ifNull": ["$favorite_motorcycles", []]}}}}
+        ]).to_list(1)
+        
+        favorites_count = favorites_count[0]["favorites_count"] if favorites_count else 0
+        
+        # Get ratings count
+        ratings_count = await db.ratings.count_documents({"user_id": user_id})
+        
+        # Get comments count (both top-level and replies)
+        comments_count = await db.comments.count_documents({"user_id": user_id})
+        
+        # Get discussion threads count (top-level comments only)
+        threads_count = await db.comments.count_documents({
+            "user_id": user_id,
+            "parent_comment_id": None
+        })
+        
+        # Get recent activity (last 30 days)
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        
+        recent_comments = await db.comments.count_documents({
+            "user_id": user_id,
+            "created_at": {"$gte": thirty_days_ago}
+        })
+        
+        recent_ratings = await db.ratings.count_documents({
+            "user_id": user_id,
+            "created_at": {"$gte": thirty_days_ago}
+        })
+        
+        # Get favorite manufacturers (from user's favorite motorcycles)
+        user_data = await db.users.find_one({"id": user_id})
+        favorite_motorcycles = user_data.get("favorite_motorcycles", []) if user_data else []
+        
+        manufacturer_stats = {}
+        if favorite_motorcycles:
+            for motorcycle_id in favorite_motorcycles:
+                motorcycle = await db.motorcycles.find_one({"id": motorcycle_id})
+                if motorcycle:
+                    manufacturer = motorcycle.get("manufacturer", "Unknown")
+                    manufacturer_stats[manufacturer] = manufacturer_stats.get(manufacturer, 0) + 1
+        
+        # Sort manufacturers by count
+        top_manufacturers = sorted(manufacturer_stats.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        # Get user's rating distribution
+        rating_distribution = {}
+        user_ratings = await db.ratings.find({"user_id": user_id}).to_list(None)
+        for rating in user_ratings:
+            star_rating = rating.get("rating", 0)
+            rating_distribution[star_rating] = rating_distribution.get(star_rating, 0) + 1
+        
+        # Calculate engagement score (0-100)
+        engagement_score = min(100, (
+            (favorites_count * 2) +
+            (ratings_count * 3) +
+            (comments_count * 4) +
+            (threads_count * 5)
+        ) / 2)
+        
+        return {
+            "user_id": user_id,
+            "total_stats": {
+                "favorites_count": favorites_count,
+                "ratings_given": ratings_count,
+                "comments_posted": comments_count,
+                "discussion_threads": threads_count,
+                "engagement_score": round(engagement_score, 1)
+            },
+            "recent_activity": {
+                "comments_last_30_days": recent_comments,
+                "ratings_last_30_days": recent_ratings
+            },
+            "preferences": {
+                "top_manufacturers": top_manufacturers,
+                "rating_distribution": rating_distribution
+            },
+            "achievements": generate_user_achievements(favorites_count, ratings_count, comments_count, threads_count)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to get user activity stats: {str(e)}")
+
+def generate_user_achievements(favorites, ratings, comments, threads):
+    """Generate user achievements based on activity"""
+    achievements = []
+    
+    # Favorites achievements
+    if favorites >= 1:
+        achievements.append({"title": "First Favorite", "description": "Added your first motorcycle to favorites", "icon": "⭐"})
+    if favorites >= 10:
+        achievements.append({"title": "Motorcycle Enthusiast", "description": "Favorited 10+ motorcycles", "icon": "🏍️"})
+    if favorites >= 50:
+        achievements.append({"title": "Collector", "description": "Favorited 50+ motorcycles", "icon": "🏆"})
+    
+    # Rating achievements
+    if ratings >= 1:
+        achievements.append({"title": "First Review", "description": "Rated your first motorcycle", "icon": "⭐"})
+    if ratings >= 25:
+        achievements.append({"title": "Reviewer", "description": "Rated 25+ motorcycles", "icon": "📝"})
+    if ratings >= 100:
+        achievements.append({"title": "Expert Reviewer", "description": "Rated 100+ motorcycles", "icon": "🎯"})
+    
+    # Comment achievements
+    if comments >= 1:
+        achievements.append({"title": "Voice Heard", "description": "Posted your first comment", "icon": "💬"})
+    if comments >= 20:
+        achievements.append({"title": "Active Contributor", "description": "Posted 20+ comments", "icon": "🗣️"})
+    if comments >= 100:
+        achievements.append({"title": "Community Leader", "description": "Posted 100+ comments", "icon": "👑"})
+    
+    # Thread achievements
+    if threads >= 5:
+        achievements.append({"title": "Discussion Starter", "description": "Started 5+ discussions", "icon": "🚀"})
+    if threads >= 20:
+        achievements.append({"title": "Community Builder", "description": "Started 20+ discussions", "icon": "🏗️"})
+    
+    return achievements
 async def flag_comment(comment_id: str, user: User = Depends(require_auth)):
     """Flag a comment for moderation"""
     try:
