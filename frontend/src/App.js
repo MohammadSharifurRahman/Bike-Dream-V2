@@ -2736,6 +2736,8 @@ function App() {
 
         {currentView === 'profile' ? (
           <ProfilePage />
+        ) : currentView === 'requests' ? (
+          <UserRequestsPage />
         ) : currentView === 'home' ? (
           // Home Page
           <>
