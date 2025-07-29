@@ -1968,6 +1968,40 @@ async def get_user_requests(
         }
     }
 
+@api_router.get("/requests/stats")
+async def get_request_stats(current_user: User = Depends(require_auth)):
+    """Get user's request statistics"""
+    # Aggregate user's request stats
+    pipeline = [
+        {"$match": {"user_id": current_user.id}},
+        {"$group": {
+            "_id": "$status",
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    status_counts = await db.user_requests.aggregate(pipeline).to_list(None)
+    
+    # Format the results
+    stats = {
+        "pending": 0,
+        "in_progress": 0,
+        "resolved": 0,
+        "rejected": 0
+    }
+    
+    for status_count in status_counts:
+        stats[status_count["_id"]] = status_count["count"]
+    
+    # Get total count
+    total_requests = sum(stats.values())
+    
+    return {
+        "total_requests": total_requests,
+        "by_status": stats,
+        "response_rate": round((stats["resolved"] + stats["rejected"]) / total_requests * 100, 1) if total_requests > 0 else 0
+    }
+
 @api_router.get("/requests/{request_id}")
 async def get_user_request(request_id: str, current_user: User = Depends(require_auth)):
     """Get a specific user request"""
