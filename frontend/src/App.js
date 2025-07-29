@@ -1299,6 +1299,55 @@ const ProfilePage = () => {
   );
 };
 
+// Enhanced Image Component with Error Handling
+const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true }) => {
+  const [imgSrc, setImgSrc] = useState(src);
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const placeholderImage = "https://images.unsplash.com/photo-1558980664-2cd663cf8dde?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwxfHxtb3RvcmN5Y2xlfGVufDB8fHxibGFja19hbmRfd2hpdGV8MTc1MzgxMDQyNXww&ixlib=rb-4.1.0&q=85";
+  
+  const handleImageError = () => {
+    if (showPlaceholderOnError && imgSrc !== placeholderImage) {
+      setImgSrc(placeholderImage);
+      setHasError(true);
+    }
+    setIsLoading(false);
+  };
+  
+  const handleImageLoad = () => {
+    setIsLoading(false);
+  };
+  
+  useEffect(() => {
+    setImgSrc(src);
+    setHasError(false);
+    setIsLoading(true);
+  }, [src]);
+  
+  return (
+    <div className="relative">
+      {isLoading && (
+        <div className={`${className} bg-gray-200 animate-pulse flex items-center justify-center`}>
+          <span className="text-gray-400 text-sm">Loading...</span>
+        </div>
+      )}
+      <img 
+        src={imgSrc}
+        alt={alt}
+        className={`${className} ${isLoading ? 'hidden' : ''}`}
+        onError={handleImageError}
+        onLoad={handleImageLoad}
+      />
+      {hasError && (
+        <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded text-xs">
+          Generic Image
+        </div>
+      )}
+    </div>
+  );
+};
+
 const MotorcycleCard = ({ motorcycle, onClick, showFavoriteButton = true }) => {
   const { user } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
