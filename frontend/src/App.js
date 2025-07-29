@@ -693,10 +693,20 @@ const MotorcycleCard = ({ motorcycle, onClick, showFavoriteButton = true }) => {
     }
   };
 
+  const handleCardClick = (e) => {
+    e.preventDefault();
+    console.log('Card clicked, motorcycle:', motorcycle);
+    if (onClick && typeof onClick === 'function') {
+      onClick(motorcycle);
+    } else {
+      console.error('onClick is not a function:', onClick);
+    }
+  };
+
   return (
     <div 
       className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105"
-      onClick={() => onClick(motorcycle)}
+      onClick={handleCardClick}
     >
       <div className="relative">
         <img 
@@ -737,14 +747,44 @@ const MotorcycleCard = ({ motorcycle, onClick, showFavoriteButton = true }) => {
           </div>
         )}
         
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-          <span>{motorcycle.year}</span>
-          <span>{motorcycle.displacement}cc</span>
-          <span>{motorcycle.horsepower}hp</span>
+        {/* Technical Features Display */}
+        <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-4">
+          <div className="flex items-center justify-between">
+            <span>Year:</span>
+            <span className="font-medium">{motorcycle.year}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Engine:</span>
+            <span className="font-medium">{motorcycle.displacement}cc</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Power:</span>
+            <span className="font-medium">{motorcycle.horsepower}hp</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Mileage:</span>
+            <span className="font-medium">{motorcycle.mileage_kmpl || 'N/A'} kmpl</span>
+          </div>
+          {motorcycle.top_speed && (
+            <div className="flex items-center justify-between">
+              <span>Top Speed:</span>
+              <span className="font-medium">{motorcycle.top_speed} km/h</span>
+            </div>
+          )}
+          {motorcycle.weight && (
+            <div className="flex items-center justify-between">
+              <span>Weight:</span>
+              <span className="font-medium">{motorcycle.weight} kg</span>
+            </div>
+          )}
         </div>
+        
         <div className="flex items-center justify-between">
           <span className="text-2xl font-bold text-green-600">${motorcycle.price_usd.toLocaleString()}</span>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+          <button 
+            onClick={handleCardClick}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
             View Details
           </button>
         </div>
