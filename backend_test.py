@@ -40,7 +40,7 @@ class MotorcycleAPITester:
             response = requests.get(f"{self.base_url}/", timeout=10)
             if response.status_code == 200:
                 data = response.json()
-                if "Welcome to Byke-Dream API" in data.get("message", ""):
+                if "Bike-Dream API" in data.get("message", ""):
                     self.log_test("API Root Connectivity", True, "API is accessible")
                     return True
                 else:
