@@ -1462,7 +1462,8 @@ function App() {
 
   useEffect(() => {
     if (currentView === 'browse') {
-      fetchMotorcycles();
+      setCurrentPage(1); // Reset to first page when filters change
+      fetchMotorcycles(1);
     }
   }, [filters, sortBy, sortOrder, currentView]);
 
