@@ -1,3 +1,4 @@
+import bcrypt
 from fastapi import FastAPI, APIRouter, HTTPException, Query, BackgroundTasks, Depends, Header
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -5,10 +6,11 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone
+import jwt
 from comprehensive_motorcycles import get_comprehensive_motorcycle_data
 from daily_update_bot import run_daily_update_job
 from vendor_pricing import vendor_pricing
