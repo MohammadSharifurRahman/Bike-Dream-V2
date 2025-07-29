@@ -3110,6 +3110,8 @@ function App() {
           <ProfilePage />
         ) : currentView === 'requests' ? (
           <UserRequestsPage />
+        ) : currentView === 'garage' ? (
+          <VirtualGaragePage />
         ) : currentView === 'home' ? (
           // Home Page
           <>
