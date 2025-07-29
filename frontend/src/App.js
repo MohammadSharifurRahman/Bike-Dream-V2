@@ -2049,6 +2049,13 @@ function App() {
   }, [categories, filterOptions]);
 
   useEffect(() => {
+    // Refetch stats when view changes to home to ensure fresh data
+    if (currentView === 'home') {
+      fetchDatabaseStats();
+    }
+  }, [currentView]);
+
+  useEffect(() => {
     if (currentView === 'browse') {
       setCurrentPage(1); // Reset to first page when filters change
       fetchMotorcycles(1);
