@@ -1407,6 +1407,727 @@ class MotorcycleAPITester:
                 all_passed = False
         
         return all_passed
+
+    # NEW AUTHENTICATION SYSTEM TESTS
+    def test_email_password_registration(self):
+        """Test POST /api/auth/register with valid email/password/name"""
+        try:
+            import time
+            registration_data = {
+                "email": f"test.rider.{int(time.time())}@bikedream.com",
+                "password": "SecurePassword123!",
+                "name": "Test Rider"
+            }
+            
+            response = requests.post(f"{self.base_url}/auth/register", 
+                                   json=registration_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data.get("message") == "Registration successful" and 
+                    "token" in data and "user" in data):
+                    
+                    # Store token for further tests
+                    self.jwt_token = data["token"]
+                    self.registered_user = data["user"]
+                    self.log_test("Email/Password Registration", True, 
+                                f"User registered: {data['user']['name']}")
+                    return True
+                else:
+                    self.log_test("Email/Password Registration", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 400:
+                # User might already exist, try with different email
+                registration_data["email"] = f"test.rider.{int(time.time())}.{int(time.time() % 1000)}@bikedream.com"
+                response = requests.post(f"{self.base_url}/auth/register", 
+                                       json=registration_data, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    self.jwt_token = data["token"]
+                    self.registered_user = data["user"]
+                    self.log_test("Email/Password Registration", True, 
+                                f"User registered with unique email: {data['user']['name']}")
+                    return True
+                else:
+                    self.log_test("Email/Password Registration", False, 
+                                f"Registration failed even with unique email: {response.text}")
+                    return False
+            else:
+                self.log_test("Email/Password Registration", False, 
+                            f"Status: {response.status_code}, Response: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Email/Password Registration", False, f"Error: {str(e)}")
+            return False
+
+    def test_email_password_login(self):
+        """Test POST /api/auth/login with valid credentials"""
+        if not hasattr(self, 'registered_user'):
+            self.log_test("Email/Password Login", False, "No registered user available for login test")
+            return False
+        
+        try:
+            login_data = {
+                "email": self.registered_user["email"],
+                "password": "SecurePassword123!"
+            }
+            
+            response = requests.post(f"{self.base_url}/auth/login", 
+                                   json=login_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data.get("message") == "Login successful" and 
+                    "token" in data and "user" in data):
+                    
+                    self.jwt_token = data["token"]  # Update token
+                    self.log_test("Email/Password Login", True, 
+                                f"User logged in: {data['user']['name']}")
+                    return True
+                else:
+                    self.log_test("Email/Password Login", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Email/Password Login", False, "Invalid credentials (401)")
+                return False
+            else:
+                self.log_test("Email/Password Login", False, 
+                            f"Status: {response.status_code}, Response: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Email/Password Login", False, f"Error: {str(e)}")
+            return False
+
+    def test_google_oauth(self):
+        """Test POST /api/auth/google with sample Google user data"""
+        try:
+            import time
+            google_data = {
+                "email": f"google.user.{int(time.time())}@gmail.com",
+                "name": "Google Test User",
+                "picture": "https://lh3.googleusercontent.com/a/default-user",
+                "google_id": f"google_id_{int(time.time())}"
+            }
+            
+            response = requests.post(f"{self.base_url}/auth/google", 
+                                   json=google_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data.get("message") == "Google authentication successful" and 
+                    "token" in data and "user" in data):
+                    
+                    self.google_jwt_token = data["token"]
+                    self.google_user = data["user"]
+                    self.log_test("Google OAuth Authentication", True, 
+                                f"Google user authenticated: {data['user']['name']}")
+                    return True
+                else:
+                    self.log_test("Google OAuth Authentication", False, f"Unexpected response: {data}")
+                    return False
+            else:
+                self.log_test("Google OAuth Authentication", False, 
+                            f"Status: {response.status_code}, Response: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Google OAuth Authentication", False, f"Error: {str(e)}")
+            return False
+
+    def test_jwt_token_validation(self):
+        """Test JWT token validation by accessing protected endpoints with Authorization header"""
+        if not hasattr(self, 'jwt_token'):
+            self.log_test("JWT Token Validation", False, "No JWT token available for testing")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(f"{self.base_url}/auth/me", headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "email" in data and "name" in data:
+                    self.log_test("JWT Token Validation", True, 
+                                f"JWT token valid, retrieved user: {data['name']}")
+                    return True
+                else:
+                    self.log_test("JWT Token Validation", False, f"Invalid user data: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("JWT Token Validation", False, "JWT token invalid or expired (401)")
+                return False
+            else:
+                self.log_test("JWT Token Validation", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("JWT Token Validation", False, f"Error: {str(e)}")
+            return False
+
+    def test_session_based_authentication(self):
+        """Test session-based authentication (legacy support) with X-Session-ID header"""
+        try:
+            import time
+            # First authenticate with Emergent session data
+            session_data = {
+                "email": f"session.user.{int(time.time())}@bikedream.com",
+                "name": "Session Test User",
+                "picture": "https://example.com/session-avatar.jpg",
+                "session_token": f"session_token_{int(time.time())}"
+            }
+            
+            response = requests.post(f"{self.base_url}/auth/profile", 
+                                   json=session_data, timeout=10)
+            
+            if response.status_code == 200:
+                # Now test accessing protected endpoint with session ID
+                headers = {"X-Session-Id": session_data["session_token"]}
+                response = requests.get(f"{self.base_url}/auth/me", headers=headers, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get("email") == session_data["email"]:
+                        self.log_test("Session-Based Authentication", True, 
+                                    f"Session authentication working: {data['name']}")
+                        return True
+                    else:
+                        self.log_test("Session-Based Authentication", False, 
+                                    f"User data mismatch: {data}")
+                        return False
+                else:
+                    self.log_test("Session-Based Authentication", False, 
+                                f"Session validation failed: {response.status_code}")
+                    return False
+            else:
+                self.log_test("Session-Based Authentication", False, 
+                            f"Session creation failed: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Session-Based Authentication", False, f"Error: {str(e)}")
+            return False
+
+    def test_invalid_credentials_handling(self):
+        """Test invalid credentials and error handling for all auth endpoints"""
+        tests_passed = 0
+        total_tests = 0
+        
+        # Test invalid registration
+        try:
+            total_tests += 1
+            invalid_registration = {
+                "email": "invalid-email",  # Invalid email format
+                "password": "123",  # Too short password
+                "name": ""  # Empty name
+            }
+            response = requests.post(f"{self.base_url}/auth/register", 
+                                   json=invalid_registration, timeout=10)
+            if response.status_code == 400:
+                tests_passed += 1
+                self.log_test("Invalid Registration Handling", True, "Properly rejected invalid registration")
+            else:
+                self.log_test("Invalid Registration Handling", False, 
+                            f"Should reject invalid registration, got: {response.status_code}")
+        except Exception as e:
+            self.log_test("Invalid Registration Handling", False, f"Error: {str(e)}")
+        
+        # Test invalid login
+        try:
+            total_tests += 1
+            invalid_login = {
+                "email": "nonexistent@example.com",
+                "password": "wrongpassword"
+            }
+            response = requests.post(f"{self.base_url}/auth/login", 
+                                   json=invalid_login, timeout=10)
+            if response.status_code == 401:
+                tests_passed += 1
+                self.log_test("Invalid Login Handling", True, "Properly rejected invalid login")
+            else:
+                self.log_test("Invalid Login Handling", False, 
+                            f"Should reject invalid login, got: {response.status_code}")
+        except Exception as e:
+            self.log_test("Invalid Login Handling", False, f"Error: {str(e)}")
+        
+        # Test accessing protected endpoint without auth
+        try:
+            total_tests += 1
+            response = requests.get(f"{self.base_url}/auth/me", timeout=10)
+            if response.status_code == 401:
+                tests_passed += 1
+                self.log_test("Unauthorized Access Handling", True, "Properly rejected unauthorized access")
+            else:
+                self.log_test("Unauthorized Access Handling", False, 
+                            f"Should reject unauthorized access, got: {response.status_code}")
+        except Exception as e:
+            self.log_test("Unauthorized Access Handling", False, f"Error: {str(e)}")
+        
+        return tests_passed == total_tests
+
+    # NEW PAGINATION SYSTEM TESTS
+    def test_pagination_basic_functionality(self):
+        """Test motorcycles endpoint GET /api/motorcycles with new pagination parameters (page, limit)"""
+        try:
+            # Test basic pagination
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"page": 1, "limit": 25}, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, dict) and "motorcycles" in data and "pagination" in data:
+                    motorcycles = data["motorcycles"]
+                    pagination = data["pagination"]
+                    
+                    # Verify response structure
+                    required_pagination_fields = ["page", "limit", "total_count", "total_pages", "has_next", "has_previous"]
+                    missing_fields = [field for field in required_pagination_fields if field not in pagination]
+                    
+                    if missing_fields:
+                        self.log_test("Pagination Basic Functionality", False, 
+                                    f"Missing pagination fields: {missing_fields}")
+                        return False
+                    
+                    if (len(motorcycles) <= 25 and 
+                        pagination["page"] == 1 and 
+                        pagination["limit"] == 25):
+                        
+                        self.log_test("Pagination Basic Functionality", True, 
+                                    f"Retrieved {len(motorcycles)} motorcycles with proper pagination structure")
+                        return True
+                    else:
+                        self.log_test("Pagination Basic Functionality", False, 
+                                    f"Pagination values incorrect: got {len(motorcycles)} motorcycles, page {pagination['page']}")
+                        return False
+                else:
+                    self.log_test("Pagination Basic Functionality", False, 
+                                "Response missing 'motorcycles' or 'pagination' fields")
+                    return False
+            else:
+                self.log_test("Pagination Basic Functionality", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Pagination Basic Functionality", False, f"Error: {str(e)}")
+            return False
+
+    def test_pagination_response_format(self):
+        """Verify pagination response format includes motorcycles array and pagination metadata"""
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"page": 1, "limit": 10}, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Verify top-level structure
+                if not isinstance(data, dict):
+                    self.log_test("Pagination Response Format", False, "Response is not a dictionary")
+                    return False
+                
+                if "motorcycles" not in data or "pagination" not in data:
+                    self.log_test("Pagination Response Format", False, 
+                                "Missing 'motorcycles' or 'pagination' in response")
+                    return False
+                
+                # Verify motorcycles array
+                motorcycles = data["motorcycles"]
+                if not isinstance(motorcycles, list):
+                    self.log_test("Pagination Response Format", False, 
+                                "'motorcycles' is not an array")
+                    return False
+                
+                # Verify pagination metadata
+                pagination = data["pagination"]
+                required_fields = ["page", "limit", "total_count", "total_pages", "has_next", "has_previous"]
+                
+                for field in required_fields:
+                    if field not in pagination:
+                        self.log_test("Pagination Response Format", False, 
+                                    f"Missing pagination field: {field}")
+                        return False
+                
+                # Verify data types
+                if (isinstance(pagination["page"], int) and 
+                    isinstance(pagination["limit"], int) and
+                    isinstance(pagination["total_count"], int) and
+                    isinstance(pagination["total_pages"], int) and
+                    isinstance(pagination["has_next"], bool) and
+                    isinstance(pagination["has_previous"], bool)):
+                    
+                    self.log_test("Pagination Response Format", True, 
+                                "Pagination response format is correct with all required fields and types")
+                    return True
+                else:
+                    self.log_test("Pagination Response Format", False, 
+                                "Pagination fields have incorrect data types")
+                    return False
+            else:
+                self.log_test("Pagination Response Format", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Pagination Response Format", False, f"Error: {str(e)}")
+            return False
+
+    def test_pagination_navigation(self):
+        """Test page navigation (page=1, page=2, etc.) with limit=25"""
+        try:
+            # Test first page
+            response1 = requests.get(f"{self.base_url}/motorcycles", 
+                                   params={"page": 1, "limit": 25}, timeout=10)
+            
+            # Test second page
+            response2 = requests.get(f"{self.base_url}/motorcycles", 
+                                   params={"page": 2, "limit": 25}, timeout=10)
+            
+            if response1.status_code == 200 and response2.status_code == 200:
+                data1 = response1.json()
+                data2 = response2.json()
+                
+                motorcycles1 = data1["motorcycles"]
+                motorcycles2 = data2["motorcycles"]
+                pagination1 = data1["pagination"]
+                pagination2 = data2["pagination"]
+                
+                # Verify different motorcycles on different pages
+                ids1 = {moto["id"] for moto in motorcycles1}
+                ids2 = {moto["id"] for moto in motorcycles2}
+                
+                if ids1.intersection(ids2):
+                    self.log_test("Pagination Navigation", False, 
+                                "Same motorcycles appear on different pages")
+                    return False
+                
+                # Verify pagination metadata
+                if (pagination1["page"] == 1 and pagination2["page"] == 2 and
+                    pagination1["has_previous"] == False and pagination1["has_next"] == True and
+                    pagination2["has_previous"] == True):
+                    
+                    self.log_test("Pagination Navigation", True, 
+                                f"Page navigation working correctly: Page 1 ({len(motorcycles1)} items), Page 2 ({len(motorcycles2)} items)")
+                    return True
+                else:
+                    self.log_test("Pagination Navigation", False, 
+                                f"Pagination metadata incorrect: P1 has_prev={pagination1['has_previous']}, has_next={pagination1['has_next']}")
+                    return False
+            else:
+                self.log_test("Pagination Navigation", False, 
+                            f"Status codes: Page 1: {response1.status_code}, Page 2: {response2.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Pagination Navigation", False, f"Error: {str(e)}")
+            return False
+
+    def test_pagination_metadata_accuracy(self):
+        """Verify total_count, total_pages, has_next, has_previous values are correct"""
+        try:
+            # Get first page
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"page": 1, "limit": 25}, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                pagination = data["pagination"]
+                
+                total_count = pagination["total_count"]
+                total_pages = pagination["total_pages"]
+                limit = pagination["limit"]
+                
+                # Verify total_pages calculation
+                expected_total_pages = (total_count + limit - 1) // limit  # Ceiling division
+                if total_pages != expected_total_pages:
+                    self.log_test("Pagination Metadata Accuracy", False, 
+                                f"total_pages incorrect: expected {expected_total_pages}, got {total_pages}")
+                    return False
+                
+                # Test last page to verify has_next/has_previous
+                if total_pages > 1:
+                    last_page_response = requests.get(f"{self.base_url}/motorcycles", 
+                                                    params={"page": total_pages, "limit": 25}, timeout=10)
+                    
+                    if last_page_response.status_code == 200:
+                        last_page_data = last_page_response.json()
+                        last_pagination = last_page_data["pagination"]
+                        
+                        if (last_pagination["has_next"] == False and 
+                            last_pagination["has_previous"] == True):
+                            
+                            self.log_test("Pagination Metadata Accuracy", True, 
+                                        f"Pagination metadata accurate: {total_count} total, {total_pages} pages")
+                            return True
+                        else:
+                            self.log_test("Pagination Metadata Accuracy", False, 
+                                        f"Last page metadata incorrect: has_next={last_pagination['has_next']}, has_previous={last_pagination['has_previous']}")
+                            return False
+                    else:
+                        self.log_test("Pagination Metadata Accuracy", False, 
+                                    f"Failed to fetch last page: {last_page_response.status_code}")
+                        return False
+                else:
+                    # Only one page
+                    if (pagination["has_next"] == False and pagination["has_previous"] == False):
+                        self.log_test("Pagination Metadata Accuracy", True, 
+                                    f"Single page metadata correct: {total_count} total motorcycles")
+                        return True
+                    else:
+                        self.log_test("Pagination Metadata Accuracy", False, 
+                                    "Single page should have has_next=False and has_previous=False")
+                        return False
+            else:
+                self.log_test("Pagination Metadata Accuracy", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Pagination Metadata Accuracy", False, f"Error: {str(e)}")
+            return False
+
+    def test_pagination_with_filtering(self):
+        """Test filtering combined with pagination works correctly"""
+        try:
+            # Test pagination with manufacturer filter
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"manufacturer": "Yamaha", "page": 1, "limit": 10}, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                motorcycles = data["motorcycles"]
+                pagination = data["pagination"]
+                
+                # Verify all motorcycles match the filter
+                yamaha_count = sum(1 for moto in motorcycles if "yamaha" in moto.get("manufacturer", "").lower())
+                
+                if yamaha_count == len(motorcycles):
+                    # Verify pagination works with filtering
+                    if pagination["total_count"] > 0 and len(motorcycles) <= 10:
+                        self.log_test("Pagination with Filtering", True, 
+                                    f"Filtering + pagination working: {len(motorcycles)} Yamaha motorcycles, total: {pagination['total_count']}")
+                        return True
+                    else:
+                        self.log_test("Pagination with Filtering", False, 
+                                    f"Pagination not working with filter: got {len(motorcycles)} motorcycles")
+                        return False
+                else:
+                    self.log_test("Pagination with Filtering", False, 
+                                f"Filter not applied correctly: {yamaha_count}/{len(motorcycles)} are Yamaha")
+                    return False
+            else:
+                self.log_test("Pagination with Filtering", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Pagination with Filtering", False, f"Error: {str(e)}")
+            return False
+
+    def test_pagination_with_sorting(self):
+        """Test sorting combined with pagination works correctly"""
+        try:
+            # Test pagination with sorting
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"sort_by": "price", "sort_order": "asc", "page": 1, "limit": 15}, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                motorcycles = data["motorcycles"]
+                pagination = data["pagination"]
+                
+                # Verify sorting is maintained with pagination
+                if len(motorcycles) > 1:
+                    is_sorted = True
+                    for i in range(len(motorcycles) - 1):
+                        if motorcycles[i].get("price_usd", 0) > motorcycles[i + 1].get("price_usd", 0):
+                            is_sorted = False
+                            break
+                    
+                    if is_sorted and len(motorcycles) <= 15:
+                        self.log_test("Pagination with Sorting", True, 
+                                    f"Sorting + pagination working: {len(motorcycles)} motorcycles sorted by price")
+                        return True
+                    else:
+                        self.log_test("Pagination with Sorting", False, 
+                                    f"Sorting not maintained with pagination: sorted={is_sorted}, count={len(motorcycles)}")
+                        return False
+                else:
+                    self.log_test("Pagination with Sorting", True, 
+                                "Insufficient data to verify sorting, but pagination structure correct")
+                    return True
+            else:
+                self.log_test("Pagination with Sorting", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Pagination with Sorting", False, f"Error: {str(e)}")
+            return False
+
+    # NEW VENDOR PRICING IMPROVEMENTS TESTS
+    def test_regional_currencies_support(self):
+        """Test vendor pricing with new regional currencies (BD, NP, TH, MY, ID, AE, SA)"""
+        if not self.motorcycle_ids:
+            self.log_test("Regional Currencies Support", False, "No motorcycle IDs available")
+            return False
+        
+        new_regions = ["BD", "NP", "TH", "MY", "ID", "AE", "SA"]
+        all_passed = True
+        
+        for region in new_regions:
+            try:
+                motorcycle_id = self.motorcycle_ids[0]
+                response = requests.get(f"{self.base_url}/motorcycles/{motorcycle_id}/pricing", 
+                                      params={"region": region}, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if ("currency" in data and "vendor_prices" in data and 
+                        data["region"] == region):
+                        
+                        self.log_test(f"Regional Currency - {region}", True, 
+                                    f"Pricing available in {data['currency']} for {region}")
+                    else:
+                        self.log_test(f"Regional Currency - {region}", False, 
+                                    f"Invalid pricing response structure")
+                        all_passed = False
+                else:
+                    self.log_test(f"Regional Currency - {region}", False, 
+                                f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Regional Currency - {region}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_discontinued_motorcycle_handling(self):
+        """Test discontinued motorcycle handling - should return proper discontinued message"""
+        try:
+            # First, let's get a motorcycle and check its availability
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"limit": 50}, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                motorcycles = data.get("motorcycles", [])
+                
+                # Look for a discontinued motorcycle
+                discontinued_moto = None
+                for moto in motorcycles:
+                    if moto.get("availability", "").lower() == "discontinued":
+                        discontinued_moto = moto
+                        break
+                
+                if discontinued_moto:
+                    # Test pricing for discontinued motorcycle
+                    pricing_response = requests.get(f"{self.base_url}/motorcycles/{discontinued_moto['id']}/pricing", 
+                                                  params={"region": "US"}, timeout=10)
+                    
+                    if pricing_response.status_code == 200:
+                        pricing_data = pricing_response.json()
+                        vendor_prices = pricing_data.get("vendor_prices", [])
+                        
+                        # Check if discontinued status is properly handled
+                        discontinued_handling = any(
+                            "discontinued" in vendor.get("availability", "").lower() or
+                            "not available" in vendor.get("availability", "").lower()
+                            for vendor in vendor_prices
+                        )
+                        
+                        if discontinued_handling or len(vendor_prices) == 0:
+                            self.log_test("Discontinued Motorcycle Handling", True, 
+                                        f"Discontinued motorcycle properly handled: {discontinued_moto['manufacturer']} {discontinued_moto['model']}")
+                            return True
+                        else:
+                            self.log_test("Discontinued Motorcycle Handling", False, 
+                                        "Discontinued motorcycle not properly marked in vendor pricing")
+                            return False
+                    else:
+                        self.log_test("Discontinued Motorcycle Handling", False, 
+                                    f"Failed to get pricing for discontinued motorcycle: {pricing_response.status_code}")
+                        return False
+                else:
+                    self.log_test("Discontinued Motorcycle Handling", True, 
+                                "No discontinued motorcycles found in database (all available)")
+                    return True
+            else:
+                self.log_test("Discontinued Motorcycle Handling", False, 
+                            f"Failed to get motorcycles: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Discontinued Motorcycle Handling", False, f"Error: {str(e)}")
+            return False
+
+    def test_verified_vendor_urls(self):
+        """Verify only verified vendor URLs are returned (no fake/placeholder links)"""
+        if not self.motorcycle_ids:
+            self.log_test("Verified Vendor URLs", False, "No motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            response = requests.get(f"{self.base_url}/motorcycles/{motorcycle_id}/pricing", 
+                                  params={"region": "US"}, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                vendor_prices = data.get("vendor_prices", [])
+                
+                if vendor_prices:
+                    fake_url_indicators = ["example.com", "placeholder", "fake", "test.com", "localhost"]
+                    verified_urls = True
+                    
+                    for vendor in vendor_prices:
+                        website_url = vendor.get("website_url", "")
+                        if any(indicator in website_url.lower() for indicator in fake_url_indicators):
+                            verified_urls = False
+                            break
+                    
+                    if verified_urls:
+                        self.log_test("Verified Vendor URLs", True, 
+                                    f"All {len(vendor_prices)} vendor URLs appear to be verified (no fake/placeholder links)")
+                        return True
+                    else:
+                        self.log_test("Verified Vendor URLs", False, 
+                                    "Some vendor URLs appear to be fake or placeholder links")
+                        return False
+                else:
+                    self.log_test("Verified Vendor URLs", True, 
+                                "No vendor prices returned (acceptable for testing)")
+                    return True
+            else:
+                self.log_test("Verified Vendor URLs", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Verified Vendor URLs", False, f"Error: {str(e)}")
+            return False
+
+    def test_currency_conversion(self):
+        """Test currency conversion is working for different regions"""
+        if not self.motorcycle_ids:
+            self.log_test("Currency Conversion", False, "No motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            
+            # Test US pricing (baseline)
+            us_response = requests.get(f"{self.base_url}/motorcycles/{motorcycle_id}/pricing", 
+                                     params={"region": "US"}, timeout=10)
+            
+            # Test different region pricing
+            eu_response = requests.get(f"{self.base_url}/motorcycles/{motorcycle_id}/pricing", 
+                                     params={"region": "EU"}, timeout=10)
+            
+            if us_response.status_code == 200 and eu_response.status_code == 200:
+                us_data = us_response.json()
+                eu_data = eu_response.json()
+                
+                us_currency = us_data.get("currency", "USD")
+                eu_currency = eu_data.get("currency", "EUR")
+                
+                if us_currency != eu_currency:
+                    self.log_test("Currency Conversion", True, 
+                                f"Currency conversion working: US uses {us_currency}, EU uses {eu_currency}")
+                    return True
+                else:
+                    self.log_test("Currency Conversion", False, 
+                                f"Same currency for different regions: {us_currency}")
+                    return False
+            else:
+                self.log_test("Currency Conversion", False, 
+                            f"Failed to get pricing: US: {us_response.status_code}, EU: {eu_response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Currency Conversion", False, f"Error: {str(e)}")
+            return False
     
     def run_all_tests(self):
         """Run all tests in sequence"""
