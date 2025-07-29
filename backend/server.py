@@ -1039,13 +1039,118 @@ async def seed_motorcycles():
         # Get final statistics
         stats = await get_database_stats()
         
+        # Add sample ratings to make the site more engaging
+        try:
+            # Sample users for ratings
+            sample_users = [
+                {"id": "user1", "name": "Alex Johnson", "picture": "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex"},
+                {"id": "user2", "name": "Sarah Chen", "picture": "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah"},
+                {"id": "user3", "name": "Mike Rodriguez", "picture": "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike"},
+                {"id": "user4", "name": "Emma Wilson", "picture": "https://api.dicebear.com/7.x/avataaars/svg?seed=Emma"},
+                {"id": "user5", "name": "David Park", "picture": "https://api.dicebear.com/7.x/avataaars/svg?seed=David"},
+                {"id": "user6", "name": "Lisa Thompson", "picture": "https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa"},
+            ]
+            
+            # Sample reviews for different types of motorcycles
+            sample_reviews = {
+                "Sport": [
+                    "Incredible performance on the track! The power delivery is smooth and the handling is razor sharp.",
+                    "Perfect for weekend rides and occasional track days. Love the aggressive styling.",
+                    "Fast and fun, but can be a bit harsh on longer rides. Great for enthusiasts!",
+                    "Amazing acceleration and braking. The electronics package is top-notch.",
+                    "Beautiful bike with excellent build quality. Worth every penny!"
+                ],
+                "Cruiser": [
+                    "Comfortable for long highway cruises. The engine has that perfect rumble.",
+                    "Classic styling meets modern reliability. Perfect for touring.",
+                    "Smooth ride with plenty of torque. Great for both city and highway riding.",
+                    "Love the low seat height and relaxed riding position. Very confidence-inspiring.",
+                    "Beautiful chrome details and solid build quality. A real head-turner!"
+                ],
+                "Naked": [
+                    "Perfect balance of performance and practicality. Great for daily commuting.",
+                    "Upright riding position is comfortable and the bike is very manageable.",
+                    "Excellent value for money. Reliable and fun to ride in all conditions.",
+                    "Great first big bike! Not too intimidating but still plenty of fun.",
+                    "Love the minimalist design and direct connection to the road."
+                ],
+                "Adventure": [
+                    "Perfect for both on-road touring and light off-road adventures.",
+                    "Comfortable for long distances with excellent wind protection.",
+                    "Capable and versatile. Can handle anything from city streets to mountain trails.",
+                    "Great for exploring new places. The large fuel tank gives excellent range.",
+                    "Excellent build quality and reliability. Built to go anywhere!"
+                ]
+            }
+            
+            # Clear existing ratings
+            await db.ratings.delete_many({})
+            
+            # Get a sample of motorcycles to add ratings to
+            motorcycles_sample = await db.motorcycles.find({}).limit(500).to_list(500)
+            
+            # Add ratings to roughly 40% of motorcycles
+            import random
+            ratings_added = 0
+            
+            for motorcycle in motorcycles_sample:
+                if random.random() < 0.4:  # 40% chance to get ratings
+                    category = motorcycle.get('category', 'Sport')
+                    
+                    # Generate 1-4 ratings for this motorcycle
+                    num_ratings = random.randint(1, 4)
+                    total_rating = 0
+                    
+                    for i in range(num_ratings):
+                        # Generate rating (biased towards higher ratings)
+                        rating = random.choices([3, 4, 5], weights=[1, 3, 4])[0]
+                        total_rating += rating
+                        
+                        # Select random user and review
+                        user = random.choice(sample_users)
+                        review_texts = sample_reviews.get(category, sample_reviews['Sport'])
+                        review_text = random.choice(review_texts)
+                        
+                        # Create rating document
+                        rating_doc = {
+                            "id": str(uuid.uuid4()),
+                            "user_id": user["id"],
+                            "user_name": user["name"],
+                            "user_picture": user["picture"],
+                            "motorcycle_id": motorcycle["id"],
+                            "rating": rating,
+                            "review_text": review_text,
+                            "created_at": datetime.utcnow(),
+                            "updated_at": datetime.utcnow()
+                        }
+                        
+                        # Insert rating
+                        await db.ratings.insert_one(rating_doc)
+                    
+                    # Update motorcycle with average rating
+                    average_rating = total_rating / num_ratings
+                    await db.motorcycles.update_one(
+                        {"id": motorcycle["id"]},
+                        {
+                            "$set": {
+                                "average_rating": round(average_rating, 1),
+                                "total_ratings": num_ratings
+                            }
+                        }
+                    )
+                    ratings_added += 1
+            
+            print(f"Added sample ratings to {ratings_added} motorcycles")
+        except Exception as e:
+            print(f"Error adding sample ratings: {str(e)}")  # Non-critical error
+        
         return {
-            "message": f"Successfully seeded comprehensive database with {total_inserted} motorcycles",
+            "message": f"Successfully seeded comprehensive database with {total_inserted} motorcycles and sample ratings",
             "total_motorcycles": stats.total_motorcycles,
             "manufacturers": len(stats.manufacturers),
             "categories": len(stats.categories),
             "year_range": stats.year_range,
-            "status": "Database expansion complete - Ready for global motorcycle enthusiasts!",
+            "status": "Database expansion complete with sample ratings - Ready for global motorcycle enthusiasts!",
             "daily_updates": "Automated daily update system is now active and ready for GMT 00:00 schedule"
         }
         
