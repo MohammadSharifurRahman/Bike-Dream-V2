@@ -340,22 +340,76 @@ class VendorPricingSystem:
         
         # Regional currency mapping
         self.regional_currencies = {
-            "US": "USD",
+            "US": "USD",    # United States
+            # South Asian countries
             "BD": "BDT",    # Bangladesh
+            "IN": "INR",    # India
             "NP": "NPR",    # Nepal
-            "BT": "BTN",    # Bhutan (using same vendors as Nepal for now)
+            "BT": "BTN",    # Bhutan
+            "PK": "PKR",    # Pakistan
+            "LK": "LKR",    # Sri Lanka
+            # Southeast Asian countries
             "TH": "THB",    # Thailand
             "MY": "MYR",    # Malaysia
             "ID": "IDR",    # Indonesia
+            "PH": "PHP",    # Philippines
+            "VN": "VND",    # Vietnam
+            "SG": "SGD",    # Singapore
+            # Middle Eastern countries
             "AE": "AED",    # UAE
             "SA": "SAR",    # Saudi Arabia
-            "EU": "EUR", 
-            "UK": "GBP",
-            "CA": "CAD",
-            "AU": "AUD",
-            "IN": "INR",
-            "JP": "JPY",
-            "CN": "CNY"
+            "QA": "QAR",    # Qatar
+            "KW": "KWD",    # Kuwait
+            "BH": "BHD",    # Bahrain
+            "OM": "OMR",    # Oman
+            "JO": "JOD",    # Jordan
+            "TR": "TRY",    # Turkey
+            # East Asian countries
+            "JP": "JPY",    # Japan
+            "KR": "KRW",    # South Korea
+            "TW": "TWD",    # Taiwan
+            "CN": "CNY",    # China
+            "HK": "HKD",    # Hong Kong
+            # European countries
+            "DE": "EUR",    # Germany
+            "FR": "EUR",    # France
+            "IT": "EUR",    # Italy
+            "ES": "EUR",    # Spain
+            "NL": "EUR",    # Netherlands
+            "BE": "EUR",    # Belgium
+            "AT": "EUR",    # Austria
+            "PT": "EUR",    # Portugal
+            "IE": "EUR",    # Ireland
+            "FI": "EUR",    # Finland
+            "GB": "GBP",    # United Kingdom
+            "CH": "CHF",    # Switzerland
+            "NO": "NOK",    # Norway
+            "SE": "SEK",    # Sweden
+            "DK": "DKK",    # Denmark
+            "PL": "PLN",    # Poland
+            "CZ": "CZK",    # Czech Republic
+            "HU": "HUF",    # Hungary
+            "RO": "RON",    # Romania
+            # Americas
+            "CA": "CAD",    # Canada
+            "BR": "BRL",    # Brazil
+            "MX": "MXN",    # Mexico
+            "AR": "ARS",    # Argentina
+            "CL": "CLP",    # Chile
+            "CO": "COP",    # Colombia
+            "PE": "PEN",    # Peru
+            # Oceania
+            "AU": "AUD",    # Australia
+            "NZ": "NZD",    # New Zealand
+            # African countries
+            "ZA": "ZAR",    # South Africa
+            "EG": "EGP",    # Egypt
+            "NG": "NGN",    # Nigeria
+            "KE": "KES",    # Kenya
+            # Other regions
+            "RU": "RUB",    # Russia
+            "UA": "UAH",    # Ukraine
+            "IL": "ILS"     # Israel
         }
     
     def get_vendor_prices(self, motorcycle: Dict[str, Any], region: str = "US") -> List[Dict[str, Any]]:
