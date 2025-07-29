@@ -104,6 +104,30 @@
 
 user_problem_statement: "Build Byke-Dream motorcycle database website with comprehensive motorcycle catalog, advanced search/filtering, detailed motorcycle pages, and user engagement features"
 
+  - task: "Email/Password Authentication System"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User feedback: No standard email/password registration/login option available. Need to implement full authentication system that allows users to register and log in with email/password (site-based login)."
+
+  - task: "Google OAuth Authentication Fix"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User feedback: Google login integration is not working as expected. After authentication via Google, the user is not logged into the site. Need to ensure proper backend database integration to manage and authenticate user accounts securely."
+
 backend:
   - task: "Motorcycle Database API with CRUD operations"
     implemented: true
