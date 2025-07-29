@@ -1147,7 +1147,7 @@ function App() {
       const response = await axios.get(`${API}/stats`);
       setDatabaseStats({
         totalMotorcycles: response.data.total_motorcycles,
-        totalManufacturers: response.data.manufacturers
+        totalManufacturers: response.data.manufacturers.length // Get length of manufacturers array
       });
     } catch (error) {
       console.error('Error fetching database stats:', error);
