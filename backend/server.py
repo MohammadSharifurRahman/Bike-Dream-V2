@@ -1976,11 +1976,8 @@ async def get_update_logs(limit: int = 10):
 # ==================== USER REQUESTS API ENDPOINTS ====================
 
 @api_router.post("/requests")
-async def create_user_request(request_data: UserRequestCreate, current_user: User = Depends(get_current_user)):
+async def create_user_request(request_data: UserRequestCreate, current_user: User = Depends(require_auth)):
     """Submit a new user request"""
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    
     # Create the user request
     user_request = UserRequest(
         user_id=current_user.id,
@@ -1998,16 +1995,13 @@ async def create_user_request(request_data: UserRequestCreate, current_user: Use
 
 @api_router.get("/requests")
 async def get_user_requests(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_auth),
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=50),
     status: Optional[str] = Query(None),
     request_type: Optional[str] = Query(None)
 ):
     """Get user's submitted requests"""
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    
     # Build query for user's requests
     query = {"user_id": current_user.id}
     
@@ -2041,11 +2035,8 @@ async def get_user_requests(
     }
 
 @api_router.get("/requests/{request_id}")
-async def get_user_request(request_id: str, current_user: User = Depends(get_current_user)):
+async def get_user_request(request_id: str, current_user: User = Depends(require_auth)):
     """Get a specific user request"""
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    
     request = await db.user_requests.find_one({"id": request_id, "user_id": current_user.id})
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
