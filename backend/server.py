@@ -338,9 +338,9 @@ async def get_current_user(x_session_id: str = Header(None), authorization: str 
     
     return user
 
-async def require_auth(x_session_id: str = Header(None)):
+async def require_auth(x_session_id: str = Header(None), authorization: str = Header(None)):
     """Require authentication"""
-    user = await get_current_user(x_session_id)
+    user = await get_current_user(x_session_id, authorization)
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     return user
