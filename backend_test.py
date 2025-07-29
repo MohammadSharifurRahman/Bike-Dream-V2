@@ -78,21 +78,32 @@ class MotorcycleAPITester:
             response = requests.get(f"{self.base_url}/motorcycles", timeout=10)
             if response.status_code == 200:
                 data = response.json()
-                if isinstance(data, list) and len(data) > 0:
-                    # Store some motorcycle IDs for individual testing
-                    self.motorcycle_ids = [moto.get("id") for moto in data[:3] if moto.get("id")]
-                    self.log_test("Get All Motorcycles", True, f"Retrieved {len(data)} motorcycles")
-                    
-                    # Verify motorcycle structure
-                    first_moto = data[0]
-                    required_fields = ["id", "manufacturer", "model", "year", "category", "price_usd"]
-                    missing_fields = [field for field in required_fields if field not in first_moto]
-                    if missing_fields:
-                        self.log_test("Motorcycle Data Structure", False, f"Missing fields: {missing_fields}")
-                        return False
+                # Handle new pagination format
+                if isinstance(data, dict) and "motorcycles" in data:
+                    motorcycles = data["motorcycles"]
+                    if len(motorcycles) > 0:
+                        # Store some motorcycle IDs for individual testing
+                        self.motorcycle_ids = [moto.get("id") for moto in motorcycles[:3] if moto.get("id")]
+                        self.log_test("Get All Motorcycles", True, f"Retrieved {len(motorcycles)} motorcycles")
+                        
+                        # Verify motorcycle structure
+                        first_moto = motorcycles[0]
+                        required_fields = ["id", "manufacturer", "model", "year", "category", "price_usd"]
+                        missing_fields = [field for field in required_fields if field not in first_moto]
+                        if missing_fields:
+                            self.log_test("Motorcycle Data Structure", False, f"Missing fields: {missing_fields}")
+                            return False
+                        else:
+                            self.log_test("Motorcycle Data Structure", True, "All required fields present")
+                            return True
                     else:
-                        self.log_test("Motorcycle Data Structure", True, "All required fields present")
-                        return True
+                        self.log_test("Get All Motorcycles", False, "No motorcycles returned")
+                        return False
+                # Handle legacy format for backward compatibility
+                elif isinstance(data, list) and len(data) > 0:
+                    self.motorcycle_ids = [moto.get("id") for moto in data[:3] if moto.get("id")]
+                    self.log_test("Get All Motorcycles", True, f"Retrieved {len(data)} motorcycles (legacy format)")
+                    return True
                 else:
                     self.log_test("Get All Motorcycles", False, "No motorcycles returned or invalid format")
                     return False
