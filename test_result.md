@@ -442,6 +442,18 @@ backend:
         comment: "✅ BROWSE LIMIT ENHANCED: GET /api/motorcycles with limit=3000 successfully returns all 1307 motorcycles in database. Limit increased from 100 to 3000 to accommodate full database browsing. System correctly returns all available motorcycles when high limit is requested."
 
 frontend:
+  - task: "Pagination System Implementation"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User feedback: Site becomes non-responsive when loading a large number of motorcycles at once. Need to implement pagination to load a maximum of 25 motorcycles per page and add Next and Back buttons to navigate through pages wherever multiple motorcycles are displayed."
+
   - task: "Motorcycle Database UI with Advanced Search"
     implemented: true
     working: true
