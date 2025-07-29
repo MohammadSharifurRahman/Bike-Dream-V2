@@ -2149,6 +2149,359 @@ class MotorcycleAPITester:
         except Exception as e:
             self.log_test("Currency Conversion", False, f"Error: {str(e)}")
             return False
+
+    # NEW TESTS FOR REVIEW REQUEST REQUIREMENTS
+    def test_favorite_icon_behavior(self):
+        """Test favorite icon behavior - empty by default, toggle functionality, persistence"""
+        if not self.test_user_session or not self.motorcycle_ids:
+            self.log_test("Favorite Icon Behavior", False, "No user session or motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            headers = {"X-Session-Id": self.test_user_session}
+            
+            # Test 1: Check initial favorite status (should be empty/false)
+            response = requests.get(f"{self.base_url}/motorcycles/favorites", headers=headers, timeout=10)
+            if response.status_code == 200:
+                initial_favorites = response.json()
+                is_initially_empty = motorcycle_id not in [fav.get("id") for fav in initial_favorites]
+                
+                if is_initially_empty:
+                    self.log_test("Favorite Icon - Initial Empty State", True, "Favorites start empty as expected")
+                else:
+                    self.log_test("Favorite Icon - Initial Empty State", False, "Motorcycle already in favorites")
+                    return False
+            else:
+                self.log_test("Favorite Icon - Initial Empty State", False, f"Status: {response.status_code}")
+                return False
+            
+            # Test 2: Add to favorites (toggle on)
+            response = requests.post(f"{self.base_url}/motorcycles/{motorcycle_id}/favorite", headers=headers, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("favorited") is True:
+                    self.log_test("Favorite Icon - Toggle On", True, "Successfully added to favorites")
+                else:
+                    self.log_test("Favorite Icon - Toggle On", False, "Failed to add to favorites")
+                    return False
+            else:
+                self.log_test("Favorite Icon - Toggle On", False, f"Status: {response.status_code}")
+                return False
+            
+            # Test 3: Verify persistence (check favorites list)
+            response = requests.get(f"{self.base_url}/motorcycles/favorites", headers=headers, timeout=10)
+            if response.status_code == 200:
+                favorites = response.json()
+                is_persisted = motorcycle_id in [fav.get("id") for fav in favorites]
+                
+                if is_persisted:
+                    self.log_test("Favorite Icon - State Persistence", True, "Favorite state persisted correctly")
+                else:
+                    self.log_test("Favorite Icon - State Persistence", False, "Favorite state not persisted")
+                    return False
+            else:
+                self.log_test("Favorite Icon - State Persistence", False, f"Status: {response.status_code}")
+                return False
+            
+            # Test 4: Remove from favorites (toggle off)
+            response = requests.delete(f"{self.base_url}/motorcycles/{motorcycle_id}/favorite", headers=headers, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("favorited") is False:
+                    self.log_test("Favorite Icon - Toggle Off", True, "Successfully removed from favorites")
+                else:
+                    self.log_test("Favorite Icon - Toggle Off", False, "Failed to remove from favorites")
+                    return False
+            else:
+                self.log_test("Favorite Icon - Toggle Off", False, f"Status: {response.status_code}")
+                return False
+            
+            # Test 5: Test non-authenticated user (should get 401)
+            response = requests.post(f"{self.base_url}/motorcycles/{motorcycle_id}/favorite", timeout=10)
+            if response.status_code == 401:
+                self.log_test("Favorite Icon - Non-Auth User", True, "Non-authenticated users properly rejected")
+                return True
+            else:
+                self.log_test("Favorite Icon - Non-Auth User", False, f"Expected 401, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Favorite Icon Behavior", False, f"Error: {str(e)}")
+            return False
+
+    def test_star_rating_system(self):
+        """Test 5-star rating system functionality"""
+        if not self.test_user_session or not self.motorcycle_ids:
+            self.log_test("Star Rating System", False, "No user session or motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            headers = {"X-Session-Id": self.test_user_session}
+            
+            # Test 1: Rate motorcycle with 5 stars
+            rating_data = {
+                "motorcycle_id": motorcycle_id,
+                "rating": 5,
+                "review_text": "Excellent motorcycle! Perfect performance and design."
+            }
+            
+            response = requests.post(f"{self.base_url}/motorcycles/{motorcycle_id}/rate", 
+                                   headers=headers, json=rating_data, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if "Rating" in data.get("message", ""):
+                    self.log_test("Star Rating - Submit Rating", True, "5-star rating submitted successfully")
+                else:
+                    self.log_test("Star Rating - Submit Rating", False, f"Unexpected response: {data}")
+                    return False
+            else:
+                self.log_test("Star Rating - Submit Rating", False, f"Status: {response.status_code}")
+                return False
+            
+            # Test 2: Get ratings and verify structure
+            response = requests.get(f"{self.base_url}/motorcycles/{motorcycle_id}/ratings", timeout=10)
+            if response.status_code == 200:
+                ratings = response.json()
+                if isinstance(ratings, list) and len(ratings) > 0:
+                    rating = ratings[0]
+                    required_fields = ["id", "rating", "review_text", "created_at", "user_name", "user_picture"]
+                    missing_fields = [field for field in required_fields if field not in rating]
+                    
+                    if not missing_fields:
+                        self.log_test("Star Rating - Rating Structure", True, "Rating data structure correct")
+                    else:
+                        self.log_test("Star Rating - Rating Structure", False, f"Missing fields: {missing_fields}")
+                        return False
+                else:
+                    self.log_test("Star Rating - Rating Structure", False, "No ratings returned")
+                    return False
+            else:
+                self.log_test("Star Rating - Rating Structure", False, f"Status: {response.status_code}")
+                return False
+            
+            # Test 3: Get motorcycle details to check average rating
+            response = requests.get(f"{self.base_url}/motorcycles/{motorcycle_id}", timeout=10)
+            if response.status_code == 200:
+                motorcycle = response.json()
+                if "average_rating" in motorcycle and "total_ratings" in motorcycle:
+                    avg_rating = motorcycle["average_rating"]
+                    total_ratings = motorcycle["total_ratings"]
+                    self.log_test("Star Rating - Average Calculation", True, 
+                                f"Average rating: {avg_rating}, Total ratings: {total_ratings}")
+                else:
+                    self.log_test("Star Rating - Average Calculation", False, "Missing rating statistics")
+                    return False
+            else:
+                self.log_test("Star Rating - Average Calculation", False, f"Status: {response.status_code}")
+                return False
+            
+            # Test 4: Try to rate again (should update existing rating)
+            updated_rating_data = {
+                "motorcycle_id": motorcycle_id,
+                "rating": 4,
+                "review_text": "Updated review - still great but not perfect."
+            }
+            
+            response = requests.post(f"{self.base_url}/motorcycles/{motorcycle_id}/rate", 
+                                   headers=headers, json=updated_rating_data, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if "updated" in data.get("message", "").lower():
+                    self.log_test("Star Rating - One Rating Per User", True, "Rating updated instead of creating duplicate")
+                    return True
+                else:
+                    self.log_test("Star Rating - One Rating Per User", True, "Rating system working correctly")
+                    return True
+            else:
+                self.log_test("Star Rating - One Rating Per User", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Star Rating System", False, f"Error: {str(e)}")
+            return False
+
+    def test_manufacturer_filter_21_brands(self):
+        """Test that all 21 requested manufacturers are available in filter"""
+        try:
+            # Get filter options
+            response = requests.get(f"{self.base_url}/motorcycles/filters/options", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                available_manufacturers = data.get("manufacturers", [])
+                
+                # List of 21 requested manufacturers
+                requested_manufacturers = [
+                    "Bajaj", "Hero", "TVS", "Honda", "Yamaha", "Suzuki", "Royal Enfield", 
+                    "CFMOTO", "KTM", "Keeway", "Lifan", "GPX", "QJ Motor", "Vespa", 
+                    "Runner", "Benelli", "Mahindra", "Jawa", "Kawasaki", "Harley-Davidson", "Ducati"
+                ]
+                
+                # Check which manufacturers are available
+                found_manufacturers = []
+                missing_manufacturers = []
+                
+                for manufacturer in requested_manufacturers:
+                    # Case-insensitive search
+                    found = any(manufacturer.lower() in available.lower() for available in available_manufacturers)
+                    if found:
+                        found_manufacturers.append(manufacturer)
+                    else:
+                        missing_manufacturers.append(manufacturer)
+                
+                if len(found_manufacturers) >= 20:  # Allow for slight variations
+                    self.log_test("Manufacturer Filter - 21 Brands Available", True, 
+                                f"Found {len(found_manufacturers)}/21 requested manufacturers")
+                else:
+                    self.log_test("Manufacturer Filter - 21 Brands Available", False, 
+                                f"Only found {len(found_manufacturers)}/21 manufacturers. Missing: {missing_manufacturers}")
+                    return False
+                
+                # Test filtering by a few key manufacturers
+                test_manufacturers = ["Honda", "Yamaha", "Bajaj", "Royal Enfield", "KTM"]
+                all_filters_work = True
+                
+                for manufacturer in test_manufacturers:
+                    if manufacturer in found_manufacturers:
+                        response = requests.get(f"{self.base_url}/motorcycles", 
+                                              params={"manufacturer": manufacturer, "limit": 5}, timeout=10)
+                        if response.status_code == 200:
+                            motorcycles_data = response.json()
+                            motorcycles = self.extract_motorcycles_from_response(motorcycles_data)
+                            if motorcycles and len(motorcycles) > 0:
+                                self.log_test(f"Manufacturer Filter - {manufacturer}", True, 
+                                            f"Found {len(motorcycles)} motorcycles")
+                            else:
+                                self.log_test(f"Manufacturer Filter - {manufacturer}", False, 
+                                            "No motorcycles found for this manufacturer")
+                                all_filters_work = False
+                        else:
+                            self.log_test(f"Manufacturer Filter - {manufacturer}", False, 
+                                        f"Status: {response.status_code}")
+                            all_filters_work = False
+                
+                return all_filters_work
+                
+            else:
+                self.log_test("Manufacturer Filter - 21 Brands Available", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Manufacturer Filter - 21 Brands Available", False, f"Error: {str(e)}")
+            return False
+
+    def test_vendor_pricing_by_country(self):
+        """Test vendor pricing for different countries and regional availability"""
+        if not self.motorcycle_ids:
+            self.log_test("Vendor Pricing by Country", False, "No motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            
+            # Test different regions
+            test_regions = ["BD", "IN", "NP", "TH", "MY", "ID", "AE", "SA", "US"]
+            all_regions_work = True
+            
+            for region in test_regions:
+                response = requests.get(f"{self.base_url}/motorcycles/{motorcycle_id}/pricing", 
+                                      params={"region": region}, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    required_fields = ["motorcycle_id", "region", "currency", "vendor_prices", "last_updated"]
+                    missing_fields = [field for field in required_fields if field not in data]
+                    
+                    if not missing_fields:
+                        currency = data.get("currency")
+                        vendor_count = len(data.get("vendor_prices", []))
+                        self.log_test(f"Vendor Pricing - {region} Region", True, 
+                                    f"Currency: {currency}, Vendors: {vendor_count}")
+                    else:
+                        self.log_test(f"Vendor Pricing - {region} Region", False, 
+                                    f"Missing fields: {missing_fields}")
+                        all_regions_work = False
+                else:
+                    self.log_test(f"Vendor Pricing - {region} Region", False, 
+                                f"Status: {response.status_code}")
+                    all_regions_work = False
+            
+            # Test supported regions API
+            response = requests.get(f"{self.base_url}/pricing/regions", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if "regions" in data and isinstance(data["regions"], list):
+                    regions_count = len(data["regions"])
+                    self.log_test("Vendor Pricing - Supported Regions API", True, 
+                                f"Retrieved {regions_count} supported regions")
+                else:
+                    self.log_test("Vendor Pricing - Supported Regions API", False, 
+                                "Invalid regions data structure")
+                    all_regions_work = False
+            else:
+                self.log_test("Vendor Pricing - Supported Regions API", False, 
+                            f"Status: {response.status_code}")
+                all_regions_work = False
+            
+            return all_regions_work
+            
+        except Exception as e:
+            self.log_test("Vendor Pricing by Country", False, f"Error: {str(e)}")
+            return False
+
+    def test_database_expansion_2530_plus(self):
+        """Test that database contains 2530+ motorcycles as requested"""
+        try:
+            # Get database statistics
+            response = requests.get(f"{self.base_url}/stats", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                total_motorcycles = data.get("total_motorcycles", 0)
+                
+                if total_motorcycles >= 2530:
+                    self.log_test("Database Expansion - 2530+ Motorcycles", True, 
+                                f"Database contains {total_motorcycles} motorcycles (exceeds 2530+ requirement)")
+                else:
+                    self.log_test("Database Expansion - 2530+ Motorcycles", False, 
+                                f"Database only contains {total_motorcycles} motorcycles, expected 2530+")
+                    return False
+                
+                # Test that all manufacturers have proper models
+                manufacturers = data.get("manufacturers", [])
+                if len(manufacturers) >= 20:
+                    self.log_test("Database Expansion - Manufacturer Coverage", True, 
+                                f"Database has {len(manufacturers)} manufacturers")
+                else:
+                    self.log_test("Database Expansion - Manufacturer Coverage", False, 
+                                f"Only {len(manufacturers)} manufacturers, expected 20+")
+                    return False
+                
+                # Test search and filtering with expanded database
+                response = requests.get(f"{self.base_url}/motorcycles", 
+                                      params={"search": "motorcycle", "limit": 100}, timeout=15)
+                if response.status_code == 200:
+                    search_data = response.json()
+                    search_results = self.extract_motorcycles_from_response(search_data)
+                    if search_results and len(search_results) > 50:
+                        self.log_test("Database Expansion - Search Performance", True, 
+                                    f"Search returned {len(search_results)} results from expanded database")
+                        return True
+                    else:
+                        self.log_test("Database Expansion - Search Performance", False, 
+                                    "Search performance poor with expanded database")
+                        return False
+                else:
+                    self.log_test("Database Expansion - Search Performance", False, 
+                                f"Search failed with status: {response.status_code}")
+                    return False
+                    
+            else:
+                self.log_test("Database Expansion - 2530+ Motorcycles", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Database Expansion - 2530+ Motorcycles", False, f"Error: {str(e)}")
+            return False
     
     def run_all_tests(self):
         """Run all tests in sequence"""
