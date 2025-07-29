@@ -1438,8 +1438,8 @@ const MotorcycleCard = ({ motorcycle, onClick, showFavoriteButton = true }) => {
       onClick={handleCardClick}
     >
       <div className="relative">
-        <img 
-          src={motorcycle.image_url} 
+        <MotorcycleImage 
+          src={motorcycle.image_url}
           alt={`${motorcycle.manufacturer} ${motorcycle.model}`}
           className="w-full h-64 object-cover rounded-t-xl"
         />
