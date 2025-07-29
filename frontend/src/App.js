@@ -2114,9 +2114,11 @@ const MotorcycleDetail = ({ motorcycle, onClose }) => {
             alt={`${motorcycle.manufacturer} ${motorcycle.model}`}
             className="w-full h-80 object-cover rounded-t-xl"
           />
+          {/* Enhanced Close Button - More Visible */}
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 bg-black bg-opacity-50 text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-opacity-75"
+            className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl shadow-lg border-2 border-white hover:scale-110 transition-all duration-200 z-10"
+            title="Close"
           >
             ×
           </button>
