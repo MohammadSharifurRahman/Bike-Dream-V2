@@ -2502,6 +2502,448 @@ class MotorcycleAPITester:
         except Exception as e:
             self.log_test("Database Expansion - 2530+ Motorcycles", False, f"Error: {str(e)}")
             return False
+
+    # NEW TESTS FOR REVIEW REQUEST REQUIREMENTS
+    def test_google_oauth_callback_endpoint(self):
+        """Test POST /api/auth/google/callback - Google OAuth callback endpoint"""
+        try:
+            # Test with invalid authorization code
+            callback_data = {"code": "invalid_test_code_12345"}
+            response = requests.post(f"{self.base_url}/auth/google/callback", 
+                                   json=callback_data, timeout=10)
+            
+            # Should return 400 for invalid code (expected behavior)
+            if response.status_code == 400:
+                data = response.json()
+                if "Failed to exchange authorization code" in data.get("detail", ""):
+                    self.log_test("Google OAuth Callback Endpoint", True, 
+                                "Endpoint exists and properly handles invalid authorization codes")
+                    return True
+                else:
+                    self.log_test("Google OAuth Callback Endpoint", False, 
+                                f"Unexpected error message: {data}")
+                    return False
+            else:
+                self.log_test("Google OAuth Callback Endpoint", False, 
+                            f"Unexpected status code: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Google OAuth Callback Endpoint", False, f"Error: {str(e)}")
+            return False
+
+    def test_google_oauth_flow_configuration(self):
+        """Test that Google OAuth flow endpoints are properly configured"""
+        try:
+            # Test POST /api/auth/google endpoint exists
+            oauth_data = {
+                "email": "test@gmail.com",
+                "name": "Test User",
+                "picture": "https://example.com/avatar.jpg",
+                "google_id": "test_google_id_123"
+            }
+            
+            response = requests.post(f"{self.base_url}/auth/google", 
+                                   json=oauth_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "Google authentication successful" in data.get("message", ""):
+                    self.log_test("Google OAuth Flow Configuration", True, 
+                                "Google OAuth endpoints are properly configured")
+                    return True
+                else:
+                    self.log_test("Google OAuth Flow Configuration", False, 
+                                f"Unexpected response: {data}")
+                    return False
+            else:
+                self.log_test("Google OAuth Flow Configuration", False, 
+                            f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Google OAuth Flow Configuration", False, f"Error: {str(e)}")
+            return False
+
+    def test_image_handling_with_fallback(self):
+        """Test that motorcycle images are properly handled with fallback to placeholder images"""
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"limit": 10}, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                motorcycles = self.extract_motorcycles_from_response(data)
+                
+                if motorcycles and len(motorcycles) > 0:
+                    # Check that all motorcycles have image_url field
+                    all_have_images = True
+                    valid_image_urls = 0
+                    
+                    for moto in motorcycles[:5]:  # Check first 5 motorcycles
+                        if "image_url" not in moto:
+                            all_have_images = False
+                            break
+                        
+                        image_url = moto.get("image_url", "")
+                        # Check if it's a valid URL format
+                        if image_url.startswith("http") and ("unsplash.com" in image_url or "placeholder" in image_url):
+                            valid_image_urls += 1
+                    
+                    if all_have_images and valid_image_urls > 0:
+                        self.log_test("Image Handling with Fallback", True, 
+                                    f"All motorcycles have image URLs, {valid_image_urls} have valid placeholder/stock images")
+                        return True
+                    else:
+                        self.log_test("Image Handling with Fallback", False, 
+                                    f"Image handling issues: all_have_images={all_have_images}, valid_urls={valid_image_urls}")
+                        return False
+                else:
+                    self.log_test("Image Handling with Fallback", False, "No motorcycles found for testing")
+                    return False
+            else:
+                self.log_test("Image Handling with Fallback", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Image Handling with Fallback", False, f"Error: {str(e)}")
+            return False
+
+    def test_dynamic_homepage_metadata(self):
+        """Test GET /api/stats endpoint returns real-time motorcycle and manufacturer counts"""
+        try:
+            response = requests.get(f"{self.base_url}/stats", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check required fields
+                required_fields = ["total_motorcycles", "manufacturers", "categories", "year_range", "latest_update"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if missing_fields:
+                    self.log_test("Dynamic Homepage Metadata", False, f"Missing fields: {missing_fields}")
+                    return False
+                
+                # Verify data types and values
+                total_motorcycles = data.get("total_motorcycles", 0)
+                manufacturers = data.get("manufacturers", [])
+                categories = data.get("categories", [])
+                
+                if (isinstance(total_motorcycles, int) and total_motorcycles >= 2530 and
+                    isinstance(manufacturers, list) and len(manufacturers) >= 21 and
+                    isinstance(categories, list) and len(categories) > 0):
+                    
+                    self.log_test("Dynamic Homepage Metadata", True, 
+                                f"Real-time stats: {total_motorcycles} motorcycles, {len(manufacturers)} manufacturers, {len(categories)} categories")
+                    return True
+                else:
+                    self.log_test("Dynamic Homepage Metadata", False, 
+                                f"Invalid data: motorcycles={total_motorcycles}, manufacturers={len(manufacturers)}, categories={len(categories)}")
+                    return False
+            else:
+                self.log_test("Dynamic Homepage Metadata", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Dynamic Homepage Metadata", False, f"Error: {str(e)}")
+            return False
+
+    def test_automated_daily_updates_trigger(self):
+        """Test the manual daily update trigger endpoint"""
+        try:
+            response = requests.post(f"{self.base_url}/update-system/run-daily-update", timeout=30)
+            if response.status_code == 200:
+                data = response.json()
+                required_keys = ["job_id", "status", "message", "check_status_url"]
+                missing_keys = [key for key in required_keys if key not in data]
+                
+                if missing_keys:
+                    self.log_test("Automated Daily Updates - Trigger", False, f"Missing keys: {missing_keys}")
+                    return False, None
+                
+                if data.get("status") == "initiated":
+                    job_id = data.get("job_id")
+                    self.log_test("Automated Daily Updates - Trigger", True, 
+                                f"Daily update triggered successfully with job ID: {job_id[:8]}...")
+                    return True, job_id
+                else:
+                    self.log_test("Automated Daily Updates - Trigger", False, 
+                                f"Unexpected status: {data.get('status')}")
+                    return False, None
+            else:
+                self.log_test("Automated Daily Updates - Trigger", False, f"Status: {response.status_code}")
+                return False, None
+        except Exception as e:
+            self.log_test("Automated Daily Updates - Trigger", False, f"Error: {str(e)}")
+            return False, None
+
+    def test_automated_daily_updates_logs(self):
+        """Test the daily update logs endpoint"""
+        try:
+            response = requests.get(f"{self.base_url}/update-system/update-history", 
+                                  params={"limit": 10}, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                required_keys = ["update_history", "count"]
+                missing_keys = [key for key in required_keys if key not in data]
+                
+                if missing_keys:
+                    self.log_test("Automated Daily Updates - Logs", False, f"Missing keys: {missing_keys}")
+                    return False
+                
+                if isinstance(data["update_history"], list) and isinstance(data["count"], int):
+                    history_count = data["count"]
+                    self.log_test("Automated Daily Updates - Logs", True, 
+                                f"Retrieved {history_count} update history records")
+                    return True
+                else:
+                    self.log_test("Automated Daily Updates - Logs", False, "Invalid data structure")
+                    return False
+            else:
+                self.log_test("Automated Daily Updates - Logs", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Automated Daily Updates - Logs", False, f"Error: {str(e)}")
+            return False
+
+    def test_vendor_pricing_regions_comprehensive(self):
+        """Test that all vendor pricing regions work with proper availability handling"""
+        try:
+            # First get supported regions
+            response = requests.get(f"{self.base_url}/pricing/regions", timeout=10)
+            if response.status_code != 200:
+                self.log_test("Vendor Pricing Regions Comprehensive", False, f"Failed to get regions: {response.status_code}")
+                return False
+            
+            regions_data = response.json()
+            regions = regions_data.get("regions", [])
+            
+            if len(regions) < 60:  # Should have 61+ regions
+                self.log_test("Vendor Pricing Regions Comprehensive", False, f"Only {len(regions)} regions found, expected 61+")
+                return False
+            
+            # Test pricing for a motorcycle in different regions
+            if not self.motorcycle_ids:
+                self.log_test("Vendor Pricing Regions Comprehensive", False, "No motorcycle IDs available for testing")
+                return False
+            
+            motorcycle_id = self.motorcycle_ids[0]
+            test_regions = ["US", "BD", "IN", "NP", "TH", "MY", "ID", "AE", "SA"]
+            successful_regions = 0
+            
+            for region in test_regions:
+                try:
+                    response = requests.get(f"{self.base_url}/motorcycles/{motorcycle_id}/pricing", 
+                                          params={"region": region}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        if ("vendor_prices" in data and "currency" in data and 
+                            data.get("region") == region):
+                            successful_regions += 1
+                except:
+                    continue
+            
+            if successful_regions >= 7:  # At least 7 out of 9 test regions should work
+                self.log_test("Vendor Pricing Regions Comprehensive", True, 
+                            f"Vendor pricing working for {successful_regions}/{len(test_regions)} test regions, {len(regions)} total regions available")
+                return True
+            else:
+                self.log_test("Vendor Pricing Regions Comprehensive", False, 
+                            f"Only {successful_regions}/{len(test_regions)} regions working properly")
+                return False
+        except Exception as e:
+            self.log_test("Vendor Pricing Regions Comprehensive", False, f"Error: {str(e)}")
+            return False
+
+    def test_system_integration_database_size(self):
+        """Verify all 2530+ motorcycles are in the database with all 21 manufacturers"""
+        try:
+            response = requests.get(f"{self.base_url}/stats", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                
+                total_motorcycles = data.get("total_motorcycles", 0)
+                manufacturers = data.get("manufacturers", [])
+                
+                # Check motorcycle count
+                if total_motorcycles < 2530:
+                    self.log_test("System Integration - Database Size", False, 
+                                f"Only {total_motorcycles} motorcycles found, expected 2530+")
+                    return False
+                
+                # Check manufacturer count
+                if len(manufacturers) < 21:
+                    self.log_test("System Integration - Database Size", False, 
+                                f"Only {len(manufacturers)} manufacturers found, expected 21+")
+                    return False
+                
+                self.log_test("System Integration - Database Size", True, 
+                            f"Database contains {total_motorcycles} motorcycles from {len(manufacturers)} manufacturers (exceeds requirements)")
+                return True
+            else:
+                self.log_test("System Integration - Database Size", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("System Integration - Database Size", False, f"Error: {str(e)}")
+            return False
+
+    def test_authentication_methods_integration(self):
+        """Test that all authentication methods work (JWT, session, Google OAuth endpoint)"""
+        auth_methods_working = 0
+        
+        # Test 1: Email/Password Registration and JWT
+        try:
+            register_data = {
+                "email": "test.integration@bykedream.com",
+                "password": "TestPassword123!",
+                "name": "Integration Test User"
+            }
+            
+            response = requests.post(f"{self.base_url}/auth/register", 
+                                   json=register_data, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if "token" in data and "user" in data:
+                    # Test JWT token usage
+                    token = data["token"]
+                    headers = {"Authorization": f"Bearer {token}"}
+                    
+                    me_response = requests.get(f"{self.base_url}/auth/me", 
+                                             headers=headers, timeout=10)
+                    if me_response.status_code == 200:
+                        auth_methods_working += 1
+                        self.log_test("Authentication Integration - JWT", True, 
+                                    "Email/password registration and JWT authentication working")
+                    else:
+                        self.log_test("Authentication Integration - JWT", False, 
+                                    f"JWT token validation failed: {me_response.status_code}")
+                else:
+                    self.log_test("Authentication Integration - JWT", False, 
+                                "Registration response missing token or user")
+            else:
+                self.log_test("Authentication Integration - JWT", False, 
+                            f"Registration failed: {response.status_code}")
+        except Exception as e:
+            self.log_test("Authentication Integration - JWT", False, f"Error: {str(e)}")
+        
+        # Test 2: Session-based authentication (Emergent)
+        try:
+            session_data = {
+                "email": "test.session@bykedream.com",
+                "name": "Session Test User",
+                "picture": "https://example.com/avatar.jpg",
+                "session_token": "test_session_integration_123"
+            }
+            
+            response = requests.post(f"{self.base_url}/auth/profile", 
+                                   json=session_data, timeout=10)
+            if response.status_code == 200:
+                # Test session usage
+                headers = {"X-Session-Id": session_data["session_token"]}
+                me_response = requests.get(f"{self.base_url}/auth/me", 
+                                         headers=headers, timeout=10)
+                if me_response.status_code == 200:
+                    auth_methods_working += 1
+                    self.log_test("Authentication Integration - Session", True, 
+                                "Session-based authentication working")
+                else:
+                    self.log_test("Authentication Integration - Session", False, 
+                                f"Session validation failed: {me_response.status_code}")
+            else:
+                self.log_test("Authentication Integration - Session", False, 
+                            f"Session auth failed: {response.status_code}")
+        except Exception as e:
+            self.log_test("Authentication Integration - Session", False, f"Error: {str(e)}")
+        
+        # Test 3: Google OAuth endpoint
+        try:
+            oauth_data = {
+                "email": "test.oauth@gmail.com",
+                "name": "OAuth Test User",
+                "picture": "https://example.com/oauth-avatar.jpg",
+                "google_id": "test_google_integration_123"
+            }
+            
+            response = requests.post(f"{self.base_url}/auth/google", 
+                                   json=oauth_data, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if "token" in data and "Google authentication successful" in data.get("message", ""):
+                    auth_methods_working += 1
+                    self.log_test("Authentication Integration - Google OAuth", True, 
+                                "Google OAuth authentication working")
+                else:
+                    self.log_test("Authentication Integration - Google OAuth", False, 
+                                f"OAuth response invalid: {data}")
+            else:
+                self.log_test("Authentication Integration - Google OAuth", False, 
+                            f"OAuth failed: {response.status_code}")
+        except Exception as e:
+            self.log_test("Authentication Integration - Google OAuth", False, f"Error: {str(e)}")
+        
+        # Overall assessment
+        if auth_methods_working >= 3:
+            self.log_test("Authentication Methods Integration", True, 
+                        f"All {auth_methods_working}/3 authentication methods working")
+            return True
+        else:
+            self.log_test("Authentication Methods Integration", False, 
+                        f"Only {auth_methods_working}/3 authentication methods working")
+            return False
+
+    def run_review_request_tests(self):
+        """Run all tests specifically requested in the review"""
+        print("🎯 Starting Review Request Testing for Byke-Dream")
+        print("=" * 80)
+        
+        # 1. GOOGLE OAUTH AUTHENTICATION TESTING
+        print("\n1. 🔐 GOOGLE OAUTH AUTHENTICATION TESTING:")
+        self.test_google_oauth_callback_endpoint()
+        self.test_google_oauth_flow_configuration()
+        
+        # 2. IMAGE HANDLING TESTING
+        print("\n2. 🖼️ IMAGE HANDLING TESTING:")
+        self.test_image_handling_with_fallback()
+        
+        # 3. DYNAMIC HOMEPAGE METADATA TESTING
+        print("\n3. 📊 DYNAMIC HOMEPAGE METADATA TESTING:")
+        self.test_dynamic_homepage_metadata()
+        
+        # 4. AUTOMATED DAILY UPDATES TESTING
+        print("\n4. 🤖 AUTOMATED DAILY UPDATES TESTING:")
+        success, job_id = self.test_automated_daily_updates_trigger()
+        if success and job_id:
+            # Wait a bit for job to process
+            import time
+            time.sleep(5)
+            self.test_job_status_monitoring(job_id)
+        self.test_automated_daily_updates_logs()
+        
+        # 5. OVERALL SYSTEM INTEGRATION TESTING
+        print("\n5. 🔧 OVERALL SYSTEM INTEGRATION TESTING:")
+        self.test_system_integration_database_size()
+        self.test_authentication_methods_integration()
+        self.test_vendor_pricing_regions_comprehensive()
+        
+        return self.get_summary()
+
+    def get_summary(self):
+        """Get test summary"""
+        passed_tests = [result for result in self.test_results if "✅ PASS" in result]
+        failed_tests = [result for result in self.test_results if "❌ FAIL" in result]
+        
+        print("\n" + "=" * 80)
+        print("📊 REVIEW REQUEST TEST SUMMARY")
+        print("=" * 80)
+        
+        print(f"Total Tests: {len(self.test_results)}")
+        print(f"Passed: {len(passed_tests)}")
+        print(f"Failed: {len(failed_tests)}")
+        
+        if failed_tests:
+            print("\n❌ FAILED TESTS:")
+            for test in failed_tests:
+                print(f"  {test}")
+        
+        success_rate = len(passed_tests) / len(self.test_results) * 100 if self.test_results else 0
+        print(f"\nSuccess Rate: {success_rate:.1f}%")
+        
+        return len(failed_tests) == 0
     
     def run_all_tests(self):
         """Run all tests in sequence"""
