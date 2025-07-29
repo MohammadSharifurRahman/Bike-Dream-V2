@@ -783,7 +783,10 @@ const AuthModal = ({ isOpen, onClose }) => {
     </div>
   );
 };
-  const { user, login, logout } = useAuth();
+// Authentication Components
+const AuthButton = () => {
+  const { user, logout } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   if (user) {
     return (
@@ -801,12 +804,18 @@ const AuthModal = ({ isOpen, onClose }) => {
   }
 
   return (
-    <button
-      onClick={login}
-      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-    >
-      Login / Sign Up
-    </button>
+    <>
+      <button
+        onClick={() => setShowAuthModal(true)}
+        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+      >
+        Login / Sign Up
+      </button>
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
+    </>
   );
 };
 
