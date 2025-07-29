@@ -2254,19 +2254,27 @@ async def get_user_garage(
         {"$match": query},
         {"$sort": {"created_at": -1}},
         {"$skip": skip},
-        {"$limit": limit},
-        {"$lookup": {
-            "from": "motorcycles",
-            "localField": "motorcycle_id",
-            "foreignField": "id",
-            "as": "motorcycle"
-        }},
-        {"$addFields": {
-            "motorcycle": {"$arrayElemAt": ["$motorcycle", 0]}
-        }}
+        {"$limit": limit}
     ]
     
-    garage_items = await db.garage_items.aggregate(pipeline).to_list(limit)
+    garage_items_raw = await db.garage_items.aggregate(pipeline).to_list(limit)
+    
+    # Manually lookup motorcycle details
+    garage_items = []
+    for item in garage_items_raw:
+        # Convert ObjectId to string if it exists
+        if "_id" in item:
+            item["_id"] = str(item["_id"])
+        
+        # Get motorcycle details
+        motorcycle = await db.motorcycles.find_one({"id": item["motorcycle_id"]})
+        if motorcycle:
+            # Convert ObjectId to string if it exists
+            if "_id" in motorcycle:
+                motorcycle["_id"] = str(motorcycle["_id"])
+            item["motorcycle"] = motorcycle
+        
+        garage_items.append(item)
     
     # Calculate pagination info
     total_pages = (total_count + limit - 1) // limit
