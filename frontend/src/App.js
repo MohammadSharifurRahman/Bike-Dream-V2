@@ -517,10 +517,12 @@ const VendorPricing = ({ motorcycle }) => {
 // Rating and Review Component
 const RatingSection = ({ motorcycle, onRatingSubmit }) => {
   const { user } = useAuth();
-  const [userRating, setUserRating] = useState(0);
-  const [reviewText, setReviewText] = useState('');
   const [ratings, setRatings] = useState([]);
-  const [showRatingForm, setShowRatingForm] = useState(false);
+  const [userRating, setUserRating] = useState(0);
+  const [userReview, setUserReview] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [hasUserRated, setHasUserRated] = useState(false);
 
   useEffect(() => {
     fetchRatings();
@@ -528,114 +530,208 @@ const RatingSection = ({ motorcycle, onRatingSubmit }) => {
 
   const fetchRatings = async () => {
     try {
+      setLoading(true);
       const response = await axios.get(`${API}/motorcycles/${motorcycle.id}/ratings`);
-      setRatings(response.data);
+      setRatings(response.data || []);
+      
+      // Check if current user has already rated this motorcycle
+      if (user) {
+        const existingRating = response.data.find(rating => rating.user_id === user.id);
+        if (existingRating) {
+          setHasUserRated(true);
+          setUserRating(existingRating.rating);
+          setUserReview(existingRating.review_text || '');
+        }
+      }
     } catch (error) {
       console.error('Error fetching ratings:', error);
+      setRatings([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSubmitRating = async () => {
-    if (!user) return;
+  const handleRatingSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!user) {
+      alert('Please login to rate this motorcycle');
+      return;
+    }
+
+    if (userRating === 0) {
+      alert('Please select a star rating');
+      return;
+    }
 
     try {
+      setSubmitting(true);
+      const token = localStorage.getItem('auth_token');
       const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+
       await axios.post(`${API}/motorcycles/${motorcycle.id}/rate`, {
         motorcycle_id: motorcycle.id,
         rating: userRating,
-        review_text: reviewText
-      }, {
-        headers: { 'X-Session-ID': sessionId }
-      });
+        review_text: userReview.trim() || null
+      }, { headers });
 
-      setUserRating(0);
-      setReviewText('');
-      setShowRatingForm(false);
-      fetchRatings();
-      if (onRatingSubmit) onRatingSubmit();
+      // Refresh ratings after successful submission
+      await fetchRatings();
+      
+      if (onRatingSubmit) {
+        onRatingSubmit();
+      }
+
+      alert(hasUserRated ? 'Rating updated successfully!' : 'Rating submitted successfully!');
     } catch (error) {
       console.error('Error submitting rating:', error);
+      alert('Error submitting rating. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  const calculateAverageRating = () => {
+    if (ratings.length === 0) return 0;
+    const sum = ratings.reduce((acc, rating) => acc + rating.rating, 0);
+    return (sum / ratings.length).toFixed(1);
+  };
+
+  const getRatingDistribution = () => {
+    const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    ratings.forEach(rating => {
+      distribution[rating.rating]++;
+    });
+    return distribution;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  const averageRating = calculateAverageRating();
+  const distribution = getRatingDistribution();
+
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-gray-800">Ratings & Reviews</h3>
-        {motorcycle.average_rating > 0 && (
-          <div className="flex items-center space-x-2">
-            <StarRating rating={Math.round(motorcycle.average_rating)} readOnly />
-            <span className="text-lg font-semibold">{motorcycle.average_rating}</span>
-            <span className="text-gray-500">({motorcycle.total_ratings} reviews)</span>
+    <div className="space-y-6">
+      {/* Rating Overview */}
+      <div className="bg-gray-50 p-6 rounded-lg">
+        <div className="flex items-center space-x-4 mb-4">
+          <div className="text-center">
+            <div className="text-4xl font-bold text-gray-800">{averageRating}</div>
+            <StarRating rating={Math.round(parseFloat(averageRating))} readOnly />
+            <div className="text-sm text-gray-500 mt-1">{ratings.length} reviews</div>
           </div>
-        )}
+          <div className="flex-1">
+            {[5, 4, 3, 2, 1].map(star => (
+              <div key={star} className="flex items-center space-x-2 mb-1">
+                <span className="text-sm w-8">{star}★</span>
+                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-yellow-400 h-2 rounded-full" 
+                    style={{ width: `${ratings.length > 0 ? (distribution[star] / ratings.length) * 100 : 0}%` }}
+                  ></div>
+                </div>
+                <span className="text-sm text-gray-500 w-8">{distribution[star]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {user && (
-        <div className="mb-6">
-          {!showRatingForm ? (
-            <button
-              onClick={() => setShowRatingForm(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Write a Review
-            </button>
-          ) : (
-            <div className="border border-gray-200 p-4 rounded-lg">
-              <h4 className="font-semibold mb-3">Rate this motorcycle:</h4>
-              <div className="mb-4">
-                <StarRating rating={userRating} onRatingChange={setUserRating} />
-              </div>
-              <textarea
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                placeholder="Share your thoughts about this motorcycle..."
-                className="w-full p-3 border border-gray-300 rounded-lg resize-none h-32 mb-4"
+      {/* User Rating Form */}
+      {user ? (
+        <div className="bg-white border rounded-lg p-6">
+          <h3 className="text-lg font-semibold mb-4">
+            {hasUserRated ? 'Update Your Rating' : 'Rate This Motorcycle'}
+          </h3>
+          <form onSubmit={handleRatingSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Your Rating *
+              </label>
+              <StarRating 
+                rating={userRating} 
+                onRatingChange={setUserRating}
+                readOnly={false}
               />
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleSubmitRating}
-                  disabled={userRating === 0}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors"
-                >
-                  Submit Review
-                </button>
-                <button
-                  onClick={() => {setShowRatingForm(false); setUserRating(0); setReviewText('');}}
-                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
-                >
-                  Cancel
-                </button>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Review (Optional)
+              </label>
+              <textarea
+                value={userReview}
+                onChange={(e) => setUserReview(e.target.value)}
+                placeholder="Share your experience with this motorcycle..."
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                maxLength={500}
+              />
+              <div className="text-right text-sm text-gray-500 mt-1">
+                {userReview.length}/500 characters
               </div>
             </div>
-          )}
+            <button
+              type="submit"
+              disabled={submitting || userRating === 0}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? 'Submitting...' : (hasUserRated ? 'Update Rating' : 'Submit Rating')}
+            </button>
+          </form>
+        </div>
+      ) : (
+        <div className="bg-gray-50 border rounded-lg p-6 text-center">
+          <p className="text-gray-600 mb-4">Please login to rate this motorcycle</p>
+          <AuthButton />
         </div>
       )}
 
-      {ratings.length > 0 && (
-        <div className="space-y-4">
-          <h4 className="font-semibold text-gray-800">User Reviews:</h4>
-          {ratings.map((rating) => (
-            <div key={rating.id} className="border-l-4 border-blue-500 pl-4 py-2">
-              <div className="flex items-center space-x-3 mb-2">
-                <img
-                  src={rating.user_picture || '/default-avatar.png'}
+      {/* Reviews List */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">User Reviews ({ratings.length})</h3>
+        {ratings.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No reviews yet. Be the first to rate this motorcycle!
+          </div>
+        ) : (
+          ratings.map((rating) => (
+            <div key={rating.id} className="bg-white border rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <img 
+                  src={rating.user_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(rating.user_name)}&background=0D8ABC&color=fff`} 
                   alt={rating.user_name}
-                  className="w-8 h-8 rounded-full"
+                  className="w-10 h-10 rounded-full"
                 />
-                <span className="font-medium">{rating.user_name}</span>
-                <StarRating rating={rating.rating} readOnly />
-                <span className="text-sm text-gray-500">
-                  {new Date(rating.created_at).toLocaleDateString()}
-                </span>
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <span className="font-medium text-gray-800">{rating.user_name}</span>
+                    <StarRating rating={rating.rating} readOnly />
+                    <span className="text-sm text-gray-500">
+                      {new Date(rating.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {rating.review_text && (
+                    <p className="text-gray-700 mt-2">{rating.review_text}</p>
+                  )}
+                </div>
               </div>
-              {rating.review_text && (
-                <p className="text-gray-700 pl-11">{rating.review_text}</p>
-              )}
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 };
