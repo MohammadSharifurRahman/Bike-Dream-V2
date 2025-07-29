@@ -853,7 +853,7 @@ async def get_motorcycles(
     displacement_max: Optional[int] = Query(None),
     horsepower_min: Optional[int] = Query(None),
     horsepower_max: Optional[int] = Query(None),
-    sort_by: Optional[str] = Query("user_interest_score", description="Sort by: year, price, horsepower, model, user_interest_score, mileage_kmpl, top_speed, weight"),
+    sort_by: Optional[str] = Query("default", description="Sort by: default (year desc, price asc), year, price, horsepower, model, user_interest_score, mileage_kmpl, top_speed, weight"),
     sort_order: Optional[str] = Query("desc", description="asc or desc"),
     limit: Optional[int] = Query(5000, le=10000),  # Increased limit to show all motorcycles
     skip: Optional[int] = Query(0),
