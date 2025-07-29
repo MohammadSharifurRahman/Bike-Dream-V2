@@ -329,7 +329,7 @@ def get_comprehensive_motorcycle_data():
                     "braking_system": "Disc" if displacement >= 125 else "Drum",
                     "suspension_type": "Telescopic" if displacement >= 200 else "Conventional",
                     "tyre_type": "Tubeless" if year >= 2015 and displacement >= 150 else "Tube",
-                    "wheel_size_inches": 17 if displacement >= 200 else 18,
+                    "wheel_size_inches": f"{17 if displacement >= 200 else 18}",
                     "headlight_type": "LED" if year >= 2020 else "Halogen",
                     "fuel_type": "Electric" if displacement == 0 else "Petrol"
                 }
