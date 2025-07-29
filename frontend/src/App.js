@@ -1047,9 +1047,15 @@ const AuthModal = ({ isOpen, onClose }) => {
 
   const handleGoogleLogin = async () => {
     setError('');
-    // This would integrate with Google OAuth SDK
-    // For now, we'll show an information message
-    setError('Google OAuth integration requires Google SDK setup. Please use email/password for now.');
+    setLoading(true);
+    
+    try {
+      await loginWithGoogle();
+    } catch (err) {
+      setError('Google login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
