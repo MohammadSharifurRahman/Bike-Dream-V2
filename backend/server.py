@@ -57,6 +57,21 @@ class UserCreate(BaseModel):
     picture: str
     session_token: str
 
+class UserRegister(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class GoogleOAuthData(BaseModel):
+    email: str
+    name: str
+    picture: str
+    google_id: str
+
 class Rating(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
