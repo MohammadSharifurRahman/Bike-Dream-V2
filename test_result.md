@@ -212,15 +212,18 @@ backend:
 
   - task: "Virtual Garage API - Get User Garage"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL ISSUE: GET /api/garage returns 500 server error when retrieving user's garage items. The endpoint exists and requires proper authentication, but fails during database aggregation or lookup operations. This prevents users from viewing their garage collections. MongoDB aggregation pipeline for joining garage_items with motorcycles collection may have issues. Status filtering works for empty results but fails when items exist."
+      - working: true
+        agent: "testing"
+        comment: "✅ VIRTUAL GARAGE GET ENDPOINT FIXED: GET /api/garage now successfully retrieves user's garage items with complete motorcycle details. The aggregation pipeline has been fixed and properly joins garage_items with motorcycles collection. Retrieved 2 garage items with complete motorcycle information including manufacturer, model, year, category, and price_usd. Pagination structure working correctly with all required fields (page, limit, total_count, total_pages, has_next, has_previous). Status filtering working for all statuses (owned, wishlist, previously_owned, test_ridden). ObjectId conversion working properly - all _id fields converted to strings for JSON serialization."
 
   - task: "Virtual Garage API - Update Garage Item"
     implemented: true
