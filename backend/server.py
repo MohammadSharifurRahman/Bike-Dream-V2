@@ -319,15 +319,15 @@ class UserRequest(BaseModel):
 class UserRequestCreate(BaseModel):
     title: str = Field(min_length=5, max_length=200)
     description: str = Field(min_length=10, max_length=2000)
-    request_type: str = Field(regex="^(feature_request|bug_report|motorcycle_addition|general_feedback)$")
-    priority: str = Field(default="medium", regex="^(low|medium|high|critical)$")
+    request_type: str = Field(pattern="^(feature_request|bug_report|motorcycle_addition|general_feedback)$")
+    priority: str = Field(default="medium", pattern="^(low|medium|high|critical)$")
     category: Optional[str] = Field(max_length=100)
     motorcycle_related: Optional[str] = None
 
 class UserRequestUpdate(BaseModel):
-    status: Optional[str] = Field(regex="^(pending|in_progress|resolved|rejected)$")
+    status: Optional[str] = Field(pattern="^(pending|in_progress|resolved|rejected)$")
     admin_response: Optional[str] = Field(max_length=1000)
-    priority: Optional[str] = Field(regex="^(low|medium|high|critical)$")
+    priority: Optional[str] = Field(pattern="^(low|medium|high|critical)$")
 
 # Daily Update Scheduler
 class DailyUpdateScheduler:
