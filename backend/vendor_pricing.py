@@ -434,6 +434,33 @@ class VendorPricingSystem:
                 "discontinued": True
             }]
         
+        # Check regional availability based on motorcycle characteristics
+        motorcycle_year = motorcycle.get("year", 2024)
+        manufacturer = motorcycle.get("manufacturer", "").lower()
+        displacement = motorcycle.get("displacement", 0)
+        
+        # Define regional availability rules
+        region_availability = self._check_regional_availability(manufacturer, displacement, motorcycle_year, region)
+        
+        if not region_availability["available"]:
+            return [{
+                "vendor_name": f"Not available in {self._get_region_name(region)}",
+                "price": 0,
+                "currency": self.regional_currencies.get(region, "USD"),
+                "price_usd": 0,
+                "availability": f"This model is not available for purchase in {self._get_region_name(region)} at this time.",
+                "special_offer": None,
+                "rating": 0,
+                "reviews_count": 0,
+                "shipping": "N/A",
+                "estimated_delivery": "N/A",
+                "website_url": "",
+                "phone": None,
+                "discontinued": False,
+                "not_available_in_region": True,
+                "reason": region_availability["reason"]
+            }]
+        
         base_price_usd = motorcycle.get("price_usd", 10000)
         currency = self.regional_currencies.get(region, "USD")
         exchange_rate = self.exchange_rates.get(currency, 1.0)
@@ -545,7 +572,8 @@ class VendorPricingSystem:
                 "estimated_delivery": f"{delivery_days} days",
                 "website_url": vendor["website"],
                 "phone": vendor.get("phone"),
-                "discontinued": False
+                "discontinued": False,
+                "not_available_in_region": False
             }
             
             # Add occasional special offers for available motorcycles
@@ -566,6 +594,98 @@ class VendorPricingSystem:
         vendor_prices.sort(key=lambda x: x["price"])
         
         return vendor_prices
+    
+    def _check_regional_availability(self, manufacturer: str, displacement: int, year: int, region: str) -> Dict[str, Any]:
+        """Check if a motorcycle is available in a specific region"""
+        
+        # Define availability rules by region and manufacturer
+        availability_rules = {
+            # South Asian markets - mostly local and affordable brands
+            "BD": {
+                "available_brands": ["bajaj", "hero", "tvs", "yamaha", "honda", "suzuki", "runner"],
+                "max_displacement": 400,
+                "min_year": 2010,
+                "reason": "Import restrictions on high-displacement motorcycles"
+            },
+            "IN": {
+                "available_brands": ["bajaj", "hero", "tvs", "yamaha", "honda", "suzuki", "ktm", "royal enfield", "jawa", "mahindra"],
+                "max_displacement": 800,
+                "min_year": 2005,
+                "reason": "Local market focus on mid-displacement segments"
+            },
+            "NP": {
+                "available_brands": ["bajaj", "hero", "tvs", "yamaha", "honda", "suzuki"],
+                "max_displacement": 250,
+                "min_year": 2015,
+                "reason": "Import duties and terrain suitability restrictions"
+            },
+            "PK": {
+                "available_brands": ["bajaj", "hero", "honda", "yamaha", "suzuki", "road prince", "united"],
+                "max_displacement": 350,
+                "min_year": 2010,
+                "reason": "Economic and import policy constraints"
+            },
+            
+            # Southeast Asian markets - diverse mix
+            "TH": {
+                "available_brands": ["yamaha", "honda", "kawasaki", "suzuki", "ducati", "ktm", "benelli"],
+                "max_displacement": 1200,
+                "min_year": 2000,
+                "reason": "Luxury tax on high-displacement motorcycles"
+            },
+            "MY": {
+                "available_brands": ["yamaha", "honda", "kawasaki", "suzuki", "benelli", "ktm"],
+                "max_displacement": 1000,
+                "min_year": 2005,
+                "reason": "Government policy on recreational vehicles"
+            },
+            "ID": {
+                "available_brands": ["yamaha", "honda", "kawasaki", "suzuki", "benelli"],
+                "max_displacement": 600,
+                "min_year": 2010,
+                "reason": "Domestic manufacturing and import restrictions"
+            },
+            
+            # Middle Eastern markets - premium focus
+            "AE": {
+                "available_brands": ["all"],  # Most brands available
+                "max_displacement": 2000,
+                "min_year": 2000,
+                "reason": None
+            },
+            "SA": {
+                "available_brands": ["harley-davidson", "yamaha", "honda", "kawasaki", "suzuki", "ducati", "ktm"],
+                "max_displacement": 2000,
+                "min_year": 2005,
+                "reason": None
+            }
+        }
+        
+        region_rules = availability_rules.get(region, {"available_brands": ["all"], "max_displacement": 2000, "min_year": 2000, "reason": None})
+        
+        # Check brand availability
+        if region_rules["available_brands"] != ["all"]:
+            if manufacturer not in region_rules["available_brands"]:
+                return {
+                    "available": False,
+                    "reason": f"{manufacturer.title()} motorcycles are not officially distributed in {self._get_region_name(region)}"
+                }
+        
+        # Check displacement restrictions
+        if displacement > region_rules["max_displacement"]:
+            return {
+                "available": False,
+                "reason": f"Motorcycles above {region_rules['max_displacement']}cc are not available due to local regulations"
+            }
+        
+        # Check year restrictions
+        if year < region_rules["min_year"]:
+            return {
+                "available": False,
+                "reason": f"This model year is no longer supported in {self._get_region_name(region)}"
+            }
+        
+        return {"available": True, "reason": None}
     
     def get_supported_regions(self) -> List[Dict[str, str]]:
         """Get list of supported regions with currencies"""
