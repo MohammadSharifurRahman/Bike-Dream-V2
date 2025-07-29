@@ -253,15 +253,94 @@ const VendorPricing = ({ motorcycle }) => {
           onChange={(e) => setSelectedRegion(e.target.value)}
           className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
-          <option value="US">United States (USD)</option>
-          <option value="BD">Bangladesh (BDT)</option>
-          <option value="NP">Nepal (NPR)</option>
-          <option value="BT">Bhutan (BTN)</option>
-          <option value="TH">Thailand (THB)</option>
-          <option value="MY">Malaysia (MYR)</option>
-          <option value="ID">Indonesia (IDR)</option>
-          <option value="AE">UAE (AED)</option>
-          <option value="SA">Saudi Arabia (SAR)</option>
+          <option value="US">🇺🇸 United States (USD)</option>
+          
+          <optgroup label="🌏 South Asia">
+            <option value="BD">🇧🇩 Bangladesh (BDT)</option>
+            <option value="IN">🇮🇳 India (INR)</option>
+            <option value="NP">🇳🇵 Nepal (NPR)</option>
+            <option value="BT">🇧🇹 Bhutan (BTN)</option>
+            <option value="PK">🇵🇰 Pakistan (PKR)</option>
+            <option value="LK">🇱🇰 Sri Lanka (LKR)</option>
+          </optgroup>
+          
+          <optgroup label="🌏 Southeast Asia">
+            <option value="TH">🇹🇭 Thailand (THB)</option>
+            <option value="MY">🇲🇾 Malaysia (MYR)</option>
+            <option value="ID">🇮🇩 Indonesia (IDR)</option>
+            <option value="PH">🇵🇭 Philippines (PHP)</option>
+            <option value="VN">🇻🇳 Vietnam (VND)</option>
+            <option value="SG">🇸🇬 Singapore (SGD)</option>
+          </optgroup>
+          
+          <optgroup label="🌏 East Asia">
+            <option value="JP">🇯🇵 Japan (JPY)</option>
+            <option value="KR">🇰🇷 South Korea (KRW)</option>
+            <option value="TW">🇹🇼 Taiwan (TWD)</option>
+            <option value="CN">🇨🇳 China (CNY)</option>
+            <option value="HK">🇭🇰 Hong Kong (HKD)</option>
+          </optgroup>
+          
+          <optgroup label="🌍 Middle East">
+            <option value="AE">🇦🇪 UAE (AED)</option>
+            <option value="SA">🇸🇦 Saudi Arabia (SAR)</option>
+            <option value="QA">🇶🇦 Qatar (QAR)</option>
+            <option value="KW">🇰🇼 Kuwait (KWD)</option>
+            <option value="BH">🇧🇭 Bahrain (BHD)</option>
+            <option value="OM">🇴🇲 Oman (OMR)</option>
+            <option value="JO">🇯🇴 Jordan (JOD)</option>
+            <option value="TR">🇹🇷 Turkey (TRY)</option>
+            <option value="IL">🇮🇱 Israel (ILS)</option>
+          </optgroup>
+          
+          <optgroup label="🇪🇺 Europe">
+            <option value="GB">🇬🇧 United Kingdom (GBP)</option>
+            <option value="DE">🇩🇪 Germany (EUR)</option>
+            <option value="FR">🇫🇷 France (EUR)</option>
+            <option value="IT">🇮🇹 Italy (EUR)</option>
+            <option value="ES">🇪🇸 Spain (EUR)</option>
+            <option value="NL">🇳🇱 Netherlands (EUR)</option>
+            <option value="BE">🇧🇪 Belgium (EUR)</option>
+            <option value="AT">🇦🇹 Austria (EUR)</option>
+            <option value="PT">🇵🇹 Portugal (EUR)</option>
+            <option value="IE">🇮🇪 Ireland (EUR)</option>
+            <option value="FI">🇫🇮 Finland (EUR)</option>
+            <option value="CH">🇨🇭 Switzerland (CHF)</option>
+            <option value="NO">🇳🇴 Norway (NOK)</option>
+            <option value="SE">🇸🇪 Sweden (SEK)</option>
+            <option value="DK">🇩🇰 Denmark (DKK)</option>
+            <option value="PL">🇵🇱 Poland (PLN)</option>
+            <option value="CZ">🇨🇿 Czech Republic (CZK)</option>
+            <option value="HU">🇭🇺 Hungary (HUF)</option>
+            <option value="RO">🇷🇴 Romania (RON)</option>
+          </optgroup>
+          
+          <optgroup label="🌎 Americas">
+            <option value="CA">🇨🇦 Canada (CAD)</option>
+            <option value="BR">🇧🇷 Brazil (BRL)</option>
+            <option value="MX">🇲🇽 Mexico (MXN)</option>
+            <option value="AR">🇦🇷 Argentina (ARS)</option>
+            <option value="CL">🇨🇱 Chile (CLP)</option>
+            <option value="CO">🇨🇴 Colombia (COP)</option>
+            <option value="PE">🇵🇪 Peru (PEN)</option>
+          </optgroup>
+          
+          <optgroup label="🌏 Oceania">
+            <option value="AU">🇦🇺 Australia (AUD)</option>
+            <option value="NZ">🇳🇿 New Zealand (NZD)</option>
+          </optgroup>
+          
+          <optgroup label="🌍 Africa">
+            <option value="ZA">🇿🇦 South Africa (ZAR)</option>
+            <option value="EG">🇪🇬 Egypt (EGP)</option>
+            <option value="NG">🇳🇬 Nigeria (NGN)</option>
+            <option value="KE">🇰🇪 Kenya (KES)</option>
+          </optgroup>
+          
+          <optgroup label="🌍 Other Regions">
+            <option value="RU">🇷🇺 Russia (RUB)</option>
+            <option value="UA">🇺🇦 Ukraine (UAH)</option>
+          </optgroup>
         </select>
       </div>
 
