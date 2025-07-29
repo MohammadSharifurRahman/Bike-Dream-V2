@@ -1479,6 +1479,27 @@ class MotorcycleAPITester:
         # Browse Limit Fix
         self.test_browse_limit_fix()
         
+        # NEW TESTS FOR TECHNICAL FEATURES DATABASE ENHANCEMENT AND DUAL-LEVEL SORTING
+        print("\n🔧 Testing Technical Features Database Enhancement...")
+        print("-" * 60)
+        
+        self.test_technical_features_database_enhancement()
+        self.test_suzuki_ducati_technical_data()
+        self.test_technical_features_filtering()
+        self.test_numeric_range_filtering()
+        
+        print("\n📊 Testing Dual-Level Sorting Implementation...")
+        print("-" * 60)
+        
+        self.test_dual_level_sorting_default()
+        self.test_compare_default_vs_single_field_sorting()
+        
+        print("\n📈 Testing Database Count Verification...")
+        print("-" * 60)
+        
+        self.test_database_count_verification()
+        self.test_manufacturer_counts_verification()
+        
         # Summary
         print("\n" + "=" * 60)
         print("📊 TEST SUMMARY")
