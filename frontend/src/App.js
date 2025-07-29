@@ -1342,6 +1342,9 @@ function App() {
   const [sortOrder, setSortOrder] = useState('desc');
   const [showFilters, setShowFilters] = useState(false);
   const [databaseStats, setDatabaseStats] = useState({ totalMotorcycles: 0, totalManufacturers: 0 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pagination, setPagination] = useState({});
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
