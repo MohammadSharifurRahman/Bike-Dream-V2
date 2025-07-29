@@ -434,9 +434,130 @@ async def get_available_features():
     }
 
 # Authentication routes
+@api_router.post("/auth/register")
+async def register_user(user_data: UserRegister):
+    """Register a new user with email and password"""
+    try:
+        # Check if user already exists
+        existing_user = await db.users.find_one({"email": user_data.email})
+        if existing_user:
+            raise HTTPException(status_code=400, detail="User with this email already exists")
+        
+        # Hash password and create user
+        password_hash = hash_password(user_data.password)
+        user = User(
+            email=user_data.email,
+            name=user_data.name,
+            password_hash=password_hash,
+            auth_method="password",
+            picture=f"https://ui-avatars.com/api/?name={user_data.name}&background=0D8ABC&color=fff"
+        )
+        
+        await db.users.insert_one(user.dict())
+        
+        # Create JWT token
+        token = create_jwt_token(user.id)
+        
+        return {
+            "message": "Registration successful",
+            "token": token,
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "picture": user.picture
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Registration failed: {str(e)}")
+
+@api_router.post("/auth/login")
+async def login_user(user_data: UserLogin):
+    """Login user with email and password"""
+    try:
+        # Find user by email
+        user_doc = await db.users.find_one({"email": user_data.email})
+        if not user_doc:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        user = User(**user_doc)
+        
+        # Verify password
+        if not user.password_hash or not verify_password(user_data.password, user.password_hash):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Create JWT token
+        token = create_jwt_token(user.id)
+        
+        return {
+            "message": "Login successful",
+            "token": token,
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "picture": user.picture
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Login failed: {str(e)}")
+
+@api_router.post("/auth/google")
+async def google_oauth(oauth_data: GoogleOAuthData):
+    """Authenticate user with Google OAuth"""
+    try:
+        # Check if user already exists
+        existing_user = await db.users.find_one({"email": oauth_data.email})
+        
+        if existing_user:
+            # Update Google ID if not set and auth method
+            user = User(**existing_user)
+            if not user.google_id:
+                await db.users.update_one(
+                    {"email": oauth_data.email},
+                    {"$set": {
+                        "google_id": oauth_data.google_id,
+                        "auth_method": "google",
+                        "picture": oauth_data.picture
+                    }}
+                )
+                user.google_id = oauth_data.google_id
+                user.auth_method = "google"
+                user.picture = oauth_data.picture
+        else:
+            # Create new user
+            user = User(
+                email=oauth_data.email,
+                name=oauth_data.name,
+                picture=oauth_data.picture,
+                google_id=oauth_data.google_id,
+                auth_method="google"
+            )
+            await db.users.insert_one(user.dict())
+        
+        # Create JWT token
+        token = create_jwt_token(user.id)
+        
+        return {
+            "message": "Google authentication successful",
+            "token": token,
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "picture": user.picture
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Google authentication failed: {str(e)}")
+
 @api_router.post("/auth/profile")
 async def authenticate_user(user_data: dict):
-    """Authenticate user with Emergent session data"""
+    """Authenticate user with Emergent session data (legacy support)"""
     try:
         # Check if user already exists
         existing_user = await db.users.find_one({"email": user_data["email"]})
@@ -452,7 +573,7 @@ async def authenticate_user(user_data: dict):
         else:
             # Create new user
             user_create = UserCreate(**user_data)
-            user = User(**user_create.dict())
+            user = User(**user_create.dict(), auth_method="emergent")
             await db.users.insert_one(user.dict())
         
         return {
