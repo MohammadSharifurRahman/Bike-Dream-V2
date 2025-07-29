@@ -803,12 +803,14 @@ const RatingSection = ({ motorcycle, onRatingSubmit }) => {
 };
 
 // Comments Section Component
-const CommentsSection = ({ motorcycle }) => {
+const DiscussionSection = ({ motorcycle }) => {
   const { user } = useAuth();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
-  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyTo, setReplyTo] = useState(null);
   const [replyText, setReplyText] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchComments();
@@ -816,192 +818,353 @@ const CommentsSection = ({ motorcycle }) => {
 
   const fetchComments = async () => {
     try {
-      const response = await axios.get(`${API}/motorcycles/${motorcycle.id}/comments`);
-      setComments(response.data);
+      setLoading(true);
+      const response = await axios.get(`${API}/motorcycles/${motorcycle.id}/comments?include_replies=true`);
+      setComments(response.data || []);
     } catch (error) {
       console.error('Error fetching comments:', error);
+      setComments([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSubmitComment = async () => {
-    if (!user || !newComment.trim()) return;
+  const handleSubmitComment = async (e) => {
+    e.preventDefault();
+    if (!user) {
+      alert('Please login to post comments');
+      return;
+    }
+
+    if (!newComment.trim()) {
+      alert('Please enter a comment');
+      return;
+    }
 
     try {
+      setSubmitting(true);
+      const token = localStorage.getItem('auth_token');
       const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+
       await axios.post(`${API}/motorcycles/${motorcycle.id}/comment`, {
         motorcycle_id: motorcycle.id,
-        comment_text: newComment
-      }, {
-        headers: { 'X-Session-ID': sessionId }
-      });
+        content: newComment.trim()
+      }, { headers });
 
       setNewComment('');
-      fetchComments();
+      await fetchComments(); // Refresh comments
     } catch (error) {
-      console.error('Error submitting comment:', error);
+      console.error('Error posting comment:', error);
+      alert('Error posting comment. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleSubmitReply = async (parentId) => {
-    if (!user || !replyText.trim()) return;
+  const handleSubmitReply = async (parentCommentId) => {
+    if (!user) {
+      alert('Please login to reply');
+      return;
+    }
+
+    if (!replyText.trim()) {
+      alert('Please enter a reply');
+      return;
+    }
 
     try {
+      setSubmitting(true);
+      const token = localStorage.getItem('auth_token');
       const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+
       await axios.post(`${API}/motorcycles/${motorcycle.id}/comment`, {
         motorcycle_id: motorcycle.id,
-        comment_text: replyText,
-        parent_comment_id: parentId
-      }, {
-        headers: { 'X-Session-ID': sessionId }
-      });
+        content: replyText.trim(),
+        parent_comment_id: parentCommentId
+      }, { headers });
 
       setReplyText('');
-      setReplyingTo(null);
-      fetchComments();
+      setReplyTo(null);
+      await fetchComments(); // Refresh comments
     } catch (error) {
-      console.error('Error submitting reply:', error);
+      console.error('Error posting reply:', error);
+      alert('Error posting reply. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleLikeComment = async (commentId) => {
-    if (!user) return;
+    if (!user) {
+      alert('Please login to like comments');
+      return;
+    }
 
     try {
+      const token = localStorage.getItem('auth_token');
       const sessionId = localStorage.getItem('session_id');
-      await axios.post(`${API}/comments/${commentId}/like`, {}, {
-        headers: { 'X-Session-ID': sessionId }
-      });
-      fetchComments();
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+
+      await axios.post(`${API}/comments/${commentId}/like`, {}, { headers });
+      await fetchComments(); // Refresh to update like counts
     } catch (error) {
       console.error('Error liking comment:', error);
     }
   };
 
-  return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
-      <h3 className="text-xl font-bold text-gray-800 mb-4">
-        Discussion ({motorcycle.total_comments || comments.length})
-      </h3>
+  const handleDeleteComment = async (commentId) => {
+    if (!user) return;
 
-      {user && (
-        <div className="mb-6">
-          <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Share your thoughts about this motorcycle..."
-            className="w-full p-3 border border-gray-300 rounded-lg resize-none h-24 mb-3"
+    if (!confirm('Are you sure you want to delete this comment?')) return;
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+
+      await axios.delete(`${API}/comments/${commentId}`, { headers });
+      await fetchComments(); // Refresh comments
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      alert('Error deleting comment. Please try again.');
+    }
+  };
+
+  const handleFlagComment = async (commentId) => {
+    if (!user) {
+      alert('Please login to flag comments');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to flag this comment as inappropriate?')) return;
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+
+      await axios.post(`${API}/comments/${commentId}/flag`, {}, { headers });
+      alert('Comment has been flagged for review. Thank you for helping keep our community safe.');
+    } catch (error) {
+      console.error('Error flagging comment:', error);
+      alert('Error flagging comment. Please try again.');
+    }
+  };
+
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const CommentItem = ({ comment, isReply = false }) => (
+    <div className={`${isReply ? 'ml-8 border-l-2 border-gray-200 pl-4' : ''} mb-4`}>
+      <div className="bg-white border rounded-lg p-4">
+        <div className="flex items-start space-x-3">
+          <img 
+            src={comment.user_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.user_name)}&background=0D8ABC&color=fff`}
+            alt={comment.user_name}
+            className="w-10 h-10 rounded-full"
           />
-          <button
-            onClick={handleSubmitComment}
-            disabled={!newComment.trim()}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-          >
-            Post Comment
-          </button>
+          <div className="flex-1">
+            <div className="flex items-center space-x-2 mb-2">
+              <span className="font-medium text-gray-800">{comment.user_name}</span>
+              <span className="text-sm text-gray-500">{formatTimeAgo(comment.created_at)}</span>
+              {comment.is_flagged && (
+                <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Flagged</span>
+              )}
+            </div>
+            <p className="text-gray-700 mb-3">{comment.content}</p>
+            
+            <div className="flex items-center space-x-4 text-sm">
+              <button
+                onClick={() => handleLikeComment(comment.id)}
+                className="flex items-center space-x-1 text-gray-500 hover:text-blue-600 transition-colors"
+                disabled={!user}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                <span>{comment.likes_count || 0}</span>
+              </button>
+
+              {!isReply && (
+                <button
+                  onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)}
+                  className="text-gray-500 hover:text-blue-600 transition-colors"
+                  disabled={!user}
+                >
+                  Reply ({comment.replies_count || 0})
+                </button>
+              )}
+
+              {user && user.id === comment.user_id && (
+                <button
+                  onClick={() => handleDeleteComment(comment.id)}
+                  className="text-gray-500 hover:text-red-600 transition-colors"
+                >
+                  Delete
+                </button>
+              )}
+
+              {user && user.id !== comment.user_id && (
+                <button
+                  onClick={() => handleFlagComment(comment.id)}
+                  className="text-gray-500 hover:text-red-600 transition-colors"
+                >
+                  Flag
+                </button>
+              )}
+            </div>
+
+            {/* Reply Form */}
+            {replyTo === comment.id && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="Write your reply..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  maxLength={1000}
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-sm text-gray-500">{replyText.length}/1000 characters</span>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => {setReplyTo(null); setReplyText('');}}
+                      className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleSubmitReply(comment.id)}
+                      disabled={submitting || !replyText.trim()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {submitting ? 'Posting...' : 'Post Reply'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Render Replies */}
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="mt-4">
+          {comment.replies.map((reply) => (
+            <CommentItem key={reply.id} comment={reply} isReply={true} />
+          ))}
         </div>
       )}
+    </div>
+  );
 
-      {!user && (
-        <div className="bg-gray-50 p-4 rounded-lg mb-6 text-center">
-          <p className="text-gray-600 mb-2">Join the discussion!</p>
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <h3 className="text-2xl font-bold text-gray-800">Discussion ({comments.length})</h3>
+      
+      {/* New Comment Form */}
+      {user ? (
+        <div className="bg-white border rounded-lg p-6">
+          <h4 className="text-lg font-semibold mb-4">Join the Discussion</h4>
+          <form onSubmit={handleSubmitComment} className="space-y-4">
+            <div className="flex items-start space-x-3">
+              <img 
+                src={user.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=0D8ABC&color=fff`}
+                alt={user.name}
+                className="w-10 h-10 rounded-full"
+              />
+              <div className="flex-1">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Share your thoughts about this motorcycle..."
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  maxLength={1000}
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-sm text-gray-500">{newComment.length}/1000 characters</span>
+                  <button
+                    type="submit"
+                    disabled={submitting || !newComment.trim()}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? 'Posting...' : 'Post Comment'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <div className="bg-gray-50 border rounded-lg p-6 text-center">
+          <p className="text-gray-600 mb-4">Please login to join the discussion</p>
           <AuthButton />
         </div>
       )}
 
+      {/* Comments List */}
       <div className="space-y-4">
-        {comments.map((comment) => (
-          <div key={comment.id} className="border border-gray-200 rounded-lg p-4">
-            <div className="flex items-start space-x-3">
-              <img
-                src={comment.user_picture || '/default-avatar.png'}
-                alt={comment.user_name}
-                className="w-10 h-10 rounded-full"
-              />
-              <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-2">
-                  <span className="font-medium text-gray-800">{comment.user_name}</span>
-                  <span className="text-sm text-gray-500">
-                    {new Date(comment.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <p className="text-gray-700 mb-3">{comment.comment_text}</p>
-                <div className="flex items-center space-x-4 text-sm">
-                  <button
-                    onClick={() => handleLikeComment(comment.id)}
-                    className="flex items-center space-x-1 text-gray-500 hover:text-blue-600 transition-colors"
-                  >
-                    <span>👍</span>
-                    <span>{comment.likes}</span>
-                  </button>
-                  {user && (
-                    <button
-                      onClick={() => setReplyingTo(comment.id)}
-                      className="text-gray-500 hover:text-blue-600 transition-colors"
-                    >
-                      Reply
-                    </button>
-                  )}
-                </div>
-
-                {replyingTo === comment.id && (
-                  <div className="mt-3 pl-4 border-l-2 border-gray-200">
-                    <textarea
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      placeholder="Write your reply..."
-                      className="w-full p-2 border border-gray-300 rounded-lg resize-none h-20 mb-2"
-                    />
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleSubmitReply(comment.id)}
-                        disabled={!replyText.trim()}
-                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:bg-gray-400"
-                      >
-                        Reply
-                      </button>
-                      <button
-                        onClick={() => {setReplyingTo(null); setReplyText('');}}
-                        className="bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-400"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {comment.replies && comment.replies.length > 0 && (
-                  <div className="mt-4 pl-4 border-l-2 border-gray-200 space-y-3">
-                    {comment.replies.map((reply) => (
-                      <div key={reply.id} className="flex items-start space-x-3">
-                        <img
-                          src={reply.user_picture || '/default-avatar.png'}
-                          alt={reply.user_name}
-                          className="w-8 h-8 rounded-full"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="font-medium text-gray-800">{reply.user_name}</span>
-                            <span className="text-xs text-gray-500">
-                              {new Date(reply.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <p className="text-gray-700 text-sm">{reply.comment_text}</p>
-                          <button
-                            onClick={() => handleLikeComment(reply.id)}
-                            className="flex items-center space-x-1 text-xs text-gray-500 hover:text-blue-600 mt-1"
-                          >
-                            <span>👍</span>
-                            <span>{reply.likes}</span>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+        {comments.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No comments yet. Be the first to start the discussion!
           </div>
-        ))}
+        ) : (
+          comments.map((comment) => (
+            <CommentItem key={comment.id} comment={comment} />
+          ))
+        )}
       </div>
     </div>
   );
