@@ -2134,11 +2134,8 @@ async def update_user_request(request_id: str, update_data: UserRequestUpdate):
     return {"message": "Request updated successfully"}
 
 @api_router.get("/requests/stats")
-async def get_request_stats(current_user: User = Depends(get_current_user)):
+async def get_request_stats(current_user: User = Depends(require_auth)):
     """Get user's request statistics"""
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    
     # Aggregate user's request stats
     pipeline = [
         {"$match": {"user_id": current_user.id}},
