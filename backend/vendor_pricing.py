@@ -108,6 +108,24 @@ class VendorPricingSystem:
                     "phone": "+880-2-58151924"
                 }
             ],
+            "IN": [  # India
+                {
+                    "name": "Hero MotoCorp",
+                    "website": "https://www.heromotocorp.com",
+                    "verified": True,
+                    "rating": 4.3,
+                    "reviews": 12500,
+                    "phone": "+91-124-4819000"
+                },
+                {
+                    "name": "Bajaj Auto",
+                    "website": "https://www.bajajauto.com",
+                    "verified": True,
+                    "rating": 4.2,
+                    "reviews": 8900,
+                    "phone": "+91-20-2926-7042"
+                }
+            ],
             "NP": [  # Nepal
                 {
                     "name": "Hansraj Hulaschand & Co",
@@ -172,6 +190,24 @@ class VendorPricingSystem:
                     "phone": "+62-21-5093-1000"
                 }
             ],
+            "JP": [  # Japan
+                {
+                    "name": "Honda Japan",
+                    "website": "https://www.honda.co.jp",
+                    "verified": True,
+                    "rating": 4.5,
+                    "reviews": 5200,
+                    "phone": "+81-3-3423-1111"
+                },
+                {
+                    "name": "Yamaha Motor Japan",
+                    "website": "https://www.yamaha-motor.co.jp",
+                    "verified": True,
+                    "rating": 4.4,
+                    "reviews": 4800,
+                    "phone": "+81-538-32-1103"
+                }
+            ],
             "AE": [  # UAE
                 {
                     "name": "Al-Futtaim Motors",
@@ -190,6 +226,114 @@ class VendorPricingSystem:
                     "rating": 4.1,
                     "reviews": 1100,
                     "phone": "+966-11-213-3333"
+                }
+            ],
+            "AU": [  # Australia
+                {
+                    "name": "Honda Australia",
+                    "website": "https://motorcycles.honda.com.au",
+                    "verified": True,
+                    "rating": 4.3,
+                    "reviews": 2200,
+                    "phone": "+61-3-9270-1111"
+                },
+                {
+                    "name": "Yamaha Australia",
+                    "website": "https://www.yamaha-motor.com.au",
+                    "verified": True,
+                    "rating": 4.2,
+                    "reviews": 1900,
+                    "phone": "+61-2-9714-3555"
+                }
+            ],
+            "CA": [  # Canada
+                {
+                    "name": "Honda Canada",
+                    "website": "https://powersports.honda.ca",
+                    "verified": True,
+                    "rating": 4.4,
+                    "reviews": 3100,
+                    "phone": "+1-888-946-6329"
+                },
+                {
+                    "name": "Yamaha Canada",
+                    "website": "https://www.yamaha-motor.ca",
+                    "verified": True,
+                    "rating": 4.3,
+                    "reviews": 2800,
+                    "phone": "+1-800-267-6329"
+                }
+            ],
+            "GB": [  # United Kingdom
+                {
+                    "name": "Honda UK",
+                    "website": "https://www.honda.co.uk",
+                    "verified": True,
+                    "rating": 4.2,
+                    "reviews": 2400,
+                    "phone": "+44-1753-590-600"
+                },
+                {
+                    "name": "Yamaha UK",
+                    "website": "https://www.yamaha-motor.co.uk",
+                    "verified": True,
+                    "rating": 4.1,
+                    "reviews": 2100,
+                    "phone": "+44-1932-358-000"
+                }
+            ],
+            "DE": [  # Germany
+                {
+                    "name": "BMW Motorrad",
+                    "website": "https://www.bmw-motorrad.de",
+                    "verified": True,
+                    "rating": 4.5,
+                    "reviews": 3800,
+                    "phone": "+49-89-382-0"
+                },
+                {
+                    "name": "Honda Deutschland",
+                    "website": "https://www.honda.de",
+                    "verified": True,
+                    "rating": 4.3,
+                    "reviews": 2900,
+                    "phone": "+49-69-8309-0"
+                }
+            ],
+            "BR": [  # Brazil
+                {
+                    "name": "Honda Brasil",
+                    "website": "https://www.honda.com.br",
+                    "verified": True,
+                    "rating": 4.1,
+                    "reviews": 4200,
+                    "phone": "+55-11-2134-3000"
+                },
+                {
+                    "name": "Yamaha Brasil",
+                    "website": "https://www.yamaha-motor.com.br",
+                    "verified": True,
+                    "rating": 4.0,
+                    "reviews": 3600,
+                    "phone": "+55-11-2134-2000"
+                }
+            ],
+            "MX": [  # Mexico
+                {
+                    "name": "Honda Mexico",
+                    "website": "https://www.honda.mx",
+                    "verified": True,
+                    "rating": 4.0,
+                    "reviews": 1800,
+                    "phone": "+52-55-5387-9700"
+                },
+                {
+                    "name": "Yamaha Mexico",
+                    "website": "https://www.yamaha-motor.com.mx",
+                    "verified": True,
+                    "rating": 3.9,
+                    "reviews": 1500,
+                    "phone": "+52-55-5626-7900"
                 }
             ]
         }
