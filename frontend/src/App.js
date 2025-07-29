@@ -2243,6 +2243,16 @@ const MotorcycleDetail = ({ motorcycle, onClose }) => {
           {activeTab === 'discussion' && (
             <DiscussionSection motorcycle={motorcycle} />
           )}
+          
+          {/* Secondary Back Button for better accessibility */}
+          <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+            <button
+              onClick={onClose}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 shadow-md hover:shadow-lg"
+            >
+              ← Back to Browse
+            </button>
+          </div>
         </div>
       </div>
     </div>
