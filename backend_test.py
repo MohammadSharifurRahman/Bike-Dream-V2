@@ -25,6 +25,15 @@ class MotorcycleAPITester:
             "session_token": "test_session_token_12345"
         }
         
+    def extract_motorcycles_from_response(self, data):
+        """Helper function to extract motorcycles from API response (handles both paginated and legacy formats)"""
+        if isinstance(data, dict) and "motorcycles" in data:
+            return data["motorcycles"]
+        elif isinstance(data, list):
+            return data
+        else:
+            return []
+        
     def log_test(self, test_name: str, success: bool, details: str = ""):
         """Log test results"""
         status = "✅ PASS" if success else "❌ FAIL"
