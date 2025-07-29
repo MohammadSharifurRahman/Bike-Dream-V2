@@ -290,6 +290,238 @@ class UpdateJobStatus(BaseModel):
     completed_at: Optional[datetime] = None
     stats: Optional[dict] = None
 
+# Daily Update Scheduler
+class DailyUpdateScheduler:
+    def __init__(self):
+        self.is_running = False
+        self.scheduler_thread = None
+    
+    async def run_daily_updates(self):
+        """Run comprehensive daily updates"""
+        try:
+            print(f"🔄 Starting daily updates at {datetime.now(timezone.utc)} GMT")
+            
+            # 1. Update motorcycle pricing
+            await self.update_vendor_pricing()
+            
+            # 2. Check for new motorcycles/models
+            await self.check_new_motorcycles()
+            
+            # 3. Update availability status
+            await self.update_availability_status()
+            
+            # 4. Log update completion
+            update_log = {
+                "timestamp": datetime.now(timezone.utc),
+                "type": "scheduled_daily_update",
+                "status": "completed",
+                "updates_applied": ["pricing", "availability", "new_models"],
+                "next_update": datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            }
+            
+            await db.update_logs.insert_one(update_log)
+            print("✅ Daily updates completed successfully")
+            
+        except Exception as e:
+            print(f"❌ Daily update failed: {str(e)}")
+            # Log the error
+            error_log = {
+                "timestamp": datetime.now(timezone.utc),
+                "type": "scheduled_daily_update",
+                "status": "failed",
+                "error": str(e)
+            }
+            await db.update_logs.insert_one(error_log)
+    
+    async def update_vendor_pricing(self):
+        """Update vendor pricing for all motorcycles"""
+        print("💰 Updating vendor pricing...")
+        
+        # Get all motorcycles
+        motorcycles = await db.motorcycles.find({}).to_list(None)
+        updated_count = 0
+        
+        for motorcycle in motorcycles:
+            try:
+                # Simulate price fluctuations (±5%)
+                current_price = motorcycle.get("price_usd", 10000)
+                price_change = random.uniform(-0.05, 0.05)
+                new_price = max(500, int(current_price * (1 + price_change)))  # Minimum $500
+                
+                # Update the motorcycle price
+                await db.motorcycles.update_one(
+                    {"id": motorcycle["id"]},
+                    {"$set": {
+                        "price_usd": new_price,
+                        "last_price_update": datetime.now(timezone.utc)
+                    }}
+                )
+                updated_count += 1
+                
+            except Exception as e:
+                print(f"Error updating pricing for {motorcycle.get('id', 'unknown')}: {str(e)}")
+        
+        print(f"📊 Updated pricing for {updated_count} motorcycles")
+    
+    async def check_new_motorcycles(self):
+        """Check for new motorcycle models and add them"""
+        print("🔍 Checking for new motorcycle models...")
+        
+        # This would typically connect to manufacturer APIs
+        # For demo, we'll simulate adding a few new models
+        current_year = datetime.now().year
+        
+        new_models = [
+            {
+                "manufacturer": "Yamaha",
+                "model": f"YZF-R125 {current_year}",
+                "year": current_year,
+                "category": "Sport",
+                "displacement": 125,
+                "horsepower": 15,
+                "price_usd": 4500,
+                "availability": "Pre-order",
+                "is_new_model": True
+            },
+            {
+                "manufacturer": "Honda",
+                "model": f"CB300R {current_year}",
+                "year": current_year,
+                "category": "Naked",
+                "displacement": 286,
+                "horsepower": 31,
+                "price_usd": 4700,
+                "availability": "Coming Soon",
+                "is_new_model": True
+            }
+        ]
+        
+        added_count = 0
+        for model_data in new_models:
+            # Check if model already exists
+            existing = await db.motorcycles.find_one({
+                "manufacturer": model_data["manufacturer"],
+                "model": model_data["model"],
+                "year": model_data["year"]
+            })
+            
+            if not existing:
+                # Add the new model with full specifications
+                motorcycle = self.generate_full_motorcycle_spec(model_data)
+                await db.motorcycles.insert_one(motorcycle)
+                added_count += 1
+        
+        print(f"🆕 Added {added_count} new motorcycle models")
+    
+    async def update_availability_status(self):
+        """Update availability status based on age and stock"""
+        print("📦 Updating availability status...")
+        
+        current_year = datetime.now().year
+        updated_count = 0
+        
+        # Update availability based on motorcycle age
+        motorcycles = await db.motorcycles.find({}).to_list(None)
+        
+        for motorcycle in motorcycles:
+            try:
+                year = motorcycle.get("year", current_year)
+                current_availability = motorcycle.get("availability", "Available")
+                new_availability = current_availability
+                
+                # Update availability logic
+                if year < current_year - 8:
+                    new_availability = "Collector Item"
+                elif year < current_year - 3:
+                    new_availability = "Discontinued"
+                elif year < current_year - 1:
+                    new_availability = "Limited Stock"
+                else:
+                    new_availability = "Available"
+                
+                # Only update if availability changed
+                if new_availability != current_availability:
+                    await db.motorcycles.update_one(
+                        {"id": motorcycle["id"]},
+                        {"$set": {
+                            "availability": new_availability,
+                            "availability_updated": datetime.now(timezone.utc)
+                        }}
+                    )
+                    updated_count += 1
+                    
+            except Exception as e:
+                print(f"Error updating availability for {motorcycle.get('id', 'unknown')}: {str(e)}")
+        
+        print(f"📊 Updated availability for {updated_count} motorcycles")
+    
+    def generate_full_motorcycle_spec(self, model_data):
+        """Generate full motorcycle specification from basic data"""
+        return {
+            "id": str(uuid.uuid4()),
+            "manufacturer": model_data["manufacturer"],
+            "model": model_data["model"],
+            "year": model_data["year"],
+            "category": model_data["category"],
+            "engine_type": "Single Cylinder" if model_data["displacement"] <= 200 else "Parallel Twin",
+            "displacement": model_data["displacement"],
+            "horsepower": model_data["horsepower"],
+            "torque": int(model_data["horsepower"] * 0.75),
+            "weight": 140 + (model_data["displacement"] // 10),
+            "top_speed": int(90 + (model_data["horsepower"] * 1.5)),
+            "fuel_capacity": 12.0 + (model_data["displacement"] // 150),
+            "price_usd": model_data["price_usd"],
+            "availability": model_data["availability"],
+            "description": f"The latest {model_data['manufacturer']} {model_data['model']} represents cutting-edge technology and performance in the {model_data['category'].lower()} segment.",
+            "image_url": "https://images.unsplash.com/photo-1558980664-2cd663cf8dde?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwxfHxtb3RvcmN5Y2xlfGVufDB8fHxibGFja19hbmRfd2hpdGV8MTc1MzgxMDQyNXww&ixlib=rb-4.1.0&q=85",
+            "user_interest_score": 95,
+            "specialisations": ["Latest Technology", "Performance", "Innovation"],
+            "mileage_kmpl": max(15, 45 - (model_data["displacement"] // 20)),
+            "transmission_type": "Manual",
+            "number_of_gears": 6 if model_data["displacement"] > 200 else 5,
+            "ground_clearance_mm": 160,
+            "seat_height_mm": 750 + (model_data["displacement"] // 20),
+            "abs_available": True,
+            "braking_system": "Disc",
+            "suspension_type": "Telescopic",
+            "tyre_type": "Tubeless",
+            "wheel_size_inches": "17",
+            "headlight_type": "LED",
+            "fuel_type": "Petrol",
+            "created_at": datetime.now(timezone.utc),
+            "is_new_model": model_data.get("is_new_model", False)
+        }
+    
+    def start_scheduler(self):
+        """Start the daily update scheduler"""
+        if self.is_running:
+            return
+        
+        def run_scheduler():
+            # Schedule daily updates at 00:00 GMT
+            schedule.every().day.at("00:00").do(lambda: asyncio.create_task(self.run_daily_updates()))
+            
+            print("📅 Daily update scheduler started - Updates at 00:00 GMT")
+            
+            while self.is_running:
+                schedule.run_pending()
+                time.sleep(60)  # Check every minute
+        
+        self.is_running = True
+        self.scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+        self.scheduler_thread.start()
+    
+    def stop_scheduler(self):
+        """Stop the daily update scheduler"""
+        self.is_running = False
+        if self.scheduler_thread:
+            self.scheduler_thread.join(timeout=5)
+        schedule.clear()
+        print("🛑 Daily update scheduler stopped")
+
+# Global scheduler instance
+daily_scheduler = DailyUpdateScheduler()
+
 # Authentication constants and helpers
 JWT_SECRET = os.environ.get("JWT_SECRET", "your-secret-key-here")
 JWT_ALGORITHM = "HS256"
