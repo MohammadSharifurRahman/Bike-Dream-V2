@@ -46,8 +46,11 @@ class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: str
     name: str
-    picture: str
-    session_token: str
+    picture: str = Field(default="")
+    session_token: Optional[str] = None
+    password_hash: Optional[str] = None  # For email/password auth
+    google_id: Optional[str] = None      # For Google OAuth
+    auth_method: str = Field(default="password")  # "password" or "google" or "emergent"
     created_at: datetime = Field(default_factory=datetime.utcnow)
     favorite_motorcycles: List[str] = Field(default_factory=list)
 
