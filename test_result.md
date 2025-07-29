@@ -530,13 +530,16 @@ frontend:
     implemented: true
     working: false
     file: "/app/frontend/src/App.js"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
     needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL DATA ACCURACY ISSUE: Homepage statistics show 2614+ motorcycles instead of expected 1307+. Browse page shows 928 motorcycles, but homepage statistics inconsistent. Backend testing confirmed 1307 motorcycles in database, but frontend displays different counts. Manufacturer count shows 0+ instead of expected 5+. This creates confusion for users about actual database size and content. Data integrity issue between backend and frontend display."
+      - working: false
+        agent: "testing"
+        comment: "❌ DATA ACCURACY STILL BROKEN: Homepage continues to show incorrect statistics - 2614+ motorcycles instead of 1307+, and manufacturer count shows incorrect values. Browse page also shows 2614 motorcycles instead of expected 1307. This indicates the frontend is not properly using the stats API data or there's a calculation error in the statistics display logic. The data inconsistency persists despite backend having correct 1307 motorcycles. Frontend statistics calculation needs debugging."
 
 metadata:
   created_by: "main_agent"
