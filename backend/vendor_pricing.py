@@ -520,21 +520,75 @@ class VendorPricingSystem:
         """Get full region name from code"""
         region_names = {
             "US": "United States",
+            # South Asian countries
             "BD": "Bangladesh",  
+            "IN": "India",
             "NP": "Nepal",
             "BT": "Bhutan",
+            "PK": "Pakistan",
+            "LK": "Sri Lanka",
+            # Southeast Asian countries
             "TH": "Thailand",
             "MY": "Malaysia", 
             "ID": "Indonesia",
+            "PH": "Philippines",
+            "VN": "Vietnam",
+            "SG": "Singapore",
+            # Middle Eastern countries
             "AE": "United Arab Emirates",
             "SA": "Saudi Arabia",
-            "EU": "European Union",
-            "UK": "United Kingdom", 
-            "CA": "Canada",
-            "AU": "Australia",
-            "IN": "India",
+            "QA": "Qatar",
+            "KW": "Kuwait",
+            "BH": "Bahrain",
+            "OM": "Oman",
+            "JO": "Jordan",
+            "TR": "Turkey",
+            # East Asian countries
             "JP": "Japan",
-            "CN": "China"
+            "KR": "South Korea",
+            "TW": "Taiwan",
+            "CN": "China",
+            "HK": "Hong Kong",
+            # European countries
+            "DE": "Germany",
+            "FR": "France",
+            "IT": "Italy",
+            "ES": "Spain",
+            "NL": "Netherlands",
+            "BE": "Belgium",
+            "AT": "Austria",
+            "PT": "Portugal",
+            "IE": "Ireland",
+            "FI": "Finland",
+            "GB": "United Kingdom", 
+            "CH": "Switzerland",
+            "NO": "Norway",
+            "SE": "Sweden",
+            "DK": "Denmark",
+            "PL": "Poland",
+            "CZ": "Czech Republic",
+            "HU": "Hungary",
+            "RO": "Romania",
+            # Americas
+            "CA": "Canada",
+            "BR": "Brazil",
+            "MX": "Mexico",
+            "AR": "Argentina",
+            "CL": "Chile",
+            "CO": "Colombia",
+            "PE": "Peru",
+            # Oceania
+            "AU": "Australia",
+            "NZ": "New Zealand",
+            # African countries
+            "ZA": "South Africa",
+            "EG": "Egypt",
+            "NG": "Nigeria",
+            "KE": "Kenya",
+            # Other regions
+            "RU": "Russia",
+            "UA": "Ukraine",
+            "IL": "Israel"
         }
         return region_names.get(region_code, region_code)
 
