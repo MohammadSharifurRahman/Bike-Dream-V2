@@ -2487,7 +2487,7 @@ const FilterSidebar = ({ filters, onFilterChange, filterOptions, availableFeatur
 );
 
 function App() {
-  const [currentView, setCurrentView] = useState('home'); // 'home', 'browse', or 'profile'
+  const [currentView, setCurrentView] = useState('home'); // 'home', 'browse', 'profile', or 'requests'
   const [motorcycles, setMotorcycles] = useState([]);
   const [categories, setCategories] = useState([]);
   const [availableFeatures, setAvailableFeatures] = useState([]);
