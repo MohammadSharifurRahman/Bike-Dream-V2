@@ -2101,40 +2101,6 @@ async def update_user_request(request_id: str, update_data: UserRequestUpdate):
     
     return {"message": "Request updated successfully"}
 
-@api_router.get("/requests/stats")
-async def get_request_stats(current_user: User = Depends(require_auth)):
-    """Get user's request statistics"""
-    # Aggregate user's request stats
-    pipeline = [
-        {"$match": {"user_id": current_user.id}},
-        {"$group": {
-            "_id": "$status",
-            "count": {"$sum": 1}
-        }}
-    ]
-    
-    status_counts = await db.user_requests.aggregate(pipeline).to_list(None)
-    
-    # Format the results
-    stats = {
-        "pending": 0,
-        "in_progress": 0,
-        "resolved": 0,
-        "rejected": 0
-    }
-    
-    for status_count in status_counts:
-        stats[status_count["_id"]] = status_count["count"]
-    
-    # Get total count
-    total_requests = sum(stats.values())
-    
-    return {
-        "total_requests": total_requests,
-        "by_status": stats,
-        "response_rate": round((stats["resolved"] + stats["rejected"]) / total_requests * 100, 1) if total_requests > 0 else 0
-    }
-
 @api_router.get("/status", response_model=List[StatusCheck])
 async def get_status_checks():
     status_checks = await db.status_checks.find().to_list(1000)
