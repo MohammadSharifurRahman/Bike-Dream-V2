@@ -2175,6 +2175,37 @@ class MotorcycleAPITester:
         # Test regional customizations
         self.test_regional_customizations()
         
+        # NEW AUTHENTICATION SYSTEM TESTS
+        print("\n🔐 Testing Authentication System...")
+        print("-" * 60)
+        
+        self.test_email_password_registration()
+        self.test_email_password_login()
+        self.test_google_oauth()
+        self.test_jwt_token_validation()
+        self.test_session_based_authentication()
+        self.test_invalid_credentials_handling()
+        
+        # NEW PAGINATION SYSTEM TESTS
+        print("\n📄 Testing Pagination System...")
+        print("-" * 60)
+        
+        self.test_pagination_basic_functionality()
+        self.test_pagination_response_format()
+        self.test_pagination_navigation()
+        self.test_pagination_metadata_accuracy()
+        self.test_pagination_with_filtering()
+        self.test_pagination_with_sorting()
+        
+        # NEW VENDOR PRICING IMPROVEMENTS TESTS
+        print("\n💰 Testing Vendor Pricing Improvements...")
+        print("-" * 60)
+        
+        self.test_regional_currencies_support()
+        self.test_discontinued_motorcycle_handling()
+        self.test_verified_vendor_urls()
+        self.test_currency_conversion()
+
         # NEW USER INTERACTION API TESTS
         print("\n👤 Testing User Interaction APIs...")
         print("-" * 60)
