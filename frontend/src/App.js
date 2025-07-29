@@ -222,14 +222,75 @@ const VendorPricing = ({ motorcycle }) => {
   const getRegionName = (regionCode) => {
     const regionNames = {
       'US': 'United States',
+      // South Asian countries
       'BD': 'Bangladesh',
+      'IN': 'India',
       'NP': 'Nepal',
       'BT': 'Bhutan',
+      'PK': 'Pakistan',
+      'LK': 'Sri Lanka',
+      // Southeast Asian countries
       'TH': 'Thailand',
       'MY': 'Malaysia',
       'ID': 'Indonesia',
+      'PH': 'Philippines',
+      'VN': 'Vietnam',
+      'SG': 'Singapore',
+      // East Asian countries
+      'JP': 'Japan',
+      'KR': 'South Korea',
+      'TW': 'Taiwan',
+      'CN': 'China',
+      'HK': 'Hong Kong',
+      // Middle Eastern countries
       'AE': 'UAE',
-      'SA': 'Saudi Arabia'
+      'SA': 'Saudi Arabia',
+      'QA': 'Qatar',
+      'KW': 'Kuwait',
+      'BH': 'Bahrain',
+      'OM': 'Oman',
+      'JO': 'Jordan',
+      'TR': 'Turkey',
+      'IL': 'Israel',
+      // European countries
+      'GB': 'United Kingdom',
+      'DE': 'Germany',
+      'FR': 'France',
+      'IT': 'Italy',
+      'ES': 'Spain',
+      'NL': 'Netherlands',
+      'BE': 'Belgium',
+      'AT': 'Austria',
+      'PT': 'Portugal',
+      'IE': 'Ireland',
+      'FI': 'Finland',
+      'CH': 'Switzerland',
+      'NO': 'Norway',
+      'SE': 'Sweden',
+      'DK': 'Denmark',
+      'PL': 'Poland',
+      'CZ': 'Czech Republic',
+      'HU': 'Hungary',
+      'RO': 'Romania',
+      // Americas
+      'CA': 'Canada',
+      'BR': 'Brazil',
+      'MX': 'Mexico',
+      'AR': 'Argentina',
+      'CL': 'Chile',
+      'CO': 'Colombia',
+      'PE': 'Peru',
+      // Oceania
+      'AU': 'Australia',
+      'NZ': 'New Zealand',
+      // African countries
+      'ZA': 'South Africa',
+      'EG': 'Egypt',
+      'NG': 'Nigeria',
+      'KE': 'Kenya',
+      // Other regions
+      'RU': 'Russia',
+      'UA': 'Ukraine'
     };
     return regionNames[regionCode] || regionCode;
   };
