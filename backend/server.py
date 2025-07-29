@@ -2056,6 +2056,11 @@ async def get_all_user_requests(
     
     requests = await db.user_requests.aggregate(pipeline).to_list(limit)
     
+    # Convert ObjectIds to strings for JSON serialization
+    for request in requests:
+        if "_id" in request:
+            request["_id"] = str(request["_id"])
+    
     # Calculate pagination info
     total_pages = (total_count + limit - 1) // limit
     has_next = page < total_pages
