@@ -286,16 +286,57 @@ class UpdateJobStatus(BaseModel):
     completed_at: Optional[datetime] = None
     stats: Optional[dict] = None
 
-# Authentication helper
-async def get_current_user(x_session_id: str = Header(None)):
-    """Get current user from session ID"""
-    if not x_session_id:
+# Authentication constants and helpers
+JWT_SECRET = os.environ.get("JWT_SECRET", "your-secret-key-here")
+JWT_ALGORITHM = "HS256"
+
+def create_jwt_token(user_id: str) -> str:
+    """Create JWT token for user"""
+    payload = {
+        "user_id": user_id,
+        "exp": datetime.utcnow().timestamp() + (24 * 60 * 60)  # 24 hours
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+def verify_jwt_token(token: str) -> Optional[str]:
+    """Verify JWT token and return user_id"""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if payload.get("exp", 0) < datetime.utcnow().timestamp():
+            return None
+        return payload.get("user_id")
+    except jwt.InvalidTokenError:
         return None
+
+def hash_password(password: str) -> str:
+    """Hash password using bcrypt"""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify password against hash"""
+    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+
+# Authentication helper
+async def get_current_user(x_session_id: str = Header(None), authorization: str = Header(None)):
+    """Get current user from session ID or JWT token"""
+    user = None
     
-    user = await db.users.find_one({"session_token": x_session_id})
-    if user:
-        return User(**user)
-    return None
+    # First try JWT token from Authorization header
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+        user_id = verify_jwt_token(token)
+        if user_id:
+            user_doc = await db.users.find_one({"id": user_id})
+            if user_doc:
+                user = User(**user_doc)
+    
+    # Fall back to session ID (for Emergent auth)
+    if not user and x_session_id:
+        user_doc = await db.users.find_one({"session_token": x_session_id})
+        if user_doc:
+            user = User(**user_doc)
+    
+    return user
 
 async def require_auth(x_session_id: str = Header(None)):
     """Require authentication"""
