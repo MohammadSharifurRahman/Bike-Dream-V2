@@ -1682,6 +1682,49 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup"""
+    try:
+        # Start the daily update scheduler
+        daily_scheduler.start_scheduler()
+        print("🚀 Application startup completed with daily scheduler")
+    except Exception as e:
+        print(f"⚠️ Startup warning: {str(e)}")
+
 @app.on_event("shutdown")
-async def shutdown_db_client():
+async def shutdown_event():
+    """Cleanup on shutdown"""
+    try:
+        # Stop the daily update scheduler
+        daily_scheduler.stop_scheduler()
+        print("🛑 Application shutdown completed")
+    except Exception as e:
+        print(f"⚠️ Shutdown warning: {str(e)}")
+    
+    # Close database connection
     client.close()
+
+# Test endpoint for manual daily updates
+@api_router.post("/admin/run-daily-update")
+async def trigger_daily_update():
+    """Manually trigger daily updates (for testing)"""
+    try:
+        await daily_scheduler.run_daily_updates()
+        return {"message": "Daily update completed successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Daily update failed: {str(e)}")
+
+# Get daily update logs
+@api_router.get("/admin/update-logs")
+async def get_update_logs(limit: int = 10):
+    """Get recent daily update logs"""
+    try:
+        logs = await db.update_logs.find({}).sort("timestamp", -1).limit(limit).to_list(limit)
+        return {"logs": logs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch update logs: {str(e)}")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)
