@@ -459,15 +459,77 @@ class VendorPricingSystem:
             
             # Generate realistic delivery times based on region
             delivery_days = {
+                # North America
                 "US": random.randint(3, 14),
+                "CA": random.randint(5, 21),
+                "MX": random.randint(7, 21),
+                # South America
+                "BR": random.randint(10, 30),
+                "AR": random.randint(14, 35),
+                "CL": random.randint(14, 35),
+                "CO": random.randint(12, 28),
+                "PE": random.randint(14, 30),
+                # Europe
+                "GB": random.randint(3, 14),
+                "DE": random.randint(3, 14),
+                "FR": random.randint(3, 14),
+                "IT": random.randint(5, 18),
+                "ES": random.randint(5, 18),
+                "NL": random.randint(3, 12),
+                "BE": random.randint(3, 12),
+                "AT": random.randint(5, 15),
+                "PT": random.randint(7, 21),
+                "IE": random.randint(5, 18),
+                "FI": random.randint(7, 21),
+                "CH": random.randint(5, 15),
+                "NO": random.randint(7, 21),
+                "SE": random.randint(7, 21),
+                "DK": random.randint(5, 15),
+                "PL": random.randint(7, 21),
+                "CZ": random.randint(7, 21),
+                "HU": random.randint(7, 21),
+                "RO": random.randint(10, 25),
+                # South Asia
                 "BD": random.randint(7, 21),
+                "IN": random.randint(5, 18),
                 "NP": random.randint(14, 30),
                 "BT": random.randint(21, 45),
+                "PK": random.randint(10, 25),
+                "LK": random.randint(10, 25),
+                # Southeast Asia
                 "TH": random.randint(5, 14),
                 "MY": random.randint(7, 21),
                 "ID": random.randint(10, 28),
+                "PH": random.randint(10, 25),
+                "VN": random.randint(10, 25),
+                "SG": random.randint(3, 10),
+                # East Asia
+                "JP": random.randint(3, 12),
+                "KR": random.randint(5, 15),
+                "TW": random.randint(7, 18),
+                "CN": random.randint(7, 21),
+                "HK": random.randint(3, 12),
+                # Middle East
                 "AE": random.randint(5, 14),
-                "SA": random.randint(7, 21)
+                "SA": random.randint(7, 21),
+                "QA": random.randint(7, 18),
+                "KW": random.randint(7, 18),
+                "BH": random.randint(7, 18),
+                "OM": random.randint(10, 25),
+                "JO": random.randint(10, 25),
+                "TR": random.randint(7, 21),
+                # Oceania
+                "AU": random.randint(5, 18),
+                "NZ": random.randint(7, 21),
+                # Africa
+                "ZA": random.randint(14, 35),
+                "EG": random.randint(14, 30),
+                "NG": random.randint(21, 45),
+                "KE": random.randint(21, 45),
+                # Other
+                "RU": random.randint(14, 35),
+                "UA": random.randint(14, 35),
+                "IL": random.randint(10, 25)
             }.get(region, 14)
             
             vendor_data = {
