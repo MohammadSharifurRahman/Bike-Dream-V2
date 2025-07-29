@@ -13,42 +13,137 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuthStatus();
+    // Check for existing authentication
+    const token = localStorage.getItem('auth_token');
+    const sessionId = localStorage.getItem('session_id');
+    
+    if (token) {
+      // Try JWT token first
+      validateToken();
+    } else if (sessionId) {
+      // Fall back to session ID
+      validateSession();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  const checkAuthStatus = async () => {
-    const sessionId = localStorage.getItem('session_id');
-    if (sessionId) {
-      try {
-        const response = await axios.get(`${API}/auth/me`, {
-          headers: { 'X-Session-ID': sessionId }
-        });
-        setUser(response.data);
-      } catch (error) {
-        localStorage.removeItem('session_id');
-      }
+  const validateToken = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await axios.get(`${API}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUser(response.data);
+    } catch (error) {
+      localStorage.removeItem('auth_token');
+      setUser(null);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const login = () => {
-    const previewUrl = window.location.origin;
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(previewUrl + '/profile')}`;
+  const validateSession = async () => {
+    try {
+      const sessionId = localStorage.getItem('session_id');
+      const response = await axios.get(`${API}/auth/me`, {
+        headers: { 'X-Session-ID': sessionId }
+      });
+      setUser(response.data);
+    } catch (error) {
+      localStorage.removeItem('session_id');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (email, password, name) => {
+    try {
+      const response = await axios.post(`${API}/auth/register`, {
+        email,
+        password,
+        name
+      });
+      
+      localStorage.setItem('auth_token', response.data.token);
+      setUser(response.data.user);
+      return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.detail || 'Registration failed' 
+      };
+    }
+  };
+
+  const login = async (email, password) => {
+    try {
+      const response = await axios.post(`${API}/auth/login`, {
+        email,
+        password
+      });
+      
+      localStorage.setItem('auth_token', response.data.token);
+      setUser(response.data.user);
+      return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.detail || 'Login failed' 
+      };
+    }
+  };
+
+  const loginWithGoogle = async (googleData) => {
+    try {
+      const response = await axios.post(`${API}/auth/google`, googleData);
+      
+      localStorage.setItem('auth_token', response.data.token);
+      setUser(response.data.user);
+      return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.detail || 'Google login failed' 
+      };
+    }
   };
 
   const logout = () => {
+    localStorage.removeItem('auth_token');
     localStorage.removeItem('session_id');
     setUser(null);
   };
 
+  const legacyLogin = () => {
+    // Legacy Emergent login (keeping for backward compatibility)
+    window.location.href = 'https://demobackend.emergentagent.com/auth/v1/env/oauth/login?redirect_url=' + 
+      encodeURIComponent(window.location.origin + '/profile');
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      register, 
+      login, 
+      loginWithGoogle, 
+      logout, 
+      legacyLogin 
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-const useAuth = () => useContext(AuthContext);
+const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 // Star Rating Component
 const StarRating = ({ rating, onRatingChange, readOnly = false }) => {
