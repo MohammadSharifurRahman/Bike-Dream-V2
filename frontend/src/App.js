@@ -1997,7 +1997,7 @@ const MotorcycleDetail = ({ motorcycle, onClose }) => {
           )}
 
           {activeTab === 'discussion' && (
-            <CommentsSection motorcycle={motorcycle} />
+            <DiscussionSection motorcycle={motorcycle} />
           )}
         </div>
       </div>
