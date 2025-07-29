@@ -1346,10 +1346,6 @@ function App() {
   const [totalPages, setTotalPages] = useState(1);
   const [pagination, setPagination] = useState({});
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [pagination, setPagination] = useState({});
-
   const fetchMotorcycles = async (page = 1) => {
     try {
       setLoading(true);
