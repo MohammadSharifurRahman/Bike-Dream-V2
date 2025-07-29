@@ -1190,6 +1190,10 @@ function App() {
   }, []);
 
   useEffect(() => {
+    fetchDatabaseStats();
+  }, [categories, filterOptions]);
+
+  useEffect(() => {
     if (currentView === 'browse') {
       fetchMotorcycles();
     }
