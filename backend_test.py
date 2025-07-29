@@ -2945,6 +2945,572 @@ class MotorcycleAPITester:
         
         return len(failed_tests) == 0
     
+    # ==================== USER REQUEST SYSTEM TESTS ====================
+    
+    def test_submit_user_request(self):
+        """Test POST /api/requests - Submit new user request with authentication"""
+        if not self.test_user_session:
+            self.log_test("Submit User Request", False, "No user session available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            request_data = {
+                "title": "Add Kawasaki Ninja ZX-10R to Database",
+                "description": "Please add the latest Kawasaki Ninja ZX-10R model to the motorcycle database. It's a popular sport bike that many users are looking for.",
+                "request_type": "motorcycle_addition",
+                "priority": "medium",
+                "category": "Database Enhancement",
+                "motorcycle_related": None
+            }
+            
+            response = requests.post(f"{self.base_url}/requests", 
+                                   headers=headers, json=request_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data.get("message") == "Request submitted successfully" and 
+                    "request_id" in data and data.get("status") == "pending"):
+                    
+                    self.test_request_id = data["request_id"]  # Store for later tests
+                    self.log_test("Submit User Request", True, 
+                                f"Request submitted with ID: {data['request_id'][:8]}...")
+                    return True
+                else:
+                    self.log_test("Submit User Request", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Submit User Request", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Submit User Request", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Submit User Request", False, f"Error: {str(e)}")
+            return False
+
+    def test_submit_multiple_request_types(self):
+        """Test submitting different types of user requests"""
+        if not self.test_user_session:
+            self.log_test("Submit Multiple Request Types", False, "No user session available")
+            return False
+        
+        request_types = [
+            {
+                "title": "Fix search functionality bug",
+                "description": "The search function doesn't work properly when searching for vintage motorcycles from the 1960s.",
+                "request_type": "bug_report",
+                "priority": "high"
+            },
+            {
+                "title": "Add motorcycle comparison feature",
+                "description": "It would be great to have a side-by-side comparison feature for different motorcycle models.",
+                "request_type": "feature_request",
+                "priority": "medium"
+            },
+            {
+                "title": "General feedback about the site",
+                "description": "The website is fantastic! Love the detailed motorcycle information and user reviews.",
+                "request_type": "general_feedback",
+                "priority": "low"
+            }
+        ]
+        
+        all_passed = True
+        headers = {"X-Session-Id": self.test_user_session}
+        
+        for i, request_data in enumerate(request_types):
+            try:
+                response = requests.post(f"{self.base_url}/requests", 
+                                       headers=headers, json=request_data, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get("message") == "Request submitted successfully":
+                        self.log_test(f"Submit {request_data['request_type'].title()}", True, 
+                                    f"Request submitted successfully")
+                    else:
+                        self.log_test(f"Submit {request_data['request_type'].title()}", False, 
+                                    f"Unexpected response: {data}")
+                        all_passed = False
+                else:
+                    self.log_test(f"Submit {request_data['request_type'].title()}", False, 
+                                f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Submit {request_data['request_type'].title()}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_get_user_requests(self):
+        """Test GET /api/requests - Retrieve user's submitted requests with pagination"""
+        if not self.test_user_session:
+            self.log_test("Get User Requests", False, "No user session available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.get(f"{self.base_url}/requests", 
+                                  headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if ("requests" in data and "pagination" in data and 
+                    isinstance(data["requests"], list) and 
+                    isinstance(data["pagination"], dict)):
+                    
+                    requests_count = len(data["requests"])
+                    pagination = data["pagination"]
+                    
+                    # Verify pagination structure
+                    required_pagination_keys = ["page", "limit", "total_count", "total_pages", "has_next", "has_previous"]
+                    missing_keys = [key for key in required_pagination_keys if key not in pagination]
+                    
+                    if missing_keys:
+                        self.log_test("Get User Requests", False, f"Missing pagination keys: {missing_keys}")
+                        return False
+                    
+                    self.log_test("Get User Requests", True, 
+                                f"Retrieved {requests_count} requests with pagination (total: {pagination['total_count']})")
+                    return True
+                else:
+                    self.log_test("Get User Requests", False, "Invalid response structure")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Get User Requests", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Get User Requests", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get User Requests", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_user_requests_with_filters(self):
+        """Test GET /api/requests with status and request_type filters"""
+        if not self.test_user_session:
+            self.log_test("Get User Requests with Filters", False, "No user session available")
+            return False
+        
+        filter_tests = [
+            ({"status": "pending"}, "Status filter - pending"),
+            ({"request_type": "feature_request"}, "Request type filter - feature_request"),
+            ({"page": 1, "limit": 5}, "Pagination parameters")
+        ]
+        
+        all_passed = True
+        headers = {"X-Session-Id": self.test_user_session}
+        
+        for params, description in filter_tests:
+            try:
+                response = requests.get(f"{self.base_url}/requests", 
+                                      headers=headers, params=params, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if "requests" in data and "pagination" in data:
+                        requests_count = len(data["requests"])
+                        self.log_test(f"Filter Test - {description}", True, 
+                                    f"Retrieved {requests_count} filtered requests")
+                    else:
+                        self.log_test(f"Filter Test - {description}", False, "Invalid response structure")
+                        all_passed = False
+                else:
+                    self.log_test(f"Filter Test - {description}", False, f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Filter Test - {description}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_get_specific_user_request(self):
+        """Test GET /api/requests/{request_id} - Get specific user request"""
+        if not self.test_user_session or not hasattr(self, 'test_request_id'):
+            self.log_test("Get Specific User Request", False, "No user session or request ID available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.get(f"{self.base_url}/requests/{self.test_request_id}", 
+                                  headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data.get("id") == self.test_request_id and 
+                    "title" in data and "description" in data and 
+                    "request_type" in data and "status" in data):
+                    
+                    self.log_test("Get Specific User Request", True, 
+                                f"Retrieved request: {data['title'][:30]}...")
+                    return True
+                else:
+                    self.log_test("Get Specific User Request", False, "Invalid request data structure")
+                    return False
+            elif response.status_code == 404:
+                self.log_test("Get Specific User Request", False, "Request not found (404)")
+                return False
+            elif response.status_code == 401:
+                self.log_test("Get Specific User Request", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Get Specific User Request", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get Specific User Request", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_request_stats(self):
+        """Test GET /api/requests/stats - Get user's request statistics"""
+        if not self.test_user_session:
+            self.log_test("Get Request Stats", False, "No user session available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.get(f"{self.base_url}/requests/stats", 
+                                  headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                required_keys = ["total_requests", "by_status", "response_rate"]
+                missing_keys = [key for key in required_keys if key not in data]
+                
+                if missing_keys:
+                    self.log_test("Get Request Stats", False, f"Missing keys: {missing_keys}")
+                    return False
+                
+                # Verify by_status structure
+                by_status = data["by_status"]
+                status_keys = ["pending", "in_progress", "resolved", "rejected"]
+                missing_status_keys = [key for key in status_keys if key not in by_status]
+                
+                if missing_status_keys:
+                    self.log_test("Get Request Stats", False, f"Missing status keys: {missing_status_keys}")
+                    return False
+                
+                total_requests = data["total_requests"]
+                response_rate = data["response_rate"]
+                
+                self.log_test("Get Request Stats", True, 
+                            f"Stats: {total_requests} total requests, {response_rate}% response rate")
+                return True
+            elif response.status_code == 401:
+                self.log_test("Get Request Stats", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Get Request Stats", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get Request Stats", False, f"Error: {str(e)}")
+            return False
+
+    def test_admin_get_all_requests(self):
+        """Test GET /api/admin/requests - Get all user requests (admin endpoint)"""
+        try:
+            response = requests.get(f"{self.base_url}/admin/requests", timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if ("requests" in data and "pagination" in data and 
+                    isinstance(data["requests"], list) and 
+                    isinstance(data["pagination"], dict)):
+                    
+                    requests_count = len(data["requests"])
+                    pagination = data["pagination"]
+                    
+                    # Verify admin requests include user information
+                    if requests_count > 0:
+                        first_request = data["requests"][0]
+                        if "user_name" in first_request and "user_email" in first_request:
+                            self.log_test("Admin Get All Requests", True, 
+                                        f"Retrieved {requests_count} requests with user info (total: {pagination['total_count']})")
+                            return True
+                        else:
+                            self.log_test("Admin Get All Requests", False, "Missing user information in admin requests")
+                            return False
+                    else:
+                        self.log_test("Admin Get All Requests", True, "No requests found (empty result is valid)")
+                        return True
+                else:
+                    self.log_test("Admin Get All Requests", False, "Invalid response structure")
+                    return False
+            else:
+                self.log_test("Admin Get All Requests", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Admin Get All Requests", False, f"Error: {str(e)}")
+            return False
+
+    def test_admin_get_requests_with_filters(self):
+        """Test admin endpoint with various filters"""
+        filter_tests = [
+            ({"status": "pending"}, "Admin filter - pending status"),
+            ({"request_type": "feature_request"}, "Admin filter - feature requests"),
+            ({"priority": "high"}, "Admin filter - high priority"),
+            ({"page": 1, "limit": 10}, "Admin pagination")
+        ]
+        
+        all_passed = True
+        
+        for params, description in filter_tests:
+            try:
+                response = requests.get(f"{self.base_url}/admin/requests", 
+                                      params=params, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if "requests" in data and "pagination" in data:
+                        requests_count = len(data["requests"])
+                        self.log_test(f"Admin Filter - {description}", True, 
+                                    f"Retrieved {requests_count} filtered requests")
+                    else:
+                        self.log_test(f"Admin Filter - {description}", False, "Invalid response structure")
+                        all_passed = False
+                else:
+                    self.log_test(f"Admin Filter - {description}", False, f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Admin Filter - {description}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_admin_update_request(self):
+        """Test PUT /api/admin/requests/{request_id} - Update user request status"""
+        if not hasattr(self, 'test_request_id'):
+            self.log_test("Admin Update Request", False, "No request ID available")
+            return False
+        
+        try:
+            update_data = {
+                "status": "in_progress",
+                "admin_response": "Thank you for your request. We are currently reviewing the addition of Kawasaki Ninja ZX-10R to our database.",
+                "priority": "high"
+            }
+            
+            response = requests.put(f"{self.base_url}/admin/requests/{self.test_request_id}", 
+                                  json=update_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("message") == "Request updated successfully":
+                    self.log_test("Admin Update Request", True, "Request updated successfully")
+                    
+                    # Verify the update by getting the request
+                    return self._verify_request_update()
+                else:
+                    self.log_test("Admin Update Request", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 404:
+                self.log_test("Admin Update Request", False, "Request not found (404)")
+                return False
+            else:
+                self.log_test("Admin Update Request", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Admin Update Request", False, f"Error: {str(e)}")
+            return False
+
+    def _verify_request_update(self):
+        """Helper method to verify request was updated correctly"""
+        if not self.test_user_session:
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.get(f"{self.base_url}/requests/{self.test_request_id}", 
+                                  headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data.get("status") == "in_progress" and 
+                    data.get("priority") == "high" and 
+                    "admin_response" in data):
+                    
+                    self.log_test("Verify Request Update", True, "Request update verified")
+                    return True
+                else:
+                    self.log_test("Verify Request Update", False, "Request not updated correctly")
+                    return False
+            else:
+                self.log_test("Verify Request Update", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Verify Request Update", False, f"Error: {str(e)}")
+            return False
+
+    def test_request_data_validation(self):
+        """Test data validation for user request submission"""
+        if not self.test_user_session:
+            self.log_test("Request Data Validation", False, "No user session available")
+            return False
+        
+        validation_tests = [
+            # Title length validation
+            ({
+                "title": "Hi",  # Too short (< 5 chars)
+                "description": "This is a valid description that is long enough.",
+                "request_type": "feature_request",
+                "priority": "medium"
+            }, "Title too short"),
+            
+            # Description length validation
+            ({
+                "title": "Valid title here",
+                "description": "Short",  # Too short (< 10 chars)
+                "request_type": "bug_report",
+                "priority": "high"
+            }, "Description too short"),
+            
+            # Invalid request type
+            ({
+                "title": "Valid title here",
+                "description": "This is a valid description that is long enough.",
+                "request_type": "invalid_type",  # Invalid enum value
+                "priority": "medium"
+            }, "Invalid request type"),
+            
+            # Invalid priority
+            ({
+                "title": "Valid title here",
+                "description": "This is a valid description that is long enough.",
+                "request_type": "general_feedback",
+                "priority": "invalid_priority"  # Invalid enum value
+            }, "Invalid priority")
+        ]
+        
+        all_passed = True
+        headers = {"X-Session-Id": self.test_user_session}
+        
+        for request_data, description in validation_tests:
+            try:
+                response = requests.post(f"{self.base_url}/requests", 
+                                       headers=headers, json=request_data, timeout=10)
+                
+                # Should return 422 (validation error) or 400 (bad request)
+                if response.status_code in [400, 422]:
+                    self.log_test(f"Validation - {description}", True, 
+                                f"Correctly rejected invalid data (status: {response.status_code})")
+                else:
+                    self.log_test(f"Validation - {description}", False, 
+                                f"Should have rejected invalid data (status: {response.status_code})")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Validation - {description}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_request_authentication_required(self):
+        """Test that request endpoints require proper authentication"""
+        endpoints_to_test = [
+            ("POST", "/requests", {"title": "Test", "description": "Test description", "request_type": "feature_request"}),
+            ("GET", "/requests", None),
+            ("GET", "/requests/stats", None)
+        ]
+        
+        all_passed = True
+        
+        for method, endpoint, data in endpoints_to_test:
+            try:
+                # Test without authentication
+                if method == "POST":
+                    response = requests.post(f"{self.base_url}{endpoint}", json=data, timeout=10)
+                else:
+                    response = requests.get(f"{self.base_url}{endpoint}", timeout=10)
+                
+                if response.status_code == 401:
+                    self.log_test(f"Auth Required - {method} {endpoint}", True, 
+                                "Correctly requires authentication")
+                else:
+                    self.log_test(f"Auth Required - {method} {endpoint}", False, 
+                                f"Should require authentication (status: {response.status_code})")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Auth Required - {method} {endpoint}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_request_workflow_complete(self):
+        """Test complete request workflow: submit -> view -> admin update -> verify"""
+        if not self.test_user_session:
+            self.log_test("Complete Request Workflow", False, "No user session available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            
+            # Step 1: Submit a new request
+            request_data = {
+                "title": "Add BMW S1000RR to Database",
+                "description": "Please add the BMW S1000RR sport bike to the motorcycle database. It's a highly requested model.",
+                "request_type": "motorcycle_addition",
+                "priority": "medium",
+                "category": "Database Addition"
+            }
+            
+            response = requests.post(f"{self.base_url}/requests", 
+                                   headers=headers, json=request_data, timeout=10)
+            
+            if response.status_code != 200:
+                self.log_test("Complete Workflow - Submit", False, f"Failed to submit request: {response.status_code}")
+                return False
+            
+            workflow_request_id = response.json()["request_id"]
+            
+            # Step 2: Verify request appears in user's requests
+            response = requests.get(f"{self.base_url}/requests", headers=headers, timeout=10)
+            if response.status_code != 200:
+                self.log_test("Complete Workflow - View User Requests", False, "Failed to get user requests")
+                return False
+            
+            user_requests = response.json()["requests"]
+            request_found = any(req["id"] == workflow_request_id for req in user_requests)
+            if not request_found:
+                self.log_test("Complete Workflow - Find in User Requests", False, "Request not found in user's requests")
+                return False
+            
+            # Step 3: Admin updates the request
+            update_data = {
+                "status": "resolved",
+                "admin_response": "BMW S1000RR has been successfully added to our motorcycle database.",
+                "priority": "medium"
+            }
+            
+            response = requests.put(f"{self.base_url}/admin/requests/{workflow_request_id}", 
+                                  json=update_data, timeout=10)
+            
+            if response.status_code != 200:
+                self.log_test("Complete Workflow - Admin Update", False, f"Failed to update request: {response.status_code}")
+                return False
+            
+            # Step 4: Verify the update
+            response = requests.get(f"{self.base_url}/requests/{workflow_request_id}", 
+                                  headers=headers, timeout=10)
+            
+            if response.status_code != 200:
+                self.log_test("Complete Workflow - Verify Update", False, "Failed to get updated request")
+                return False
+            
+            updated_request = response.json()
+            if (updated_request.get("status") == "resolved" and 
+                "resolved_at" in updated_request and 
+                updated_request.get("admin_response")):
+                
+                self.log_test("Complete Request Workflow", True, 
+                            "Complete workflow: submit → view → admin update → verify")
+                return True
+            else:
+                self.log_test("Complete Workflow - Final Verification", False, "Request not properly updated")
+                return False
+                
+        except Exception as e:
+            self.log_test("Complete Request Workflow", False, f"Error: {str(e)}")
+            return False
+
     def run_all_tests(self):
         """Run all tests in sequence"""
         print("🏍️  Starting Byke-Dream Backend API Tests")
