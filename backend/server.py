@@ -329,6 +329,106 @@ class UserRequestUpdate(BaseModel):
     admin_response: Optional[str] = Field(max_length=1000)
     priority: Optional[str] = Field(pattern="^(low|medium|high|critical)$")
 
+# Virtual Garage Models
+class GarageItem(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    motorcycle_id: str
+    status: str  # "owned", "wishlist", "previously_owned", "test_ridden"
+    purchase_date: Optional[datetime] = None
+    purchase_price: Optional[float] = None
+    current_mileage: Optional[int] = None
+    modifications: List[str] = Field(default_factory=list)
+    notes: Optional[str] = None
+    images: List[str] = Field(default_factory=list)  # URLs to user uploaded images
+    is_public: bool = True  # Whether to show in public garage
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
+
+class GarageItemCreate(BaseModel):
+    motorcycle_id: str
+    status: str = Field(pattern="^(owned|wishlist|previously_owned|test_ridden)$")
+    purchase_date: Optional[datetime] = None
+    purchase_price: Optional[float] = Field(None, ge=0)
+    current_mileage: Optional[int] = Field(None, ge=0)
+    modifications: List[str] = Field(default_factory=list)
+    notes: Optional[str] = Field(None, max_length=1000)
+    is_public: bool = True
+
+class GarageItemUpdate(BaseModel):
+    status: Optional[str] = Field(None, pattern="^(owned|wishlist|previously_owned|test_ridden)$")
+    purchase_date: Optional[datetime] = None
+    purchase_price: Optional[float] = Field(None, ge=0)
+    current_mileage: Optional[int] = Field(None, ge=0)
+    modifications: Optional[List[str]] = None
+    notes: Optional[str] = Field(None, max_length=1000)
+    is_public: Optional[bool] = None
+
+# Price Alert Models
+class PriceAlert(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    motorcycle_id: str
+    target_price: float
+    condition: str  # "below", "above", "equal"
+    is_active: bool = True
+    region: str = "US"
+    triggered_count: int = 0
+    last_triggered: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
+
+class PriceAlertCreate(BaseModel):
+    motorcycle_id: str
+    target_price: float = Field(gt=0)
+    condition: str = Field(pattern="^(below|above|equal)$")
+    region: str = "US"
+
+# Rider Group Models
+class RiderGroup(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str
+    location: Optional[str] = None
+    group_type: str  # "location", "brand", "riding_style", "general"
+    is_public: bool = True
+    max_members: Optional[int] = None
+    creator_id: str
+    admin_ids: List[str] = Field(default_factory=list)
+    member_ids: List[str] = Field(default_factory=list)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
+
+class RiderGroupCreate(BaseModel):
+    name: str = Field(min_length=3, max_length=100)
+    description: str = Field(min_length=10, max_length=1000)
+    location: Optional[str] = Field(None, max_length=200)
+    group_type: str = Field(pattern="^(location|brand|riding_style|general)$")
+    is_public: bool = True
+    max_members: Optional[int] = Field(None, ge=2, le=1000)
+
+# Achievement Models
+class Achievement(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str
+    icon: str  # emoji or icon class
+    category: str  # "social", "collection", "activity", "milestone"
+    requirement_type: str  # "count", "streak", "specific"
+    requirement_value: int
+    requirement_field: str  # what to count (e.g., "favorites", "ratings", "comments")
+    points: int = 10
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class UserAchievement(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    achievement_id: str
+    earned_at: datetime = Field(default_factory=datetime.utcnow)
+    progress: int = 0  # current progress towards achievement
+    is_completed: bool = False
+
 # Daily Update Scheduler
 class DailyUpdateScheduler:
     def __init__(self):
