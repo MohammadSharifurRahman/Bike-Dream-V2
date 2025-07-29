@@ -3063,6 +3063,14 @@ function App() {
                 >
                   Requests
                 </button>
+                <button
+                  onClick={() => {setCurrentView('garage'); window.history.pushState({}, '', '/garage');}}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    currentView === 'garage' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  My Garage
+                </button>
                 <AuthButton />
                 {currentView === 'browse' && (
                   <>
