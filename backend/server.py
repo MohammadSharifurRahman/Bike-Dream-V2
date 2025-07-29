@@ -2403,21 +2403,24 @@ async def create_price_alert(alert_data: PriceAlertCreate, current_user: User = 
 async def get_user_price_alerts(current_user: User = Depends(require_auth)):
     """Get user's price alerts"""
     # Get active price alerts with motorcycle details
-    pipeline = [
-        {"$match": {"user_id": current_user.id, "is_active": True}},
-        {"$sort": {"created_at": -1}},
-        {"$lookup": {
-            "from": "motorcycles",
-            "localField": "motorcycle_id",
-            "foreignField": "id",
-            "as": "motorcycle"
-        }},
-        {"$addFields": {
-            "motorcycle": {"$arrayElemAt": ["$motorcycle", 0]}
-        }}
-    ]
+    alerts_raw = await db.price_alerts.find({"user_id": current_user.id, "is_active": True}).sort("created_at", -1).to_list(None)
     
-    alerts = await db.price_alerts.aggregate(pipeline).to_list(None)
+    # Manually lookup motorcycle details
+    alerts = []
+    for alert in alerts_raw:
+        # Convert ObjectId to string if it exists
+        if "_id" in alert:
+            alert["_id"] = str(alert["_id"])
+        
+        # Get motorcycle details
+        motorcycle = await db.motorcycles.find_one({"id": alert["motorcycle_id"]})
+        if motorcycle:
+            # Convert ObjectId to string if it exists
+            if "_id" in motorcycle:
+                motorcycle["_id"] = str(motorcycle["_id"])
+            alert["motorcycle"] = motorcycle
+        
+        alerts.append(alert)
     return {"price_alerts": alerts}
 
 @api_router.delete("/price-alerts/{alert_id}")
