@@ -3027,18 +3027,18 @@ class MotorcycleAPITester:
                 if response.status_code == 200:
                     data = response.json()
                     if data.get("message") == "Request submitted successfully":
-                        self.log_test(f"Submit {request_data['request_type'].title()}", True, 
+                        self.log_test(f"Submit {request_data['request_type'].replace('_', ' ').title()}", True, 
                                     f"Request submitted successfully")
                     else:
-                        self.log_test(f"Submit {request_data['request_type'].title()}", False, 
+                        self.log_test(f"Submit {request_data['request_type'].replace('_', ' ').title()}", False, 
                                     f"Unexpected response: {data}")
                         all_passed = False
                 else:
-                    self.log_test(f"Submit {request_data['request_type'].title()}", False, 
+                    self.log_test(f"Submit {request_data['request_type'].replace('_', ' ').title()}", False, 
                                 f"Status: {response.status_code}")
                     all_passed = False
             except Exception as e:
-                self.log_test(f"Submit {request_data['request_type'].title()}", False, f"Error: {str(e)}")
+                self.log_test(f"Submit {request_data['request_type'].replace('_', ' ').title()}", False, f"Error: {str(e)}")
                 all_passed = False
         
         return all_passed
