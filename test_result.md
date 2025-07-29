@@ -543,9 +543,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Technical Features Database Enhancement"
-    - "Dual-Level Sorting Implementation"
-  stuck_tasks: []
+    - "Motorcycle Detail Modal"
+    - "Data Display Accuracy Testing"
+  stuck_tasks:
+    - "Motorcycle Detail Modal"
+    - "Data Display Accuracy Testing"
   test_all: false
   test_priority: "high_first"
 
