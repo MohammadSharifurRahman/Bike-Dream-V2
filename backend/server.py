@@ -1002,7 +1002,7 @@ async def create_motorcycle(motorcycle: MotorcycleCreate):
     await db.motorcycles.insert_one(motorcycle_obj.dict())
     return motorcycle_obj
 
-@api_router.get("/motorcycles", response_model=List[Motorcycle])
+@api_router.get("/motorcycles", response_model=dict)
 async def get_motorcycles(
     search: Optional[str] = Query(None, description="Search in manufacturer, model, or description"),
     manufacturer: Optional[str] = Query(None),
@@ -1037,8 +1037,9 @@ async def get_motorcycles(
     horsepower_max: Optional[int] = Query(None),
     sort_by: Optional[str] = Query("default", description="Sort by: default (year desc, price asc), year, price, horsepower, model, user_interest_score, mileage_kmpl, top_speed, weight"),
     sort_order: Optional[str] = Query("desc", description="asc or desc"),
-    limit: Optional[int] = Query(5000, le=10000),  # Increased limit to show all motorcycles
+    limit: Optional[int] = Query(25, le=100),  # Changed default to 25 for pagination
     skip: Optional[int] = Query(0),
+    page: Optional[int] = Query(1, ge=1),  # Added page parameter
     region: Optional[str] = Query("US", description="Region for pricing")
 ):
     query = {}
@@ -1112,6 +1113,13 @@ async def get_motorcycles(
     if horsepower_max:
         query.setdefault("horsepower", {})["$lte"] = horsepower_max
     
+    # Calculate pagination parameters
+    if page > 1:
+        skip = (page - 1) * limit
+    
+    # Get total count for pagination
+    total_count = await db.motorcycles.count_documents(query)
+    
     # Sort direction
     sort_direction = 1 if sort_order == "asc" else -1
     
@@ -1122,7 +1130,23 @@ async def get_motorcycles(
     else:
         # Single field sorting with custom sort direction
         motorcycles = await db.motorcycles.find(query).sort(sort_by, sort_direction).skip(skip).limit(limit).to_list(limit)
-    return [Motorcycle(**motorcycle) for motorcycle in motorcycles]
+    
+    # Calculate pagination info
+    total_pages = (total_count + limit - 1) // limit  # Ceiling division
+    has_next = page < total_pages
+    has_previous = page > 1
+    
+    return {
+        "motorcycles": [Motorcycle(**motorcycle) for motorcycle in motorcycles],
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "has_next": has_next,
+            "has_previous": has_previous
+        }
+    }
 
 @api_router.get("/motorcycles/{motorcycle_id}", response_model=MotorcycleWithPricing)
 async def get_motorcycle(motorcycle_id: str, region: str = Query("US")):
