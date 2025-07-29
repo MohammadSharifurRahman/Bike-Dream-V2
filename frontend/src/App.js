@@ -2118,8 +2118,18 @@ const MotorcycleDetail = ({ motorcycle, onClose }) => {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl max-w-6xl w-full max-h-screen overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      onClick={(e) => {
+        // Close modal when clicking the backdrop (not the modal content)
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="bg-white rounded-xl max-w-6xl w-full max-h-screen overflow-y-auto"
+        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking modal content
+      >
         <div className="relative">
           <img 
             src={motorcycle.image_url} 
