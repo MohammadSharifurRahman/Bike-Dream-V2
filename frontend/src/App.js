@@ -1343,7 +1343,11 @@ function App() {
   const [showFilters, setShowFilters] = useState(false);
   const [databaseStats, setDatabaseStats] = useState({ totalMotorcycles: 0, totalManufacturers: 0 });
 
-  const fetchMotorcycles = async () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pagination, setPagination] = useState({});
+
+  const fetchMotorcycles = async (page = 1) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -1356,10 +1360,14 @@ function App() {
       
       params.append('sort_by', sortBy);
       params.append('sort_order', sortOrder);
-      params.append('limit', '5000'); // Show all motorcycles
+      params.append('page', page.toString());
+      params.append('limit', '25'); // 25 motorcycles per page
       
       const response = await axios.get(`${API}/motorcycles?${params.toString()}`);
-      setMotorcycles(response.data);
+      setMotorcycles(response.data.motorcycles);
+      setPagination(response.data.pagination);
+      setCurrentPage(response.data.pagination.page);
+      setTotalPages(response.data.pagination.total_pages);
     } catch (error) {
       console.error('Error fetching motorcycles:', error);
     } finally {
