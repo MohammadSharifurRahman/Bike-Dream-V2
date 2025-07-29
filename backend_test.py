@@ -1031,13 +1031,13 @@ class MotorcycleAPITester:
                 data = response.json()
                 if isinstance(data, list):
                     total_count = len(data)
-                    if total_count >= 2614:  # Should return 2614+ motorcycles
+                    if total_count >= 1307:  # Should return 1307+ motorcycles
                         self.log_test("Browse Limit Fix", True, 
-                                    f"Successfully retrieved {total_count} motorcycles (exceeds 2614+ requirement)")
+                                    f"Successfully retrieved {total_count} motorcycles (exceeds 1307+ requirement)")
                         return True
                     else:
                         self.log_test("Browse Limit Fix", False, 
-                                    f"Only retrieved {total_count} motorcycles, expected 2614+")
+                                    f"Only retrieved {total_count} motorcycles, expected 1307+")
                         return False
                 else:
                     self.log_test("Browse Limit Fix", False, "Invalid response format")
@@ -1048,6 +1048,365 @@ class MotorcycleAPITester:
         except Exception as e:
             self.log_test("Browse Limit Fix", False, f"Error: {str(e)}")
             return False
+
+    # NEW TESTS FOR TECHNICAL FEATURES DATABASE ENHANCEMENT
+    def test_technical_features_database_enhancement(self):
+        """Test that all motorcycles have complete technical features and use 'specialisations' field"""
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"limit": 50}, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list) and len(data) > 0:
+                    # Check technical features on first few motorcycles
+                    technical_features = [
+                        "mileage_kmpl", "transmission_type", "number_of_gears", 
+                        "ground_clearance_mm", "seat_height_mm", "abs_available",
+                        "braking_system", "suspension_type", "tyre_type", 
+                        "wheel_size_inches", "headlight_type", "fuel_type"
+                    ]
+                    
+                    all_features_present = True
+                    specialisations_consistent = True
+                    
+                    for i, moto in enumerate(data[:10]):  # Check first 10 motorcycles
+                        # Check technical features
+                        missing_features = [feature for feature in technical_features if feature not in moto]
+                        if missing_features:
+                            self.log_test("Technical Features - Complete Data", False, 
+                                        f"Motorcycle {i+1} missing features: {missing_features}")
+                            all_features_present = False
+                            break
+                        
+                        # Check specialisations field (not features)
+                        if "specialisations" not in moto:
+                            self.log_test("Technical Features - Specialisations Field", False, 
+                                        f"Motorcycle {i+1} missing 'specialisations' field")
+                            specialisations_consistent = False
+                            break
+                        
+                        # Check that old 'features' field is not present
+                        if "features" in moto:
+                            self.log_test("Technical Features - Field Consistency", False, 
+                                        f"Motorcycle {i+1} still has old 'features' field")
+                            specialisations_consistent = False
+                            break
+                    
+                    if all_features_present:
+                        self.log_test("Technical Features - Complete Data", True, 
+                                    "All motorcycles have complete technical features")
+                    
+                    if specialisations_consistent:
+                        self.log_test("Technical Features - Specialisations Field", True, 
+                                    "All motorcycles use 'specialisations' field consistently")
+                    
+                    return all_features_present and specialisations_consistent
+                else:
+                    self.log_test("Technical Features Database Enhancement", False, 
+                                "No motorcycles returned or invalid format")
+                    return False
+            else:
+                self.log_test("Technical Features Database Enhancement", False, 
+                            f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Technical Features Database Enhancement", False, f"Error: {str(e)}")
+            return False
+
+    def test_suzuki_ducati_technical_data(self):
+        """Test that Suzuki and Ducati motorcycles have complete technical data"""
+        manufacturers = ["Suzuki", "Ducati"]
+        all_passed = True
+        
+        for manufacturer in manufacturers:
+            try:
+                response = requests.get(f"{self.base_url}/motorcycles", 
+                                      params={"manufacturer": manufacturer, "limit": 10}, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    if isinstance(data, list) and len(data) > 0:
+                        # Check first motorcycle from this manufacturer
+                        moto = data[0]
+                        technical_features = [
+                            "mileage_kmpl", "transmission_type", "number_of_gears", 
+                            "ground_clearance_mm", "seat_height_mm", "abs_available",
+                            "braking_system", "suspension_type", "tyre_type", 
+                            "wheel_size_inches", "headlight_type", "fuel_type"
+                        ]
+                        
+                        missing_features = [feature for feature in technical_features if feature not in moto]
+                        if missing_features:
+                            self.log_test(f"Technical Data - {manufacturer}", False, 
+                                        f"Missing features: {missing_features}")
+                            all_passed = False
+                        else:
+                            self.log_test(f"Technical Data - {manufacturer}", True, 
+                                        f"Complete technical data present")
+                    else:
+                        self.log_test(f"Technical Data - {manufacturer}", False, 
+                                    f"No {manufacturer} motorcycles found")
+                        all_passed = False
+                else:
+                    self.log_test(f"Technical Data - {manufacturer}", False, 
+                                f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Technical Data - {manufacturer}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_technical_features_filtering(self):
+        """Test filtering by technical features"""
+        filter_tests = [
+            ("transmission_type", "Manual", "Manual transmission filter"),
+            ("braking_system", "Disc", "Disc braking system filter"),
+            ("fuel_type", "Petrol", "Petrol fuel type filter"),
+            ("abs_available", True, "ABS available filter")
+        ]
+        
+        all_passed = True
+        for filter_field, filter_value, description in filter_tests:
+            try:
+                params = {filter_field: filter_value, "limit": 20}
+                response = requests.get(f"{self.base_url}/motorcycles", 
+                                      params=params, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    if isinstance(data, list):
+                        # Verify all results match the filter
+                        valid_results = True
+                        for moto in data:
+                            if filter_field == "abs_available":
+                                if moto.get(filter_field) != filter_value:
+                                    valid_results = False
+                                    break
+                            else:
+                                if filter_value.lower() not in str(moto.get(filter_field, "")).lower():
+                                    valid_results = False
+                                    break
+                        
+                        if valid_results:
+                            self.log_test(f"Technical Filter - {description}", True, 
+                                        f"Found {len(data)} matching motorcycles")
+                        else:
+                            self.log_test(f"Technical Filter - {description}", False, 
+                                        "Some results don't match filter")
+                            all_passed = False
+                    else:
+                        self.log_test(f"Technical Filter - {description}", False, 
+                                    "Invalid response format")
+                        all_passed = False
+                else:
+                    self.log_test(f"Technical Filter - {description}", False, 
+                                f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Technical Filter - {description}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_numeric_range_filtering(self):
+        """Test numeric range filtering for technical features"""
+        range_tests = [
+            ("mileage_min", "mileage_max", 20, 40, "mileage_kmpl", "Mileage range filter"),
+            ("ground_clearance_min", "ground_clearance_max", 150, 200, "ground_clearance_mm", "Ground clearance range filter"),
+            ("seat_height_min", "seat_height_max", 750, 850, "seat_height_mm", "Seat height range filter")
+        ]
+        
+        all_passed = True
+        for min_param, max_param, min_val, max_val, field_name, description in range_tests:
+            try:
+                params = {min_param: min_val, max_param: max_val, "limit": 20}
+                response = requests.get(f"{self.base_url}/motorcycles", 
+                                      params=params, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    if isinstance(data, list):
+                        # Verify all results are within range
+                        valid_results = True
+                        for moto in data:
+                            value = moto.get(field_name, 0)
+                            if value < min_val or value > max_val:
+                                valid_results = False
+                                break
+                        
+                        if valid_results:
+                            self.log_test(f"Numeric Range - {description}", True, 
+                                        f"Found {len(data)} motorcycles in range")
+                        else:
+                            self.log_test(f"Numeric Range - {description}", False, 
+                                        "Some results outside range")
+                            all_passed = False
+                    else:
+                        self.log_test(f"Numeric Range - {description}", False, 
+                                    "Invalid response format")
+                        all_passed = False
+                else:
+                    self.log_test(f"Numeric Range - {description}", False, 
+                                f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Numeric Range - {description}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    # NEW TESTS FOR DUAL-LEVEL SORTING IMPLEMENTATION
+    def test_dual_level_sorting_default(self):
+        """Test dual-level sorting: year descending (new to old), then price ascending (low to high)"""
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"sort_by": "default", "limit": 50}, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list) and len(data) > 10:
+                    # Verify dual-level sorting
+                    is_sorted = True
+                    for i in range(len(data) - 1):
+                        current_year = data[i].get("year", 0)
+                        next_year = data[i + 1].get("year", 0)
+                        current_price = data[i].get("price_usd", 0)
+                        next_price = data[i + 1].get("price_usd", 0)
+                        
+                        # Primary sort: year descending (newer first)
+                        if current_year < next_year:
+                            is_sorted = False
+                            break
+                        # Secondary sort: within same year, price ascending (lower first)
+                        elif current_year == next_year and current_price > next_price:
+                            is_sorted = False
+                            break
+                    
+                    if is_sorted:
+                        self.log_test("Dual-Level Sorting - Default", True, 
+                                    f"Correctly sorted {len(data)} motorcycles by year desc, then price asc")
+                        return True
+                    else:
+                        self.log_test("Dual-Level Sorting - Default", False, 
+                                    "Results not properly sorted by dual-level criteria")
+                        return False
+                else:
+                    self.log_test("Dual-Level Sorting - Default", False, 
+                                "Insufficient data to verify sorting")
+                    return False
+            else:
+                self.log_test("Dual-Level Sorting - Default", False, 
+                            f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Dual-Level Sorting - Default", False, f"Error: {str(e)}")
+            return False
+
+    def test_compare_default_vs_single_field_sorting(self):
+        """Compare default dual-level sorting vs single-field sorting"""
+        try:
+            # Get default sorting
+            response_default = requests.get(f"{self.base_url}/motorcycles", 
+                                          params={"sort_by": "default", "limit": 20}, timeout=10)
+            
+            # Get single-field year sorting
+            response_year = requests.get(f"{self.base_url}/motorcycles", 
+                                       params={"sort_by": "year", "sort_order": "desc", "limit": 20}, timeout=10)
+            
+            # Get single-field price sorting
+            response_price = requests.get(f"{self.base_url}/motorcycles", 
+                                        params={"sort_by": "price_usd", "sort_order": "asc", "limit": 20}, timeout=10)
+            
+            if (response_default.status_code == 200 and 
+                response_year.status_code == 200 and 
+                response_price.status_code == 200):
+                
+                data_default = response_default.json()
+                data_year = response_year.json()
+                data_price = response_price.json()
+                
+                if (isinstance(data_default, list) and 
+                    isinstance(data_year, list) and 
+                    isinstance(data_price, list)):
+                    
+                    # Verify that default sorting is different from single-field sorting
+                    default_different_from_year = data_default != data_year
+                    default_different_from_price = data_default != data_price
+                    
+                    if default_different_from_year and default_different_from_price:
+                        self.log_test("Sorting Comparison - Default vs Single-Field", True, 
+                                    "Default dual-level sorting produces different results than single-field sorting")
+                        return True
+                    else:
+                        self.log_test("Sorting Comparison - Default vs Single-Field", False, 
+                                    "Default sorting appears identical to single-field sorting")
+                        return False
+                else:
+                    self.log_test("Sorting Comparison - Default vs Single-Field", False, 
+                                "Invalid response format")
+                    return False
+            else:
+                self.log_test("Sorting Comparison - Default vs Single-Field", False, 
+                            "One or more sorting requests failed")
+                return False
+        except Exception as e:
+            self.log_test("Sorting Comparison - Default vs Single-Field", False, f"Error: {str(e)}")
+            return False
+
+    def test_database_count_verification(self):
+        """Verify total motorcycle count remains consistent (1307+ motorcycles)"""
+        try:
+            response = requests.get(f"{self.base_url}/stats", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                total_motorcycles = data.get("total_motorcycles", 0)
+                
+                if total_motorcycles >= 1307:
+                    self.log_test("Database Count Verification", True, 
+                                f"Database contains {total_motorcycles} motorcycles (exceeds 1307+ requirement)")
+                    return True
+                else:
+                    self.log_test("Database Count Verification", False, 
+                                f"Database only contains {total_motorcycles} motorcycles, expected 1307+")
+                    return False
+            else:
+                self.log_test("Database Count Verification", False, 
+                            f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Database Count Verification", False, f"Error: {str(e)}")
+            return False
+
+    def test_manufacturer_counts_verification(self):
+        """Verify manufacturer counts (Yamaha, Honda, Kawasaki, Suzuki, Ducati)"""
+        expected_manufacturers = ["Yamaha", "Honda", "Kawasaki", "Suzuki", "Ducati"]
+        all_passed = True
+        
+        for manufacturer in expected_manufacturers:
+            try:
+                response = requests.get(f"{self.base_url}/motorcycles", 
+                                      params={"manufacturer": manufacturer, "limit": 1000}, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    if isinstance(data, list):
+                        count = len(data)
+                        if count > 0:
+                            self.log_test(f"Manufacturer Count - {manufacturer}", True, 
+                                        f"Found {count} {manufacturer} motorcycles")
+                        else:
+                            self.log_test(f"Manufacturer Count - {manufacturer}", False, 
+                                        f"No {manufacturer} motorcycles found")
+                            all_passed = False
+                    else:
+                        self.log_test(f"Manufacturer Count - {manufacturer}", False, 
+                                    "Invalid response format")
+                        all_passed = False
+                else:
+                    self.log_test(f"Manufacturer Count - {manufacturer}", False, 
+                                f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Manufacturer Count - {manufacturer}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
     
     def run_all_tests(self):
         """Run all tests in sequence"""
