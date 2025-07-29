@@ -1430,15 +1430,23 @@ function App() {
     }
   };
 
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    fetchMotorcycles(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleViewAllCategory = (categoryName) => {
     setCurrentView('browse');
     setFilters({ category: categoryName });
+    setCurrentPage(1); // Reset to first page when changing filters
     window.history.pushState({}, '', '/browse');
   };
 
   const handleCategoryButtonClick = (categoryName) => {
     setCurrentView('browse');
     setFilters({ category: categoryName });
+    setCurrentPage(1); // Reset to first page when changing category
     window.history.pushState({}, '', '/browse');
   };
 
