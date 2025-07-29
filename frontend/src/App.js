@@ -2486,6 +2486,366 @@ const FilterSidebar = ({ filters, onFilterChange, filterOptions, availableFeatur
   </div>
 );
 
+// User Requests Page Component
+const UserRequestsPage = () => {
+  const { user } = useContext(AuthContext);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showSubmissionForm, setShowSubmissionForm] = useState(false);
+  const [stats, setStats] = useState({});
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    request_type: 'feature_request',
+    priority: 'medium',
+    category: '',
+    motorcycle_related: ''
+  });
+
+  // Fetch user requests
+  const fetchRequests = async () => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      const response = await axios.get(`${API}/requests`, { headers });
+      setRequests(response.data.requests || []);
+    } catch (error) {
+      console.error('Error fetching requests:', error);
+    }
+  };
+
+  // Fetch user stats
+  const fetchStats = async () => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      const response = await axios.get(`${API}/requests/stats`, { headers });
+      setStats(response.data);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  // Submit new request
+  const handleSubmitRequest = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      await axios.post(`${API}/requests`, formData, { headers });
+      
+      // Reset form and refresh data
+      setFormData({
+        title: '',
+        description: '',
+        request_type: 'feature_request',
+        priority: 'medium',
+        category: '',
+        motorcycle_related: ''
+      });
+      setShowSubmissionForm(false);
+      
+      // Refresh requests and stats
+      await Promise.all([fetchRequests(), fetchStats()]);
+      
+      alert('Request submitted successfully!');
+    } catch (error) {
+      console.error('Error submitting request:', error);
+      alert('Error submitting request. Please try again.');
+    }
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchRequests(), fetchStats()]);
+      setLoading(false);
+    };
+    
+    if (user) {
+      loadData();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Authentication Required</h2>
+          <p className="text-gray-600 mb-6">Please log in to submit and view your requests.</p>
+          <button
+            onClick={() => {/* You'd trigger auth modal here */}}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Login / Sign Up
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your requests...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">Your Requests</h1>
+              <p className="text-gray-600 mt-2">Submit feedback, feature requests, and bug reports</p>
+            </div>
+            <button
+              onClick={() => setShowSubmissionForm(!showSubmissionForm)}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              {showSubmissionForm ? 'Cancel' : 'Submit New Request'}
+            </button>
+          </div>
+
+          {/* Stats */}
+          {stats.total_requests > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+              <div className="bg-blue-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-blue-600">{stats.total_requests}</div>
+                <div className="text-sm text-gray-600">Total Requests</div>
+              </div>
+              <div className="bg-yellow-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-yellow-600">{stats.by_status.pending}</div>
+                <div className="text-sm text-gray-600">Pending</div>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-green-600">{stats.by_status.resolved}</div>
+                <div className="text-sm text-gray-600">Resolved</div>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-purple-600">{stats.response_rate}%</div>
+                <div className="text-sm text-gray-600">Response Rate</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Submission Form */}
+        {showSubmissionForm && (
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Submit New Request</h2>
+            <form onSubmit={handleSubmitRequest} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Request Type</label>
+                  <select
+                    value={formData.request_type}
+                    onChange={(e) => setFormData({...formData, request_type: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="feature_request">Feature Request</option>
+                    <option value="bug_report">Bug Report</option>
+                    <option value="motorcycle_addition">Motorcycle Addition</option>
+                    <option value="general_feedback">General Feedback</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                  <select
+                    value={formData.priority}
+                    onChange={(e) => setFormData({...formData, priority: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Brief title for your request..."
+                  required
+                  minLength={5}
+                  maxLength={200}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={6}
+                  placeholder="Detailed description of your request..."
+                  required
+                  minLength={10}
+                  maxLength={2000}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category (Optional)</label>
+                  <input
+                    type="text"
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., Search, Filters, UI/UX..."
+                    maxLength={100}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Related Motorcycle ID (Optional)</label>
+                  <input
+                    type="text"
+                    value={formData.motorcycle_related}
+                    onChange={(e) => setFormData({...formData, motorcycle_related: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="If related to specific motorcycle..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setShowSubmissionForm(false)}
+                  className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Submit Request
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Requests List */}
+        <div className="bg-white rounded-xl shadow-lg">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-800">Your Submitted Requests</h2>
+          </div>
+          
+          {requests.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="text-gray-400 text-6xl mb-4">📝</div>
+              <h3 className="text-lg font-medium text-gray-800 mb-2">No requests yet</h3>
+              <p className="text-gray-600 mb-4">Submit your first request to get started!</p>
+              <button
+                onClick={() => setShowSubmissionForm(true)}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Submit First Request
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {requests.map((request) => (
+                <div key={request.id} className="p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h3 className="text-lg font-medium text-gray-800">{request.title}</h3>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          request.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                          request.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {request.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          request.priority === 'low' ? 'bg-gray-100 text-gray-800' :
+                          request.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          request.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {request.priority.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-gray-600 mb-3">{request.description}</p>
+                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <span>Type: {request.request_type.replace('_', ' ')}</span>
+                        <span>•</span>
+                        <span>Submitted: {new Date(request.created_at).toLocaleDateString()}</span>
+                        {request.category && (
+                          <>
+                            <span>•</span>
+                            <span>Category: {request.category}</span>
+                          </>
+                        )}
+                      </div>
+                      {request.admin_response && (
+                        <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                          <div className="text-sm font-medium text-blue-800 mb-1">Admin Response:</div>
+                          <div className="text-blue-700">{request.admin_response}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const [currentView, setCurrentView] = useState('home'); // 'home', 'browse', 'profile', or 'requests'
   const [motorcycles, setMotorcycles] = useState([]);
