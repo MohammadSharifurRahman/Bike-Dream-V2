@@ -2105,6 +2105,18 @@ const CategorySection = ({ category, onMotorcycleClick, onViewAllClick }) => (
 const MotorcycleDetail = ({ motorcycle, onClose }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Add keyboard escape functionality
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl max-w-6xl w-full max-h-screen overflow-y-auto">
