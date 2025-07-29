@@ -28,6 +28,13 @@ def get_comprehensive_motorcycle_data():
     VINTAGE_IMAGES = [
         "https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg"
     ]
+    
+    # Professional placeholder images for when specific images aren't available
+    PLACEHOLDER_IMAGES = [
+        "https://images.unsplash.com/photo-1558980664-2cd663cf8dde?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwxfHxtb3RvcmN5Y2xlfGVufDB8fHxibGFja19hbmRfd2hpdGV8MTc1MzgxMDQyNXww&ixlib=rb-4.1.0&q=85",  # Professional motorcycle silhouette
+        "https://images.unsplash.com/photo-1532895215727-c006c8fdf560?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwyfHxtb3RvcmN5Y2xlfGVufDB8fHxibGFja19hbmRfd2hpdGV8MTc1MzgxMDQyNXww&ixlib=rb-4.1.0&q=85",  # Clean motorcycle profile
+        "https://images.pexels.com/photos/104842/bmw-vehicle-ride-bike-104842.jpeg"  # Generic motorcycle image
+    ]
 
     # BAJAJ - Complete Model Range (2000-2025)
     bajaj_models = [
