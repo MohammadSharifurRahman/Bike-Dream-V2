@@ -117,11 +117,6 @@ class CommentLike(BaseModel):
     user_id: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-class CommentCreate(BaseModel):
-    motorcycle_id: str
-    comment_text: str
-    parent_comment_id: Optional[str] = None
-
 class CommentWithUser(BaseModel):
     id: str
     user_id: str
