@@ -294,7 +294,22 @@ def get_comprehensive_motorcycle_data():
                 "availability": availability,
                 "description": f"The Kawasaki {model_data['model']} {year} delivers Kawasaki's signature performance and aggressive styling. Engineered for riders who demand excitement and cutting-edge technology.",
                 "image_url": image_url,
-                "features": ["Kawasaki Performance", "Aggressive Styling", "Advanced Electronics", "Track Ready", "Precision Engineering"],
+                "specialisations": ["Kawasaki Performance", "Aggressive Styling", "Advanced Electronics", "Track Ready", "Precision Engineering"],
+                
+                # Technical Features
+                "mileage_kmpl": 32.0 if model_data["displacement"] < 200 else 20.0 if model_data["displacement"] < 500 else 16.0 if model_data["displacement"] < 1000 else 12.0,
+                "transmission_type": "Manual" if model_data["category"] != "Scooter" else "CVT",
+                "number_of_gears": 6 if model_data["displacement"] > 400 else 5,
+                "ground_clearance_mm": 150 if model_data["category"] == "Sport" else 170 if model_data["category"] in ["Naked", "Standard"] else 195,
+                "seat_height_mm": 830 if model_data["category"] == "Sport" else 805 if model_data["category"] in ["Naked", "Standard"] else 785,
+                "abs_available": year >= 2013,
+                "braking_system": "Disc" if model_data["displacement"] > 150 else "Drum",
+                "suspension_type": "USD Fork" if model_data["category"] == "Sport" else "Telescopic",
+                "tyre_type": "Tubeless" if year >= 2010 else "Tube",
+                "wheel_size_inches": "17" if model_data["displacement"] > 300 else "16",
+                "headlight_type": "LED" if year >= 2016 else "Halogen",
+                "fuel_type": "Petrol",
+                
                 "user_interest_score": model_data["interest"]
             }
             comprehensive_motorcycles.append(motorcycle)
