@@ -2292,52 +2292,50 @@ function App() {
         ) : currentView === 'home' ? (
           // Home Page
           <>
-            {/* Hero Section */}
-            <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-                <div className="text-center">
-                  <h2 className="text-5xl font-bold mb-6">Discover Your Dream Motorcycle</h2>
-                  <p className="text-xl mb-8 text-blue-100">
-                    The world's most comprehensive motorcycle database spanning from 1900 to present day
-                  </p>
-                  <div className="flex justify-center space-x-12 text-lg mb-8">
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-blue-300">{totalMotorcycles}+</div>
-                      <div className="text-blue-100">Motorcycles</div>
+            {/* Hero Carousel Section */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <HeroCarousel onViewChange={setCurrentView} />
+            </div>
+
+            {/* Stats Section */}
+            <div className="bg-gray-50 py-16">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
+                  <div className="bg-white p-8 rounded-xl shadow-lg">
+                    <div className="text-5xl font-bold text-blue-600 mb-3">
+                      {totalMotorcycles.toLocaleString()}+
                     </div>
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-blue-300">125+</div>
-                      <div className="text-blue-100">Years of History</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-blue-300">{totalManufacturers}+</div>
-                      <div className="text-blue-100">Manufacturers</div>
-                    </div>
+                    <div className="text-gray-600 text-lg">Motorcycles Listed</div>
                   </div>
-                  
-                  <div className="flex flex-col items-center space-y-6">
-                    <button
-                      onClick={() => {setCurrentView('browse'); window.history.pushState({}, '', '/browse');}}
-                      className="bg-white text-blue-900 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-50 transition-colors"
-                    >
-                      Explore All Motorcycles
-                    </button>
-                    
-                    {/* Quick Category Buttons */}
-                    <div className="mt-8">
-                      <p className="text-blue-100 mb-4 text-lg">Or explore by category:</p>
-                      <div className="flex flex-wrap justify-center gap-3">
-                        {['Sport', 'Cruiser', 'Touring', 'Adventure', 'Naked', 'Vintage', 'Scooter', 'Standard', 'Enduro', 'Motocross'].map((category) => (
-                          <button
-                            key={category}
-                            onClick={() => handleCategoryButtonClick(category)}
-                            className="bg-blue-700 bg-opacity-50 text-white px-4 py-2 rounded-lg hover:bg-opacity-70 transition-colors text-sm font-medium"
-                          >
-                            {category}
-                          </button>
-                        ))}
-                      </div>
+                  <div className="bg-white p-8 rounded-xl shadow-lg">
+                    <div className="text-5xl font-bold text-green-600 mb-3">
+                      {totalManufacturers}+
                     </div>
+                    <div className="text-gray-600 text-lg">Manufacturers</div>
+                  </div>
+                  <div className="bg-white p-8 rounded-xl shadow-lg">
+                    <div className="text-5xl font-bold text-purple-600 mb-3">125+</div>
+                    <div className="text-gray-600 text-lg">Years of History</div>
+                  </div>
+                  <div className="bg-white p-8 rounded-xl shadow-lg">
+                    <div className="text-5xl font-bold text-red-600 mb-3">67+</div>
+                    <div className="text-gray-600 text-lg">Countries Supported</div>
+                  </div>
+                </div>
+                
+                {/* Quick Category Buttons */}
+                <div className="mt-16 text-center">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-6">Explore by Category</h3>
+                  <div className="flex flex-wrap justify-center gap-3">
+                    {['Sport', 'Cruiser', 'Touring', 'Adventure', 'Naked', 'Vintage', 'Scooter', 'Standard', 'Enduro', 'Motocross'].map((category) => (
+                      <button
+                        key={category}
+                        onClick={() => handleCategoryButtonClick(category)}
+                        className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+                      >
+                        {category}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
