@@ -2486,6 +2486,499 @@ const FilterSidebar = ({ filters, onFilterChange, filterOptions, availableFeatur
   </div>
 );
 
+// Virtual Garage Page Component
+const VirtualGaragePage = () => {
+  const { user } = useContext(AuthContext);
+  const [garageItems, setGarageItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [stats, setStats] = useState({});
+  const [priceAlerts, setPriceAlerts] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMotorcycle, setSelectedMotorcycle] = useState(null);
+  const [addFormData, setAddFormData] = useState({
+    motorcycle_id: '',
+    status: 'owned',
+    purchase_date: '',
+    purchase_price: '',
+    current_mileage: '',
+    modifications: [],
+    notes: '',
+    is_public: true
+  });
+
+  // Fetch garage items
+  const fetchGarageItems = async () => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      const response = await axios.get(`${API}/garage`, { headers });
+      setGarageItems(response.data.garage_items || []);
+    } catch (error) {
+      console.error('Error fetching garage items:', error);
+    }
+  };
+
+  // Fetch garage stats
+  const fetchGarageStats = async () => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      const response = await axios.get(`${API}/garage/stats`, { headers });
+      setStats(response.data);
+    } catch (error) {
+      console.error('Error fetching garage stats:', error);
+    }
+  };
+
+  // Fetch price alerts
+  const fetchPriceAlerts = async () => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      const response = await axios.get(`${API}/price-alerts`, { headers });
+      setPriceAlerts(response.data.price_alerts || []);
+    } catch (error) {
+      console.error('Error fetching price alerts:', error);
+    }
+  };
+
+  // Search motorcycles for adding to garage
+  const searchMotorcycles = async (term) => {
+    if (!term || term.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    
+    try {
+      const response = await axios.get(`${API}/motorcycles?search=${encodeURIComponent(term)}&limit=10`);
+      setSearchResults(response.data.motorcycles || []);
+    } catch (error) {
+      console.error('Error searching motorcycles:', error);
+    }
+  };
+
+  // Add motorcycle to garage
+  const handleAddToGarage = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      const formDataCopy = { ...addFormData };
+      
+      // Convert empty strings to null for optional numeric fields
+      if (!formDataCopy.purchase_price) formDataCopy.purchase_price = null;
+      if (!formDataCopy.current_mileage) formDataCopy.current_mileage = null;
+      if (!formDataCopy.purchase_date) formDataCopy.purchase_date = null;
+      
+      await axios.post(`${API}/garage`, formDataCopy, { headers });
+      
+      // Reset form and refresh data
+      setAddFormData({
+        motorcycle_id: '',
+        status: 'owned',
+        purchase_date: '',
+        purchase_price: '',
+        current_mileage: '',
+        modifications: [],
+        notes: '',
+        is_public: true
+      });
+      setShowAddForm(false);
+      setSelectedMotorcycle(null);
+      setSearchResults([]);
+      setSearchTerm('');
+      
+      // Refresh garage data
+      await Promise.all([fetchGarageItems(), fetchGarageStats()]);
+      
+      alert('Added to garage successfully!');
+    } catch (error) {
+      console.error('Error adding to garage:', error);
+      alert('Error adding to garage. Please try again.');
+    }
+  };
+
+  // Remove from garage
+  const handleRemoveFromGarage = async (itemId) => {
+    if (!confirm('Are you sure you want to remove this from your garage?')) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      await axios.delete(`${API}/garage/${itemId}`, { headers });
+      
+      // Refresh garage data
+      await Promise.all([fetchGarageItems(), fetchGarageStats()]);
+      
+      alert('Removed from garage successfully!');
+    } catch (error) {
+      console.error('Error removing from garage:', error);
+      alert('Error removing from garage. Please try again.');
+    }
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchGarageItems(), fetchGarageStats(), fetchPriceAlerts()]);
+      setLoading(false);
+    };
+    
+    if (user) {
+      loadData();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      searchMotorcycles(searchTerm);
+    }, 300);
+    
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm]);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Authentication Required</h2>
+          <p className="text-gray-600 mb-6">Please log in to access your virtual garage.</p>
+          <button
+            onClick={() => {/* You'd trigger auth modal here */}}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Login / Sign Up
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your garage...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">My Virtual Garage</h1>
+              <p className="text-gray-600 mt-2">Manage your motorcycle collection and wishlist</p>
+            </div>
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              {showAddForm ? 'Cancel' : 'Add Motorcycle'}
+            </button>
+          </div>
+
+          {/* Stats */}
+          {stats.total_items > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
+              <div className="bg-blue-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-blue-600">{stats.total_items}</div>
+                <div className="text-sm text-gray-600">Total Items</div>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-green-600">{stats.by_status.owned}</div>
+                <div className="text-sm text-gray-600">Owned</div>
+              </div>
+              <div className="bg-yellow-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-yellow-600">{stats.by_status.wishlist}</div>
+                <div className="text-sm text-gray-600">Wishlist</div>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-purple-600">{stats.by_status.test_ridden}</div>
+                <div className="text-sm text-gray-600">Test Ridden</div>
+              </div>
+              <div className="bg-red-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-red-600">${stats.estimated_value?.toLocaleString() || 0}</div>
+                <div className="text-sm text-gray-600">Est. Value</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Add Motorcycle Form */}
+        {showAddForm && (
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Add Motorcycle to Garage</h2>
+            
+            {/* Search for motorcycle */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search Motorcycle</label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Type to search motorcycles..."
+              />
+              
+              {/* Search results */}
+              {searchResults.length > 0 && (
+                <div className="mt-2 border border-gray-300 rounded-lg max-h-48 overflow-y-auto">
+                  {searchResults.map((motorcycle) => (
+                    <div
+                      key={motorcycle.id}
+                      onClick={() => {
+                        setSelectedMotorcycle(motorcycle);
+                        setAddFormData({...addFormData, motorcycle_id: motorcycle.id});
+                        setSearchResults([]);
+                        setSearchTerm(`${motorcycle.manufacturer} ${motorcycle.model} (${motorcycle.year})`);
+                      }}
+                      className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-200 last:border-b-0"
+                    >
+                      <div className="font-medium">{motorcycle.manufacturer} {motorcycle.model}</div>
+                      <div className="text-sm text-gray-600">{motorcycle.year} • {motorcycle.category} • ${motorcycle.price_usd?.toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {selectedMotorcycle && (
+              <form onSubmit={handleAddToGarage} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select
+                      value={addFormData.status}
+                      onChange={(e) => setAddFormData({...addFormData, status: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="owned">Owned</option>
+                      <option value="wishlist">Wishlist</option>
+                      <option value="previously_owned">Previously Owned</option>
+                      <option value="test_ridden">Test Ridden</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Purchase Date (Optional)</label>
+                    <input
+                      type="date"
+                      value={addFormData.purchase_date}
+                      onChange={(e) => setAddFormData({...addFormData, purchase_date: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Purchase Price (USD) (Optional)</label>
+                    <input
+                      type="number"
+                      value={addFormData.purchase_price}
+                      onChange={(e) => setAddFormData({...addFormData, purchase_price: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Current Mileage (Optional)</label>
+                    <input
+                      type="number"
+                      value={addFormData.current_mileage}
+                      onChange={(e) => setAddFormData({...addFormData, current_mileage: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                  <textarea
+                    value={addFormData.notes}
+                    onChange={(e) => setAddFormData({...addFormData, notes: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="Any notes about this motorcycle..."
+                    maxLength={1000}
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="is_public"
+                    checked={addFormData.is_public}
+                    onChange={(e) => setAddFormData({...addFormData, is_public: e.target.checked})}
+                    className="mr-2"
+                  />
+                  <label htmlFor="is_public" className="text-sm text-gray-700">Make this visible in my public garage</label>
+                </div>
+
+                <div className="flex justify-end space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => {setShowAddForm(false); setSelectedMotorcycle(null);}}
+                    className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Add to Garage
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* Garage Items */}
+        <div className="bg-white rounded-xl shadow-lg">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-800">Your Motorcycle Collection</h2>
+          </div>
+          
+          {garageItems.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="text-gray-400 text-6xl mb-4">🏍️</div>
+              <h3 className="text-lg font-medium text-gray-800 mb-2">No motorcycles in your garage yet</h3>
+              <p className="text-gray-600 mb-4">Start building your virtual collection!</p>
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Add Your First Motorcycle
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+              {garageItems.map((item) => (
+                <div key={item.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  {item.motorcycle && (
+                    <>
+                      <img
+                        src={item.motorcycle.image_url}
+                        alt={`${item.motorcycle.manufacturer} ${item.motorcycle.model}`}
+                        className="w-full h-48 object-cover rounded-lg mb-4"
+                      />
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-lg font-bold text-gray-800">
+                          {item.motorcycle.manufacturer} {item.motorcycle.model}
+                        </h3>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          item.status === 'owned' ? 'bg-green-100 text-green-800' :
+                          item.status === 'wishlist' ? 'bg-blue-100 text-blue-800' :
+                          item.status === 'previously_owned' ? 'bg-gray-100 text-gray-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {item.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-gray-600 mb-3">{item.motorcycle.year} • {item.motorcycle.category}</p>
+                      
+                      {item.purchase_price && (
+                        <div className="text-sm text-gray-600 mb-1">
+                          Purchase Price: ${item.purchase_price.toLocaleString()}
+                        </div>
+                      )}
+                      
+                      {item.current_mileage && (
+                        <div className="text-sm text-gray-600 mb-1">
+                          Mileage: {item.current_mileage.toLocaleString()} miles
+                        </div>
+                      )}
+                      
+                      {item.notes && (
+                        <div className="text-sm text-gray-600 mb-3 italic">
+                          "{item.notes}"
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between items-center mt-4">
+                        <span className="text-xs text-gray-500">
+                          Added {new Date(item.created_at).toLocaleDateString()}
+                        </span>
+                        <button
+                          onClick={() => handleRemoveFromGarage(item.id)}
+                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // User Requests Page Component
 const UserRequestsPage = () => {
   const { user } = useContext(AuthContext);
