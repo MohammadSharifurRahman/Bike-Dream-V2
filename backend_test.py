@@ -139,9 +139,10 @@ class MotorcycleAPITester:
                                       params={"search": search_term}, timeout=10)
                 if response.status_code == 200:
                     data = response.json()
-                    if isinstance(data, list):
+                    motorcycles = self.extract_motorcycles_from_response(data)
+                    if motorcycles is not None:
                         self.log_test(f"Search - {test_type} ('{search_term}')", True, 
-                                    f"Found {len(data)} results")
+                                    f"Found {len(motorcycles)} results")
                     else:
                         self.log_test(f"Search - {test_type} ('{search_term}')", False, 
                                     "Invalid response format")
