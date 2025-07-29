@@ -2626,6 +2626,24 @@ class MotorcycleAPITester:
         self.test_database_count_verification()
         self.test_manufacturer_counts_verification()
         
+        # NEW TESTS FOR REVIEW REQUEST REQUIREMENTS
+        print("\n🎯 Testing Review Request Requirements...")
+        print("-" * 60)
+        
+        # Test favorite icon behavior (requires authentication)
+        if self.test_user_session:
+            self.test_favorite_icon_behavior()
+            self.test_star_rating_system()
+        
+        # Test manufacturer filter with 21 brands
+        self.test_manufacturer_filter_21_brands()
+        
+        # Test vendor pricing by country
+        self.test_vendor_pricing_by_country()
+        
+        # Test database expansion to 2530+ motorcycles
+        self.test_database_expansion_2530_plus()
+        
         # Summary
         print("\n" + "=" * 60)
         print("📊 TEST SUMMARY")
