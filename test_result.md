@@ -456,13 +456,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Daily Update Bot System - Manual Trigger API"
-    - "Daily Update Bot System - Job Status Monitoring API"
-    - "Daily Update Bot System - Update History API"
-    - "Daily Update Bot System - Regional Customizations API"
-    - "Daily Update Bot System - Complete Workflow Integration"
+    - "Technical Features Database Enhancement"
+    - "Dual-Level Sorting Implementation"
   stuck_tasks: []
-  test_all: true
+  test_all: false
   test_priority: "high_first"
 
 agent_communication:
