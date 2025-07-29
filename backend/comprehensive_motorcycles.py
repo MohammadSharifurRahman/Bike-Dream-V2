@@ -275,19 +275,34 @@ def get_comprehensive_motorcycle_data():
                 else:
                     availability = "Collector Item"
                 
-                # Select appropriate image based on category
-                if model_data["category"] in ["Sport", "Supersport"]:
-                    image_url = SPORT_BIKE_IMAGES[hash(model_data["model"]) % len(SPORT_BIKE_IMAGES)]
-                elif model_data["category"] in ["Naked", "Roadster"]:
-                    image_url = NAKED_IMAGES[0]
-                elif model_data["category"] in ["Cruiser", "Touring"]:
-                    image_url = CRUISER_IMAGES[hash(model_data["model"]) % len(CRUISER_IMAGES)]
-                elif model_data["category"] in ["Adventure", "Enduro", "Dual Sport"]:
-                    image_url = ADVENTURE_IMAGES[0]
-                elif model_data["category"] in ["Vintage", "Classic"]:
-                    image_url = VINTAGE_IMAGES[0]
-                else:
-                    image_url = SPORT_BIKE_IMAGES[0]
+                # Select appropriate image based on category with better fallback
+                def get_motorcycle_image(category, model_name):
+                    """Get appropriate image for motorcycle with fallback to placeholder"""
+                    try:
+                        if category in ["Sport", "Supersport"]:
+                            if len(SPORT_BIKE_IMAGES) > 0:
+                                return SPORT_BIKE_IMAGES[hash(model_name) % len(SPORT_BIKE_IMAGES)]
+                        elif category in ["Naked", "Roadster"]:
+                            if len(NAKED_IMAGES) > 0:
+                                return NAKED_IMAGES[0]
+                        elif category in ["Cruiser", "Touring", "Bobber"]:
+                            if len(CRUISER_IMAGES) > 0:
+                                return CRUISER_IMAGES[hash(model_name) % len(CRUISER_IMAGES)]
+                        elif category in ["Adventure", "Enduro", "Dual Sport"]:
+                            if len(ADVENTURE_IMAGES) > 0:
+                                return ADVENTURE_IMAGES[0]
+                        elif category in ["Vintage", "Classic"]:
+                            if len(VINTAGE_IMAGES) > 0:
+                                return VINTAGE_IMAGES[0]
+                        
+                        # Fallback to placeholder for unknown categories or empty image arrays
+                        return PLACEHOLDER_IMAGES[hash(model_name) % len(PLACEHOLDER_IMAGES)]
+                        
+                    except (IndexError, ZeroDivisionError):
+                        # Emergency fallback to first placeholder
+                        return PLACEHOLDER_IMAGES[0] if PLACEHOLDER_IMAGES else "https://via.placeholder.com/400x300/666666/ffffff?text=Motorcycle"
+                
+                image_url = get_motorcycle_image(model_data["category"], model_data["model"])
                 
                 # Generate detailed technical specifications
                 displacement = model_data["displacement"]
