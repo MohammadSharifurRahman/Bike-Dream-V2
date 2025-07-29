@@ -1993,6 +1993,11 @@ function App() {
       });
     } catch (error) {
       console.error('Error fetching database stats:', error);
+      // Set fallback stats
+      setDatabaseStats({
+        totalMotorcycles: 0,
+        totalManufacturers: 0
+      });
       // Fallback to calculating from categories if stats API fails
       const totalFromCategories = categories.reduce((sum, cat) => sum + cat.count, 0);
       const totalManufacturersFromFilter = filterOptions.manufacturers?.length || 0;
