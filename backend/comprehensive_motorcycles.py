@@ -797,7 +797,7 @@ def get_comprehensive_motorcycle_data():
                 "braking_system": "Disc" if model_data["displacement"] > 150 else "Drum",
                 "suspension_type": "USD Fork" if model_data["category"] == "Sport" else "Telescopic",
                 "tyre_type": "Tubeless" if year >= 2008 else "Tube",
-                "wheel_size_inches": "17" if model_data["displacement"] > 300 else "16",
+                "wheel_size_inches": f"{'17' if model_data['displacement'] > 300 else '16'}",
                 "headlight_type": "LED" if year >= 2015 else "Halogen",
                 "fuel_type": "Petrol",
                 
