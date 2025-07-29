@@ -95,13 +95,27 @@ class RatingCreate(BaseModel):
 
 class Comment(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    user_id: str
     motorcycle_id: str
-    comment_text: str
+    user_id: str
+    user_name: str
+    user_picture: str = Field(default="")
+    content: str
     parent_comment_id: Optional[str] = None  # For replies
+    is_flagged: bool = Field(default=False)
+    likes_count: int = Field(default=0)
+    replies_count: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-    likes: int = Field(default=0)
+    updated_at: Optional[datetime] = None
+
+class CommentCreate(BaseModel):
+    motorcycle_id: str
+    content: str
+    parent_comment_id: Optional[str] = None
+
+class CommentLike(BaseModel):
+    comment_id: str
+    user_id: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class CommentCreate(BaseModel):
     motorcycle_id: str
