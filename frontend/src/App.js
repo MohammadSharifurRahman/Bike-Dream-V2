@@ -292,7 +292,7 @@ const AutoCompleteSearchBar = ({
   };
 
   // Cleanup timeout on unmount
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       if (debounceTimeout) {
         clearTimeout(debounceTimeout);
