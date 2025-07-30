@@ -895,9 +895,22 @@ async def create_banner(banner_data: BannerCreate, admin_user: User = Depends(re
         banner_dict = banner.dict()
         await db.banners.insert_one(banner_dict)
         
+        # Format response banner for JSON serialization
+        response_banner = {
+            "id": banner.id,
+            "message": banner.message,
+            "is_active": banner.is_active,
+            "priority": banner.priority,
+            "created_by": banner.created_by,
+            "created_at": banner.created_at.isoformat() if banner.created_at else None,
+            "updated_at": banner.updated_at.isoformat() if banner.updated_at else None,
+            "starts_at": banner.starts_at.isoformat() if banner.starts_at else None,
+            "ends_at": banner.ends_at.isoformat() if banner.ends_at else None
+        }
+        
         return {
             "message": "Banner created successfully",
-            "banner": banner_dict
+            "banner": response_banner
         }
         
     except HTTPException:
