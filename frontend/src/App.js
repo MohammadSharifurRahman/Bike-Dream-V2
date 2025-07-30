@@ -5844,6 +5844,7 @@ function App() {
                 >
                   Analytics
                 </button>
+                <AdminButton />
                 <AuthButton />
                 {currentView === 'browse' && (
                   <>
