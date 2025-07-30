@@ -4731,6 +4731,14 @@ function App() {
     }
   }, [filters, sortBy, sortOrder, currentView]);
 
+  // New useEffect for search term and hide unavailable changes
+  useEffect(() => {
+    if (currentView === 'browse') {
+      setCurrentPage(1);
+      fetchMotorcycles(1);
+    }
+  }, [searchTerm, hideUnavailable]);
+
   // Handle route changes
   useEffect(() => {
     const path = window.location.pathname;
