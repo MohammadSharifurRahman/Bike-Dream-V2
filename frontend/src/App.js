@@ -4545,6 +4545,16 @@ function App() {
       setLoading(true);
       const params = new URLSearchParams();
       
+      // Add search term if present
+      if (searchTerm && searchTerm.trim()) {
+        params.append('search', searchTerm.trim());
+      }
+      
+      // Add hide unavailable filter
+      if (hideUnavailable) {
+        params.append('hide_unavailable', 'true');
+      }
+      
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== null && value !== '' && value !== undefined) {
           params.append(key, value);
@@ -4563,16 +4573,16 @@ function App() {
       setTotalPages(response.data.pagination.total_pages);
       
       // Log search analytics
-      const searchTerm = filters.search || '';
+      const currentSearchTerm = searchTerm || filters.search || '';
       const searchType = filters.manufacturer ? 'manufacturer' : 
                         filters.category ? 'category' : 
                         filters.price_range ? 'price_range' : 'general';
       
-      if (searchTerm || Object.keys(filters).length > 0) {
+      if (currentSearchTerm || Object.keys(filters).length > 0) {
         logSearchAnalytics(
-          searchTerm,
+          currentSearchTerm,
           searchType,
-          filters,
+          { ...filters, hide_unavailable: hideUnavailable },
           response.data.motorcycles.length
         );
       }
