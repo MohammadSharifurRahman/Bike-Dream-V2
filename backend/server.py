@@ -976,9 +976,22 @@ async def update_banner(banner_id: str, banner_update: BannerUpdate, admin_user:
         # Return updated banner
         updated_banner = await db.banners.find_one({"id": banner_id})
         
+        # Format updated banner for JSON serialization
+        response_banner = {
+            "id": updated_banner["id"],
+            "message": updated_banner["message"],
+            "is_active": updated_banner["is_active"],
+            "priority": updated_banner["priority"],
+            "created_by": updated_banner["created_by"],
+            "created_at": updated_banner["created_at"].isoformat() if updated_banner.get("created_at") else None,
+            "updated_at": updated_banner["updated_at"].isoformat() if updated_banner.get("updated_at") else None,
+            "starts_at": updated_banner["starts_at"].isoformat() if updated_banner.get("starts_at") else None,
+            "ends_at": updated_banner["ends_at"].isoformat() if updated_banner.get("ends_at") else None
+        }
+        
         return {
             "message": "Banner updated successfully",
-            "banner": updated_banner
+            "banner": response_banner
         }
         
     except HTTPException:
