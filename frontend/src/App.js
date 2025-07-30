@@ -372,6 +372,36 @@ const AutoCompleteSearchBar = ({
   );
 };
 
+// Hide Unavailable Motorcycles Toggle Component
+const HideUnavailableToggle = ({ isHidden, onToggle, className = "" }) => {
+  return (
+    <div className={`flex items-center space-x-3 ${className}`}>
+      <label className="flex items-center cursor-pointer">
+        <div className="relative">
+          <input
+            type="checkbox"
+            checked={isHidden}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="sr-only"
+          />
+          <div className={`block bg-gray-300 w-14 h-8 rounded-full transition-colors duration-300 ${
+            isHidden ? 'bg-blue-600' : 'bg-gray-300'
+          }`}></div>
+          <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform duration-300 transform ${
+            isHidden ? 'translate-x-6' : ''
+          }`}></div>
+        </div>
+        <span className="ml-3 text-sm font-medium text-gray-700">
+          Hide Unavailable Bikes
+        </span>
+      </label>
+      <div className="text-xs text-gray-500">
+        ({isHidden ? 'Hiding' : 'Showing'} discontinued and out-of-stock motorcycles)
+      </div>
+    </div>
+  );
+};
+
 // Vendor Pricing Component
 const VendorPricing = ({ motorcycle }) => {
   const [vendorPrices, setVendorPrices] = useState([]);
