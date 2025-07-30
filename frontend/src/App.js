@@ -6134,9 +6134,9 @@ function App() {
         )}
         
         {/* Phase 3: Admin Dashboard */}
-        {showAdminDashboard && (
+        {showAdminDashboard && user && (
           <AdminDashboard
-            user={useAuth().user}
+            user={user}
             onClose={() => setShowAdminDashboard(false)}
           />
         )}
