@@ -118,6 +118,31 @@ class CommentLike(BaseModel):
     user_id: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+# Phase 3: Scrolling Banner Models
+class Banner(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    message: str = Field(min_length=1, max_length=500)
+    is_active: bool = Field(default=True)
+    priority: int = Field(default=0)  # Higher priority banners show first
+    created_by: str  # Admin user ID
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
+    starts_at: Optional[datetime] = None  # Optional scheduled start
+    ends_at: Optional[datetime] = None    # Optional scheduled end
+
+class BannerCreate(BaseModel):
+    message: str = Field(min_length=1, max_length=500)
+    priority: int = Field(default=0, ge=0, le=100)
+    starts_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None
+
+class BannerUpdate(BaseModel):
+    message: Optional[str] = Field(None, min_length=1, max_length=500)
+    is_active: Optional[bool] = None
+    priority: Optional[int] = Field(None, ge=0, le=100)
+    starts_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None
+
 class CommentWithUser(BaseModel):
     id: str
     user_id: str
