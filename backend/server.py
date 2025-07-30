@@ -1755,6 +1755,7 @@ async def get_motorcycles(
     manufacturer: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
     specialisations: Optional[str] = Query(None, description="Comma-separated list of required specialisations"),
+    hide_unavailable: Optional[bool] = Query(False, description="Hide discontinued and unavailable motorcycles"),
     
     # Technical Features Filters
     transmission_type: Optional[str] = Query(None),
