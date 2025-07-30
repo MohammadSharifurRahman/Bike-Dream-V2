@@ -4490,6 +4490,10 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pagination, setPagination] = useState({});
+  
+  // New states for Phase 1 features
+  const [searchTerm, setSearchTerm] = useState('');
+  const [hideUnavailable, setHideUnavailable] = useState(false);
 
   // Analytics helper functions
   const logSearchAnalytics = async (searchTerm, searchType = 'general', filtersApplied = {}, resultsCount = 0, clickedResults = []) => {
