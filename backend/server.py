@@ -2809,6 +2809,83 @@ async def seed_ratings_only():
         logging.error(f"Error seeding ratings: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Rating seeding failed: {str(e)}")
 
+@api_router.post("/motorcycles/update-authentic-images")
+async def update_authentic_images():
+    """Update motorcycles with authentic, working motorcycle images"""
+    try:
+        # High-quality, authentic motorcycle images that will actually load
+        authentic_images = {
+            # General motorcycles - high quality Unsplash images
+            "sport": [
+                "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=400&h=250&fit=crop&auto=format",
+                "https://images.unsplash.com/photo-1531327431456-837da4b1d562?w=400&h=250&fit=crop&auto=format",
+                "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=250&fit=crop&auto=format",
+                "https://images.pexels.com/photos/1416169/pexels-photo-1416169.jpeg?w=400&h=250&fit=crop&auto=format",
+            ],
+            "cruiser": [
+                "https://images.unsplash.com/photo-1659465493788-046d031bcd35?w=400&h=250&fit=crop&auto=format",
+                "https://images.unsplash.com/photo-1653554919017-fb4a40f7364b?w=400&h=250&fit=crop&auto=format",
+                "https://images.pexels.com/photos/33222522/pexels-photo-33222522.jpeg?w=400&h=250&fit=crop&auto=format",
+                "https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?w=400&h=250&fit=crop&auto=format",
+            ],
+            "royal_enfield": [
+                "https://images.unsplash.com/photo-1694271558638-7a6f4c8879b0?w=400&h=250&fit=crop&auto=format",
+                "https://images.unsplash.com/photo-1694956792421-e946fff94564?w=400&h=250&fit=crop&auto=format",
+                "https://images.unsplash.com/photo-1675233262719-6b2309a2e751?w=400&h=250&fit=crop&auto=format",
+                "https://images.pexels.com/photos/1033116/pexels-photo-1033116.jpeg?w=400&h=250&fit=crop&auto=format",
+            ],
+            "commuter": [
+                "https://images.pexels.com/photos/2629412/pexels-photo-2629412.jpeg?w=400&h=250&fit=crop&auto=format",
+                "https://images.pexels.com/photos/33215447/pexels-photo-33215447.jpeg?w=400&h=250&fit=crop&auto=format",
+                "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=400&h=250&fit=crop&auto=format",
+                "https://images.pexels.com/photos/1416169/pexels-photo-1416169.jpeg?w=400&h=250&fit=crop&auto=format",
+            ]
+        }
+        
+        import random
+        updated_count = 0
+        
+        # Get all motorcycles
+        all_motorcycles = await db.motorcycles.find({}).to_list(None)
+        
+        for motorcycle in all_motorcycles:
+            manufacturer = motorcycle.get('manufacturer', '').lower()
+            category = motorcycle.get('category', '').lower()
+            
+            # Choose appropriate authentic image based on manufacturer and category
+            if 'royal enfield' in manufacturer:
+                image_options = authentic_images["royal_enfield"]
+            elif 'sport' in category:
+                image_options = authentic_images["sport"]
+            elif 'cruiser' in category:
+                image_options = authentic_images["cruiser"]
+            elif any(term in category for term in ['commuter', 'standard', 'naked']):
+                image_options = authentic_images["commuter"]
+            else:
+                # Default to sport bikes for unknown categories
+                image_options = authentic_images["sport"]
+            
+            # Select a random image from the appropriate category
+            new_image = random.choice(image_options)
+            
+            # Update motorcycle with authentic image
+            await db.motorcycles.update_one(
+                {"id": motorcycle["id"]},
+                {"$set": {"image_url": new_image}}
+            )
+            updated_count += 1
+        
+        return {
+            "message": f"Successfully updated {updated_count} motorcycles with authentic images",
+            "updated_count": updated_count,
+            "total_processed": len(all_motorcycles),
+            "status": "Authentic motorcycle images updated!"
+        }
+        
+    except Exception as e:
+        logging.error(f"Error updating authentic images: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Authentic image update failed: {str(e)}")
+
 @api_router.post("/motorcycles/use-base64-images")
 async def use_base64_images():
     """Replace external image URLs with base64 encoded placeholder images to avoid CORS issues"""
