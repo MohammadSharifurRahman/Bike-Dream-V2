@@ -5561,6 +5561,303 @@ class MotorcycleAPITester:
         print("\n" + "=" * 80)
         return success_rate >= 85
 
+    # SPECIFIC TESTS FOR REVIEW REQUEST ISSUES
+    def test_rating_display_issue(self):
+        """Test if motorcycles have proper average_rating and total_ratings fields populated"""
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"limit": 50}, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                motorcycles = self.extract_motorcycles_from_response(data)
+                
+                if motorcycles and len(motorcycles) > 0:
+                    # Check rating fields on first few motorcycles
+                    rating_fields_present = True
+                    sample_ratings_found = False
+                    
+                    for i, moto in enumerate(motorcycles[:10]):
+                        # Check if rating fields exist
+                        if "average_rating" not in moto or "total_ratings" not in moto:
+                            self.log_test("Rating Fields Present", False, 
+                                        f"Motorcycle {i+1} missing rating fields")
+                            rating_fields_present = False
+                            break
+                        
+                        # Check if some motorcycles have actual rating data
+                        if moto.get("total_ratings", 0) > 0:
+                            sample_ratings_found = True
+                    
+                    if rating_fields_present:
+                        self.log_test("Rating Fields Present", True, 
+                                    "All motorcycles have average_rating and total_ratings fields")
+                    
+                    if sample_ratings_found:
+                        self.log_test("Sample Ratings Data", True, 
+                                    "Found motorcycles with actual rating data")
+                    else:
+                        self.log_test("Sample Ratings Data", False, 
+                                    "No motorcycles found with rating data - may need sample ratings seeded")
+                    
+                    # Test individual motorcycle rating data
+                    if self.motorcycle_ids:
+                        motorcycle_id = self.motorcycle_ids[0]
+                        individual_response = requests.get(f"{self.base_url}/motorcycles/{motorcycle_id}", timeout=10)
+                        if individual_response.status_code == 200:
+                            individual_data = individual_response.json()
+                            if "average_rating" in individual_data and "total_ratings" in individual_data:
+                                self.log_test("Individual Motorcycle Rating Data", True, 
+                                            f"Rating fields present: avg={individual_data.get('average_rating')}, total={individual_data.get('total_ratings')}")
+                            else:
+                                self.log_test("Individual Motorcycle Rating Data", False, 
+                                            "Rating fields missing in individual motorcycle response")
+                                rating_fields_present = False
+                    
+                    return rating_fields_present
+                else:
+                    self.log_test("Rating Display Issue", False, "No motorcycles returned")
+                    return False
+            else:
+                self.log_test("Rating Display Issue", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Rating Display Issue", False, f"Error: {str(e)}")
+            return False
+
+    def test_hide_unavailable_filter(self):
+        """Test if the hide_unavailable parameter works correctly"""
+        try:
+            # Test without hide_unavailable parameter
+            response_all = requests.get(f"{self.base_url}/motorcycles", 
+                                      params={"limit": 100}, timeout=10)
+            if response_all.status_code != 200:
+                self.log_test("Hide Unavailable Filter", False, f"Failed to get all motorcycles: {response_all.status_code}")
+                return False
+            
+            all_data = response_all.json()
+            all_motorcycles = self.extract_motorcycles_from_response(all_data)
+            
+            # Test with hide_unavailable=true
+            response_available = requests.get(f"{self.base_url}/motorcycles", 
+                                            params={"hide_unavailable": "true", "limit": 100}, timeout=10)
+            if response_available.status_code != 200:
+                self.log_test("Hide Unavailable Filter", False, f"Failed to get available motorcycles: {response_available.status_code}")
+                return False
+            
+            available_data = response_available.json()
+            available_motorcycles = self.extract_motorcycles_from_response(available_data)
+            
+            # Count unavailable motorcycles in all results
+            unavailable_statuses = ["Discontinued", "Not Available", "Out of Stock", "Collector Item"]
+            unavailable_count = 0
+            for moto in all_motorcycles:
+                if moto.get("availability") in unavailable_statuses:
+                    unavailable_count += 1
+            
+            # Verify filtering worked
+            filtered_correctly = True
+            for moto in available_motorcycles:
+                if moto.get("availability") in unavailable_statuses:
+                    filtered_correctly = False
+                    break
+            
+            if filtered_correctly:
+                total_all = len(all_motorcycles)
+                total_available = len(available_motorcycles)
+                self.log_test("Hide Unavailable Filter", True, 
+                            f"Filter working correctly: {total_all} total, {total_available} available, {unavailable_count} unavailable filtered out")
+                return True
+            else:
+                self.log_test("Hide Unavailable Filter", False, 
+                            "Filter not working - unavailable motorcycles still present in filtered results")
+                return False
+                
+        except Exception as e:
+            self.log_test("Hide Unavailable Filter", False, f"Error: {str(e)}")
+            return False
+
+    def test_duplicate_listings_issue(self):
+        """Test for duplicate motorcycle entries"""
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"limit": 3000}, timeout=15)
+            if response.status_code == 200:
+                data = response.json()
+                motorcycles = self.extract_motorcycles_from_response(data)
+                
+                if motorcycles and len(motorcycles) > 0:
+                    # Check for duplicates by manufacturer + model combination
+                    seen_combinations = {}
+                    duplicates_found = []
+                    
+                    for moto in motorcycles:
+                        manufacturer = moto.get("manufacturer", "").strip()
+                        model = moto.get("model", "").strip()
+                        year = moto.get("year", 0)
+                        
+                        # Create a key for manufacturer + model (ignoring year for now)
+                        key = f"{manufacturer.lower()}_{model.lower()}"
+                        
+                        if key in seen_combinations:
+                            # Check if it's the same year (true duplicate) or different year (valid)
+                            existing_years = [entry["year"] for entry in seen_combinations[key]]
+                            if year in existing_years:
+                                duplicates_found.append({
+                                    "manufacturer": manufacturer,
+                                    "model": model,
+                                    "year": year,
+                                    "duplicate_of": seen_combinations[key][0]["id"]
+                                })
+                            else:
+                                seen_combinations[key].append({
+                                    "id": moto.get("id"),
+                                    "year": year,
+                                    "manufacturer": manufacturer,
+                                    "model": model
+                                })
+                        else:
+                            seen_combinations[key] = [{
+                                "id": moto.get("id"),
+                                "year": year,
+                                "manufacturer": manufacturer,
+                                "model": model
+                            }]
+                    
+                    # Check for models with multiple years (like Kawasaki Ninja H2)
+                    multi_year_models = []
+                    for key, entries in seen_combinations.items():
+                        if len(entries) > 1:
+                            years = [entry["year"] for entry in entries]
+                            multi_year_models.append({
+                                "model": entries[0]["model"],
+                                "manufacturer": entries[0]["manufacturer"],
+                                "years": sorted(years),
+                                "count": len(entries)
+                            })
+                    
+                    if duplicates_found:
+                        self.log_test("Duplicate Listings Check", False, 
+                                    f"Found {len(duplicates_found)} true duplicates (same manufacturer, model, and year)")
+                        for dup in duplicates_found[:3]:  # Show first 3
+                            print(f"  Duplicate: {dup['manufacturer']} {dup['model']} {dup['year']}")
+                        return False
+                    else:
+                        self.log_test("Duplicate Listings Check", True, 
+                                    f"No true duplicates found. {len(multi_year_models)} models have multiple years (valid)")
+                        
+                        # Show some multi-year examples
+                        if multi_year_models:
+                            print("  Multi-year models found (valid):")
+                            for model in multi_year_models[:3]:
+                                print(f"    {model['manufacturer']} {model['model']}: {model['count']} years ({min(model['years'])}-{max(model['years'])})")
+                        
+                        return True
+                else:
+                    self.log_test("Duplicate Listings Check", False, "No motorcycles returned")
+                    return False
+            else:
+                self.log_test("Duplicate Listings Check", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Duplicate Listings Check", False, f"Error: {str(e)}")
+            return False
+
+    def test_database_seeding_status(self):
+        """Test if the database is properly populated with expected data"""
+        try:
+            # Test motorcycle count
+            response = requests.get(f"{self.base_url}/stats", timeout=10)
+            if response.status_code == 200:
+                stats_data = response.json()
+                total_motorcycles = stats_data.get("total_motorcycles", 0)
+                
+                if total_motorcycles >= 1300:
+                    self.log_test("Database Motorcycle Count", True, 
+                                f"Database has {total_motorcycles} motorcycles (exceeds 1300+ requirement)")
+                else:
+                    self.log_test("Database Motorcycle Count", False, 
+                                f"Database has only {total_motorcycles} motorcycles (expected 1300+)")
+                
+                # Test manufacturers
+                manufacturers = stats_data.get("manufacturers", [])
+                expected_manufacturers = ["Yamaha", "Honda", "Kawasaki", "Suzuki", "Ducati"]
+                missing_manufacturers = [m for m in expected_manufacturers if m not in manufacturers]
+                
+                if not missing_manufacturers:
+                    self.log_test("Database Manufacturers", True, 
+                                f"All expected manufacturers present: {len(manufacturers)} total")
+                else:
+                    self.log_test("Database Manufacturers", False, 
+                                f"Missing manufacturers: {missing_manufacturers}")
+                
+                # Test categories
+                categories = stats_data.get("categories", [])
+                expected_categories = ["Sport", "Naked", "Cruiser", "Adventure"]
+                missing_categories = [c for c in expected_categories if c not in categories]
+                
+                if not missing_categories:
+                    self.log_test("Database Categories", True, 
+                                f"All expected categories present: {len(categories)} total")
+                else:
+                    self.log_test("Database Categories", False, 
+                                f"Missing categories: {missing_categories}")
+                
+                # Test year range
+                year_range = stats_data.get("year_range", {})
+                min_year = year_range.get("min_year", 0)
+                max_year = year_range.get("max_year", 0)
+                
+                if min_year >= 1999 and max_year >= 2024:
+                    self.log_test("Database Year Range", True, 
+                                f"Year range: {min_year}-{max_year} (covers expected range)")
+                else:
+                    self.log_test("Database Year Range", False, 
+                                f"Year range: {min_year}-{max_year} (expected 1999-2025+)")
+                
+                return (total_motorcycles >= 1300 and 
+                       not missing_manufacturers and 
+                       not missing_categories and 
+                       min_year >= 1999 and max_year >= 2024)
+            else:
+                self.log_test("Database Seeding Status", False, f"Stats API failed: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Database Seeding Status", False, f"Error: {str(e)}")
+            return False
+
+    def run_review_request_tests(self):
+        """Run specific tests for the review request issues"""
+        print("🔍 Running Review Request Specific Tests")
+        print("=" * 80)
+        
+        # Test the 4 specific issues mentioned in the review request
+        issue1_result = self.test_rating_display_issue()
+        issue2_result = self.test_hide_unavailable_filter()
+        issue3_result = self.test_duplicate_listings_issue()
+        issue4_result = self.test_database_seeding_status()
+        
+        print("\n" + "=" * 80)
+        print("📊 REVIEW REQUEST TEST SUMMARY")
+        print("=" * 80)
+        
+        issues = [
+            ("Rating Display Issue", issue1_result),
+            ("Hide Unavailable Filter", issue2_result),
+            ("Duplicate Listings Issue", issue3_result),
+            ("Database Seeding Status", issue4_result)
+        ]
+        
+        for issue_name, result in issues:
+            status = "✅ RESOLVED" if result else "❌ ISSUE FOUND"
+            print(f"{status} - {issue_name}")
+        
+        passed = sum(1 for _, result in issues if result)
+        total = len(issues)
+        print(f"\nOverall: {passed}/{total} issues resolved ({(passed/total)*100:.1f}%)")
+        
+        return all(result for _, result in issues)
+
     def run_all_tests(self):
         """Run comprehensive deployment readiness testing"""
         return self.run_comprehensive_deployment_testing()
