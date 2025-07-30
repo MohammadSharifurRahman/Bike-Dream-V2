@@ -4112,6 +4112,476 @@ class MotorcycleAPITester:
             self.log_test("Complete Request Workflow", False, f"Error: {str(e)}")
             return False
 
+    # ==================== RIDER GROUPS API TESTS ====================
+    
+    def test_create_rider_group(self):
+        """Test POST /api/rider-groups - Create new rider group"""
+        if not self.test_user_session:
+            self.log_test("Create Rider Group", False, "No user session available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            group_data = {
+                "name": "Yamaha Enthusiasts Club",
+                "description": "A group for Yamaha motorcycle lovers to share experiences and tips",
+                "location": "California, USA",
+                "group_type": "brand",
+                "is_public": True,
+                "max_members": 100
+            }
+            
+            response = requests.post(f"{self.base_url}/rider-groups", 
+                                   json=group_data, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "id" in data and "message" in data:
+                    self.rider_group_id = data["id"]  # Store for other tests
+                    self.log_test("Create Rider Group", True, 
+                                f"Group created successfully: {data['message']}")
+                    return True
+                else:
+                    self.log_test("Create Rider Group", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Create Rider Group", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Create Rider Group", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Create Rider Group", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_rider_groups(self):
+        """Test GET /api/rider-groups - Browse public rider groups"""
+        try:
+            params = {
+                "page": 1,
+                "limit": 10,
+                "group_type": "brand"
+            }
+            
+            response = requests.get(f"{self.base_url}/rider-groups", 
+                                  params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "rider_groups" in data and "pagination" in data:
+                    groups = data["rider_groups"]
+                    pagination = data["pagination"]
+                    
+                    # Verify pagination structure
+                    required_pagination_fields = ["page", "limit", "total_count", "total_pages", "has_next", "has_previous"]
+                    missing_fields = [field for field in required_pagination_fields if field not in pagination]
+                    
+                    if missing_fields:
+                        self.log_test("Get Rider Groups", False, f"Missing pagination fields: {missing_fields}")
+                        return False
+                    
+                    self.log_test("Get Rider Groups", True, 
+                                f"Retrieved {len(groups)} groups with proper pagination")
+                    return True
+                else:
+                    self.log_test("Get Rider Groups", False, "Invalid response format")
+                    return False
+            else:
+                self.log_test("Get Rider Groups", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get Rider Groups", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_rider_group_details(self):
+        """Test GET /api/rider-groups/{group_id} - Get specific rider group details"""
+        if not hasattr(self, 'rider_group_id'):
+            self.log_test("Get Rider Group Details", False, "No rider group ID available")
+            return False
+        
+        try:
+            response = requests.get(f"{self.base_url}/rider-groups/{self.rider_group_id}", 
+                                  timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                required_fields = ["id", "name", "description", "group_type", "member_count"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if missing_fields:
+                    self.log_test("Get Rider Group Details", False, f"Missing fields: {missing_fields}")
+                    return False
+                
+                self.log_test("Get Rider Group Details", True, 
+                            f"Retrieved group details: {data['name']} with {data['member_count']} members")
+                return True
+            elif response.status_code == 404:
+                self.log_test("Get Rider Group Details", False, "Rider group not found (404)")
+                return False
+            else:
+                self.log_test("Get Rider Group Details", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get Rider Group Details", False, f"Error: {str(e)}")
+            return False
+
+    def test_join_rider_group(self):
+        """Test POST /api/rider-groups/{group_id}/join - Join rider group"""
+        if not self.test_user_session or not hasattr(self, 'rider_group_id'):
+            self.log_test("Join Rider Group", False, "No user session or group ID available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.post(f"{self.base_url}/rider-groups/{self.rider_group_id}/join", 
+                                   headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "message" in data:
+                    self.log_test("Join Rider Group", True, f"Joined group: {data['message']}")
+                    return True
+                else:
+                    self.log_test("Join Rider Group", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 400:
+                # User might already be a member (creator)
+                data = response.json()
+                if "Already a member" in data.get("detail", ""):
+                    self.log_test("Join Rider Group", True, "Already a member (expected for creator)")
+                    return True
+                else:
+                    self.log_test("Join Rider Group", False, f"Bad request: {data.get('detail', 'Unknown error')}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Join Rider Group", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Join Rider Group", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Join Rider Group", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_my_rider_groups(self):
+        """Test GET /api/users/me/rider-groups - Get user's joined rider groups"""
+        if not self.test_user_session:
+            self.log_test("Get My Rider Groups", False, "No user session available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.get(f"{self.base_url}/users/me/rider-groups", 
+                                  headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "rider_groups" in data:
+                    groups = data["rider_groups"]
+                    
+                    # Verify each group has required fields
+                    for group in groups:
+                        required_fields = ["id", "name", "member_count", "user_role", "is_creator"]
+                        missing_fields = [field for field in required_fields if field not in group]
+                        if missing_fields:
+                            self.log_test("Get My Rider Groups", False, f"Missing fields in group: {missing_fields}")
+                            return False
+                    
+                    self.log_test("Get My Rider Groups", True, 
+                                f"Retrieved {len(groups)} user groups with proper structure")
+                    return True
+                else:
+                    self.log_test("Get My Rider Groups", False, "Invalid response format")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Get My Rider Groups", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Get My Rider Groups", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get My Rider Groups", False, f"Error: {str(e)}")
+            return False
+
+    # ==================== ACHIEVEMENT SYSTEM API TESTS ====================
+    
+    def test_get_achievements(self):
+        """Test GET /api/achievements - Get all available achievements"""
+        try:
+            response = requests.get(f"{self.base_url}/achievements", timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "achievements" in data:
+                    achievements = data["achievements"]
+                    
+                    if len(achievements) > 0:
+                        # Verify achievement structure
+                        required_fields = ["id", "name", "description", "icon", "category", "requirement_type", "requirement_value"]
+                        for achievement in achievements[:3]:  # Check first 3
+                            missing_fields = [field for field in required_fields if field not in achievement]
+                            if missing_fields:
+                                self.log_test("Get Achievements", False, f"Missing fields in achievement: {missing_fields}")
+                                return False
+                        
+                        self.log_test("Get Achievements", True, 
+                                    f"Retrieved {len(achievements)} achievements with proper structure")
+                        return True
+                    else:
+                        self.log_test("Get Achievements", False, "No achievements found")
+                        return False
+                else:
+                    self.log_test("Get Achievements", False, "Invalid response format")
+                    return False
+            else:
+                self.log_test("Get Achievements", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get Achievements", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_user_achievements(self):
+        """Test GET /api/users/me/achievements - Get user achievements with progress"""
+        if not self.test_user_session:
+            self.log_test("Get User Achievements", False, "No user session available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.get(f"{self.base_url}/users/me/achievements", 
+                                  headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "achievements" in data and "stats" in data:
+                    achievements = data["achievements"]
+                    stats = data["stats"]
+                    
+                    # Verify stats structure
+                    required_stats = ["total_achievements", "completed_count", "completion_rate", "total_points"]
+                    missing_stats = [field for field in required_stats if field not in stats]
+                    if missing_stats:
+                        self.log_test("Get User Achievements", False, f"Missing stats fields: {missing_stats}")
+                        return False
+                    
+                    # Verify achievement progress structure
+                    if len(achievements) > 0:
+                        achievement = achievements[0]
+                        required_fields = ["id", "name", "completed", "progress"]
+                        missing_fields = [field for field in required_fields if field not in achievement]
+                        if missing_fields:
+                            self.log_test("Get User Achievements", False, f"Missing achievement fields: {missing_fields}")
+                            return False
+                    
+                    self.log_test("Get User Achievements", True, 
+                                f"Retrieved {len(achievements)} achievements with progress, {stats['completed_count']} completed")
+                    return True
+                else:
+                    self.log_test("Get User Achievements", False, "Invalid response format")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Get User Achievements", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Get User Achievements", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get User Achievements", False, f"Error: {str(e)}")
+            return False
+
+    def test_check_achievements(self):
+        """Test POST /api/achievements/check - Check for new achievements"""
+        if not self.test_user_session:
+            self.log_test("Check Achievements", False, "No user session available")
+            return False
+        
+        try:
+            headers = {"X-Session-Id": self.test_user_session}
+            response = requests.post(f"{self.base_url}/achievements/check", 
+                                   headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "message" in data and "new_achievements" in data:
+                    new_achievements = data["new_achievements"]
+                    self.log_test("Check Achievements", True, 
+                                f"Achievement check completed: {data['message']}, {len(new_achievements)} new achievements")
+                    return True
+                else:
+                    self.log_test("Check Achievements", False, f"Unexpected response: {data}")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("Check Achievements", False, "Authentication required (401)")
+                return False
+            else:
+                self.log_test("Check Achievements", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Check Achievements", False, f"Error: {str(e)}")
+            return False
+
+    # ==================== SEARCH ANALYTICS API TESTS ====================
+    
+    def test_log_search_analytics(self):
+        """Test POST /api/analytics/search - Log search analytics"""
+        try:
+            analytics_data = {
+                "search_term": "Yamaha R1",
+                "search_type": "general",
+                "filters_applied": {
+                    "manufacturer": "Yamaha",
+                    "category": "Sport"
+                },
+                "results_count": 15,
+                "clicked_results": ["moto_id_1", "moto_id_2"]
+            }
+            
+            headers = {}
+            if self.test_user_session:
+                headers["X-Session-Id"] = self.test_user_session
+            
+            response = requests.post(f"{self.base_url}/analytics/search", 
+                                   json=analytics_data, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "message" in data and "successfully" in data["message"]:
+                    self.log_test("Log Search Analytics", True, f"Analytics logged: {data['message']}")
+                    return True
+                else:
+                    self.log_test("Log Search Analytics", False, f"Unexpected response: {data}")
+                    return False
+            else:
+                self.log_test("Log Search Analytics", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Log Search Analytics", False, f"Error: {str(e)}")
+            return False
+
+    def test_log_user_engagement(self):
+        """Test POST /api/analytics/engagement - Log user engagement"""
+        try:
+            engagement_data = {
+                "page_view": "/motorcycles/yamaha-r1-2024",
+                "time_spent": 120,
+                "actions": [
+                    {"action_type": "favorite", "timestamp": "2024-01-01T12:00:00Z"},
+                    {"action_type": "view_details", "timestamp": "2024-01-01T12:01:00Z"}
+                ],
+                "referrer": "https://google.com"
+            }
+            
+            headers = {}
+            if self.test_user_session:
+                headers["X-Session-Id"] = self.test_user_session
+            
+            response = requests.post(f"{self.base_url}/analytics/engagement", 
+                                   json=engagement_data, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "message" in data and "successfully" in data["message"]:
+                    self.log_test("Log User Engagement", True, f"Engagement logged: {data['message']}")
+                    return True
+                else:
+                    self.log_test("Log User Engagement", False, f"Unexpected response: {data}")
+                    return False
+            else:
+                self.log_test("Log User Engagement", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Log User Engagement", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_search_trends(self):
+        """Test GET /api/analytics/search-trends - Get search trends"""
+        try:
+            params = {
+                "days": 7,
+                "limit": 10
+            }
+            
+            response = requests.get(f"{self.base_url}/analytics/search-trends", 
+                                  params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                required_fields = ["popular_terms", "trends", "popular_manufacturers", "period_days"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if missing_fields:
+                    self.log_test("Get Search Trends", False, f"Missing fields: {missing_fields}")
+                    return False
+                
+                self.log_test("Get Search Trends", True, 
+                            f"Retrieved search trends: {len(data['popular_terms'])} popular terms, {len(data['trends'])} trend points")
+                return True
+            else:
+                self.log_test("Get Search Trends", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get Search Trends", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_user_behavior_analytics(self):
+        """Test GET /api/analytics/user-behavior - Get user behavior analytics"""
+        try:
+            params = {
+                "days": 7
+            }
+            
+            response = requests.get(f"{self.base_url}/analytics/user-behavior", 
+                                  params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                required_fields = ["page_views", "actions", "session_stats", "period_days"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if missing_fields:
+                    self.log_test("Get User Behavior Analytics", False, f"Missing fields: {missing_fields}")
+                    return False
+                
+                self.log_test("Get User Behavior Analytics", True, 
+                            f"Retrieved behavior analytics: {len(data['page_views'])} page views, {len(data['actions'])} action types")
+                return True
+            else:
+                self.log_test("Get User Behavior Analytics", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get User Behavior Analytics", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_motorcycle_interests(self):
+        """Test GET /api/analytics/motorcycle-interests - Get motorcycle interest analytics"""
+        try:
+            params = {
+                "days": 30,
+                "limit": 20
+            }
+            
+            response = requests.get(f"{self.base_url}/analytics/motorcycle-interests", 
+                                  params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                required_fields = ["motorcycle_interests", "category_interests", "manufacturer_interests", "period_days"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if missing_fields:
+                    self.log_test("Get Motorcycle Interests", False, f"Missing fields: {missing_fields}")
+                    return False
+                
+                self.log_test("Get Motorcycle Interests", True, 
+                            f"Retrieved interest analytics: {len(data['motorcycle_interests'])} motorcycle interests, {len(data['category_interests'])} category interests")
+                return True
+            else:
+                self.log_test("Get Motorcycle Interests", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Get Motorcycle Interests", False, f"Error: {str(e)}")
+            return False
+
     def run_all_tests(self):
         """Run all tests in sequence"""
         print("🏍️  Starting Byke-Dream Backend API Tests")
