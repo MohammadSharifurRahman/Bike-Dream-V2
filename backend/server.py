@@ -2435,6 +2435,319 @@ async def delete_price_alert(alert_id: str, current_user: User = Depends(require
     
     return {"message": "Price alert deleted successfully"}
 
+# ==================== RIDER GROUPS API ENDPOINTS ====================
+
+@api_router.post("/rider-groups")
+async def create_rider_group(group_data: RiderGroupCreate, current_user: User = Depends(require_auth)):
+    """Create a new rider group"""
+    # Create rider group
+    rider_group = RiderGroup(
+        creator_id=current_user.id,
+        admin_ids=[current_user.id],  # Creator is automatically an admin
+        member_ids=[current_user.id],  # Creator is automatically a member
+        **group_data.dict()
+    )
+    
+    await db.rider_groups.insert_one(rider_group.dict())
+    return {"message": "Rider group created successfully", "id": rider_group.id}
+
+@api_router.get("/rider-groups")
+async def get_rider_groups(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=50),
+    group_type: Optional[str] = Query(None),
+    location: Optional[str] = Query(None),
+    search: Optional[str] = Query(None)
+):
+    """Get public rider groups with filtering"""
+    query = {"is_public": True}
+    
+    if group_type:
+        query["group_type"] = group_type
+    if location:
+        query["location"] = {"$regex": location, "$options": "i"}
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # Calculate pagination
+    skip = (page - 1) * limit
+    total_count = await db.rider_groups.count_documents(query)
+    
+    # Get groups with member counts
+    pipeline = [
+        {"$match": query},
+        {"$sort": {"created_at": -1}},
+        {"$skip": skip},
+        {"$limit": limit},
+        {"$addFields": {
+            "member_count": {"$size": "$member_ids"}
+        }}
+    ]
+    
+    groups_raw = await db.rider_groups.aggregate(pipeline).to_list(limit)
+    
+    # Convert ObjectIds to strings
+    groups = []
+    for group in groups_raw:
+        if "_id" in group:
+            group["_id"] = str(group["_id"])
+        groups.append(group)
+    
+    # Calculate pagination info
+    total_pages = (total_count + limit - 1) // limit
+    has_next = page < total_pages
+    has_previous = page > 1
+    
+    return {
+        "rider_groups": groups,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "has_next": has_next,
+            "has_previous": has_previous
+        }
+    }
+
+@api_router.get("/rider-groups/{group_id}")
+async def get_rider_group(group_id: str):
+    """Get specific rider group details"""
+    group = await db.rider_groups.find_one({"id": group_id})
+    if not group:
+        raise HTTPException(status_code=404, detail="Rider group not found")
+    
+    # Convert ObjectId to string
+    if "_id" in group:
+        group["_id"] = str(group["_id"])
+    
+    # Add member count
+    group["member_count"] = len(group.get("member_ids", []))
+    
+    return group
+
+@api_router.post("/rider-groups/{group_id}/join")
+async def join_rider_group(group_id: str, current_user: User = Depends(require_auth)):
+    """Join a rider group"""
+    group = await db.rider_groups.find_one({"id": group_id})
+    if not group:
+        raise HTTPException(status_code=404, detail="Rider group not found")
+    
+    # Check if already a member
+    if current_user.id in group.get("member_ids", []):
+        raise HTTPException(status_code=400, detail="Already a member of this group")
+    
+    # Check if group is full
+    max_members = group.get("max_members")
+    current_members = len(group.get("member_ids", []))
+    if max_members and current_members >= max_members:
+        raise HTTPException(status_code=400, detail="Group is full")
+    
+    # Add user to group
+    await db.rider_groups.update_one(
+        {"id": group_id},
+        {
+            "$push": {"member_ids": current_user.id},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+    
+    return {"message": "Successfully joined the rider group"}
+
+@api_router.post("/rider-groups/{group_id}/leave")
+async def leave_rider_group(group_id: str, current_user: User = Depends(require_auth)):
+    """Leave a rider group"""
+    group = await db.rider_groups.find_one({"id": group_id})
+    if not group:
+        raise HTTPException(status_code=404, detail="Rider group not found")
+    
+    # Check if user is a member
+    if current_user.id not in group.get("member_ids", []):
+        raise HTTPException(status_code=400, detail="Not a member of this group")
+    
+    # Don't allow creator to leave (they must transfer ownership first)
+    if current_user.id == group.get("creator_id"):
+        raise HTTPException(status_code=400, detail="Group creator cannot leave without transferring ownership")
+    
+    # Remove user from group
+    await db.rider_groups.update_one(
+        {"id": group_id},
+        {
+            "$pull": {
+                "member_ids": current_user.id,
+                "admin_ids": current_user.id  # Remove from admins too if they were one
+            },
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+    
+    return {"message": "Successfully left the rider group"}
+
+@api_router.get("/users/me/rider-groups")
+async def get_my_rider_groups(current_user: User = Depends(require_auth)):
+    """Get current user's rider groups (member of)"""
+    groups = await db.rider_groups.find({"member_ids": current_user.id}).to_list(None)
+    
+    # Convert ObjectIds and add member counts
+    formatted_groups = []
+    for group in groups:
+        if "_id" in group:
+            group["_id"] = str(group["_id"])
+        group["member_count"] = len(group.get("member_ids", []))
+        group["user_role"] = "admin" if current_user.id in group.get("admin_ids", []) else "member"
+        group["is_creator"] = current_user.id == group.get("creator_id")
+        formatted_groups.append(group)
+    
+    return {"rider_groups": formatted_groups}
+
+# ==================== ACHIEVEMENT SYSTEM API ENDPOINTS ====================
+
+@api_router.get("/achievements")
+async def get_achievements():
+    """Get all available achievements"""
+    achievements = await db.achievements.find({"is_active": True}).to_list(None)
+    
+    # Convert ObjectIds to strings
+    formatted_achievements = []
+    for achievement in achievements:
+        if "_id" in achievement:
+            achievement["_id"] = str(achievement["_id"])
+        formatted_achievements.append(achievement)
+    
+    return {"achievements": formatted_achievements}
+
+@api_router.get("/users/me/achievements")
+async def get_user_achievements(current_user: User = Depends(require_auth)):
+    """Get current user's achievements and progress"""
+    # Get user's completed achievements
+    user_achievements = await db.user_achievements.find({"user_id": current_user.id}).to_list(None)
+    completed_achievement_ids = [ua["achievement_id"] for ua in user_achievements if ua.get("is_completed")]
+    
+    # Get all achievements
+    all_achievements = await db.achievements.find({"is_active": True}).to_list(None)
+    
+    # Calculate progress for each achievement
+    achievements_with_progress = []
+    for achievement in all_achievements:
+        if "_id" in achievement:
+            achievement["_id"] = str(achievement["_id"])
+        
+        # Check if user has completed this achievement
+        user_achievement = next((ua for ua in user_achievements if ua["achievement_id"] == achievement["id"]), None)
+        
+        if user_achievement:
+            achievement["completed"] = user_achievement.get("is_completed", False)
+            achievement["progress"] = user_achievement.get("progress", 0)
+            achievement["earned_at"] = user_achievement.get("earned_at")
+        else:
+            achievement["completed"] = False
+            achievement["progress"] = 0
+            
+            # Calculate current progress based on achievement type
+            progress = await calculate_user_achievement_progress(current_user.id, achievement)
+            achievement["progress"] = progress
+        
+        achievements_with_progress.append(achievement)
+    
+    # Calculate user stats
+    total_achievements = len(all_achievements)
+    completed_count = len(completed_achievement_ids)
+    total_points = sum(ua.get("points", 10) for ua in user_achievements if ua.get("is_completed"))
+    
+    return {
+        "achievements": achievements_with_progress,
+        "stats": {
+            "total_achievements": total_achievements,
+            "completed_count": completed_count,
+            "completion_rate": round(completed_count / total_achievements * 100, 1) if total_achievements > 0 else 0,
+            "total_points": total_points
+        }
+    }
+
+async def calculate_user_achievement_progress(user_id: str, achievement: dict) -> int:
+    """Calculate user's current progress towards an achievement"""
+    requirement_type = achievement.get("requirement_type")
+    requirement_field = achievement.get("requirement_field")
+    requirement_value = achievement.get("requirement_value", 1)
+    
+    try:
+        if requirement_field == "favorites":
+            count = await db.favorites.count_documents({"user_id": user_id})
+        elif requirement_field == "ratings":
+            count = await db.ratings.count_documents({"user_id": user_id})
+        elif requirement_field == "comments":
+            count = await db.comments.count_documents({"user_id": user_id})
+        elif requirement_field == "garage_items":
+            count = await db.garage_items.count_documents({"user_id": user_id})
+        elif requirement_field == "rider_groups":
+            count = await db.rider_groups.count_documents({"member_ids": user_id})
+        else:
+            count = 0
+        
+        # For "count" type achievements, return current count (capped at requirement_value)
+        if requirement_type == "count":
+            return min(count, requirement_value)
+        
+        return count
+    except Exception:
+        return 0
+
+@api_router.post("/achievements/check")
+async def check_user_achievements(current_user: User = Depends(require_auth)):
+    """Check and award new achievements for user"""
+    new_achievements = []
+    
+    # Get all active achievements
+    achievements = await db.achievements.find({"is_active": True}).to_list(None)
+    
+    # Get user's existing achievements
+    user_achievements = await db.user_achievements.find({"user_id": current_user.id}).to_list(None)
+    completed_achievement_ids = [ua["achievement_id"] for ua in user_achievements if ua.get("is_completed")]
+    
+    for achievement in achievements:
+        # Skip if already completed
+        if achievement["id"] in completed_achievement_ids:
+            continue
+        
+        # Calculate current progress
+        progress = await calculate_user_achievement_progress(current_user.id, achievement)
+        requirement_value = achievement.get("requirement_value", 1)
+        
+        # Check if achievement should be awarded
+        if progress >= requirement_value:
+            # Award achievement
+            user_achievement = UserAchievement(
+                user_id=current_user.id,
+                achievement_id=achievement["id"],
+                progress=progress,
+                is_completed=True
+            )
+            
+            await db.user_achievements.insert_one(user_achievement.dict())
+            new_achievements.append({
+                "id": achievement["id"],
+                "name": achievement["name"],
+                "description": achievement["description"],
+                "icon": achievement["icon"],
+                "points": achievement.get("points", 10)
+            })
+        else:
+            # Update progress if exists
+            existing_ua = next((ua for ua in user_achievements if ua["achievement_id"] == achievement["id"]), None)
+            if existing_ua and existing_ua.get("progress", 0) != progress:
+                await db.user_achievements.update_one(
+                    {"user_id": current_user.id, "achievement_id": achievement["id"]},
+                    {"$set": {"progress": progress}}
+                )
+    
+    return {
+        "message": f"Checked achievements, awarded {len(new_achievements)} new achievements",
+        "new_achievements": new_achievements
+    }
+
 @api_router.get("/status", response_model=List[StatusCheck])
 async def get_status_checks():
     status_checks = await db.status_checks.find().to_list(1000)
