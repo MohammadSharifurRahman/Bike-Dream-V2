@@ -2721,6 +2721,80 @@ async def seed_ratings_only():
         logging.error(f"Error seeding ratings: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Rating seeding failed: {str(e)}")
 
+@api_router.post("/motorcycles/update-images")
+async def update_motorcycle_images():
+    """Update motorcycle images with more authentic ones"""
+    try:
+        # Mapping of manufacturer/model to appropriate images
+        image_mappings = {
+            # Hero motorcycles - use commuter-style images
+            ("Hero", "HF 100"): "https://images.unsplash.com/photo-1728567867292-e615aa97e372",
+            ("Hero", "HF Deluxe"): "https://images.unsplash.com/photo-1707561525582-2ddcf937a6dd",
+            ("Hero", "HF Dawn"): "https://images.pexels.com/photos/31967053/pexels-photo-31967053.jpeg",
+            ("Hero", "Splendor"): "https://images.pexels.com/photos/31967054/pexels-photo-31967054.jpeg",
+            
+            # Bajaj motorcycles - use sporty commuter images
+            ("Bajaj", "CT 100"): "https://images.unsplash.com/photo-1614152412583-bae4138b3f50",
+            ("Bajaj", "Platina"): "https://images.unsplash.com/photo-1644879796743-32f929189b81",
+            ("Bajaj", "Discover"): "https://images.unsplash.com/photo-1644879796656-94f5d2bf1b95",
+            ("Bajaj", "Pulsar"): "https://images.pexels.com/photos/17494037/pexels-photo-17494037.jpeg",
+            
+            # TVS motorcycles
+            ("TVS", "Star City"): "https://images.unsplash.com/photo-1691838870244-d56470357328",
+            ("TVS", "Radeon"): "https://images.pexels.com/photos/33186656/pexels-photo-33186656.jpeg",
+            ("TVS", "Sport"): "https://images.pexels.com/photos/33162493/pexels-photo-33162493.jpeg",
+            
+            # Generic fallback for other manufacturers
+            ("Honda", ""): "https://images.unsplash.com/photo-1558618047-3c8c76ca7d2b",
+            ("Yamaha", ""): "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7",
+            ("Suzuki", ""): "https://images.unsplash.com/photo-1544552866-d3ed42536cfd",
+            ("Kawasaki", ""): "https://images.unsplash.com/photo-1591231720264-80b4c3b9bc76"
+        }
+        
+        updated_count = 0
+        
+        # Get all motorcycles that need image updates
+        all_motorcycles = await db.motorcycles.find({}).to_list(None)
+        
+        for motorcycle in all_motorcycles:
+            manufacturer = motorcycle.get('manufacturer', '')
+            model = motorcycle.get('model', '')
+            current_image = motorcycle.get('image_url', '')
+            
+            # Check if this motorcycle needs an image update
+            new_image = None
+            
+            # Try exact manufacturer + model match first
+            for (mfr, mdl), img_url in image_mappings.items():
+                if mfr == manufacturer and (mdl == model or mdl == ""):
+                    new_image = img_url
+                    break
+            
+            # If no specific match, use manufacturer fallback
+            if not new_image:
+                for (mfr, mdl), img_url in image_mappings.items():
+                    if mfr == manufacturer and mdl == "":
+                        new_image = img_url
+                        break
+            
+            # Update if we found a better image and it's not already the same
+            if new_image and new_image != current_image:
+                await db.motorcycles.update_one(
+                    {"id": motorcycle["id"]},
+                    {"$set": {"image_url": new_image}}
+                )
+                updated_count += 1
+                print(f"Updated {manufacturer} {model}: {new_image}")
+        
+        return {
+            "message": f"Successfully updated images for {updated_count} motorcycles",
+            "updated_count": updated_count,
+            "total_checked": len(all_motorcycles)
+        }
+        
+    except Exception as e:
+        logging.error(f"Error updating motorcycle images: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Image update failed: {str(e)}")
 @api_router.post("/motorcycles/seed")
 async def seed_motorcycles():
     """Seed the database with comprehensive motorcycle data (1000+ motorcycles)"""
