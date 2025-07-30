@@ -2644,6 +2644,7 @@ async def seed_ratings_only():
             "message": f"Successfully added sample ratings to {ratings_added} motorcycles",
             "motorcycles_processed": len(motorcycles_without_ratings),
             "ratings_added": ratings_added,
+            "ratings_inserted": ratings_inserted,
             "status": "Sample ratings seeding complete!"
         }
         
