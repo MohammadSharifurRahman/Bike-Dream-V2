@@ -6207,17 +6207,34 @@ const MainAppContent = () => {
                   </div>
                 ) : motorcycles.length === 0 ? (
                   <div className="text-center py-12">
-                    <div className="text-gray-500 text-lg">No motorcycles found matching your criteria</div>
-                    <button
-                      onClick={() => {
-                        setFilters({});
-                        setSearchTerm('');
-                        setHideUnavailable(false);
-                        setCurrentPage(1);
-                      }}
-                      className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Clear All Filters
+                    <div className="max-w-md mx-auto">
+                      <div className="text-6xl mb-6">🔍</div>
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">
+                        {selectedRegion ? 
+                          `No motorcycles available in ${selectedRegion === 'IN' ? 'India' : selectedRegion === 'US' ? 'United States' : selectedRegion === 'DE' ? 'Germany' : selectedRegion === 'GB' ? 'United Kingdom' : selectedRegion === 'IT' ? 'Italy' : selectedRegion === 'JP' ? 'Japan' : selectedRegion === 'AU' ? 'Australia' : 'selected region'}` 
+                          : 'No motorcycles found matching your criteria'
+                        }
+                      </h3>
+                      <p className="text-gray-600 mb-6">
+                        {selectedRegion ? 
+                          'This region may not have motorcycle availability data. Try selecting "All Countries" to view the complete catalog.' 
+                          : 'Try adjusting your search terms or filters to find motorcycles.'
+                        }
+                      </p>
+                      <button
+                        onClick={() => {
+                          setFilters({});
+                          setSearchTerm('');
+                          setHideUnavailable(false);
+                          setSelectedRegion('');
+                          setCurrentPage(1);
+                        }}
+                        className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                      >
+                        Clear All Filters
+                      </button>
+                    </div>
+                  </div>
                     </button>
                   </div>
                 ) : (
