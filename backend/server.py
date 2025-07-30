@@ -979,6 +979,31 @@ async def delete_banner(banner_id: str, admin_user: User = Depends(require_admin
         print(f"Error deleting banner: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete banner: {str(e)}")
 
+# Test endpoint for making a user admin (for testing purposes only)
+@api_router.post("/test/make-admin")
+async def make_user_admin(request: dict):
+    """Test endpoint to make a user admin (for testing purposes only)"""
+    try:
+        user_id = request.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="user_id is required")
+        
+        # Update user role to Admin
+        result = await db.users.update_one(
+            {"id": user_id},
+            {"$set": {"role": "Admin"}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return {"message": "User role updated to Admin successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update user role: {str(e)}")
+
 # Phase 3: Admin Dashboard APIs
 @api_router.get("/admin/users")
 async def get_all_users(admin_user: User = Depends(require_admin)):
