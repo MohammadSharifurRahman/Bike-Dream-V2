@@ -55,6 +55,7 @@ class User(BaseModel):
     password_hash: Optional[str] = None  # For email/password auth
     google_id: Optional[str] = None      # For Google OAuth
     auth_method: str = Field(default="password")  # "password" or "google" or "emergent"
+    role: str = Field(default="User")  # "Admin", "Moderator", or "User"
     created_at: datetime = Field(default_factory=datetime.utcnow)
     favorite_motorcycles: List[str] = Field(default_factory=list)
 
