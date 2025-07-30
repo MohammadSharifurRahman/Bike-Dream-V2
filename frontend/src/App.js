@@ -5582,6 +5582,11 @@ const MainAppContent = () => {
         params.append('hide_unavailable', 'true');
       }
       
+      // Add region filter
+      if (selectedRegion) {
+        params.append('region', selectedRegion);
+      }
+      
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== null && value !== '' && value !== undefined) {
           params.append(key, value);
