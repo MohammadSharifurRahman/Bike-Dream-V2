@@ -269,9 +269,16 @@ const AutoCompleteSearchBar = ({
   };
 
   const handleSuggestionClick = (suggestion) => {
-    setSearchTerm(suggestion.value);
-    setShowSuggestions(false);
-    onSearchSelect(suggestion);
+    try {
+      if (!suggestion || !suggestion.value) {
+        return;
+      }
+      setSearchTerm(suggestion.value);
+      setShowSuggestions(false);
+      onSearchSelect(suggestion);
+    } catch (error) {
+      console.error('Error handling suggestion click:', error);
+    }
   };
 
   const handleSubmit = (e) => {
