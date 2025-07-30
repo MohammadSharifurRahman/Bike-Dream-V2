@@ -510,9 +510,7 @@ const ComparisonModal = ({ comparisonList, onClose }) => {
         setError(null);
         
         const motorcycleIds = comparisonList.map(m => m.id);
-        const response = await axios.post(`${API}/motorcycles/compare`, {
-          motorcycle_ids: motorcycleIds
-        });
+        const response = await axios.post(`${API}/motorcycles/compare`, motorcycleIds);
         
         setComparisonData(response.data);
       } catch (error) {
