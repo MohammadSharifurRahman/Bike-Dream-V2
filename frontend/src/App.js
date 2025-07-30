@@ -317,7 +317,8 @@ const AutoCompleteSearchBar = ({
             onBlur={(e) => {
               // Delay hiding suggestions to allow click events
               setTimeout(() => {
-                if (!e.currentTarget.contains(document.activeElement)) {
+                const activeElement = document.activeElement;
+                if (!activeElement || !e.currentTarget.contains(activeElement)) {
                   setShowSuggestions(false);
                 }
               }, 200);
