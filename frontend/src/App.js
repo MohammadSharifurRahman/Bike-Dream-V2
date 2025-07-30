@@ -2632,12 +2632,28 @@ const MotorcycleCard = ({ motorcycle, onClick, showFavoriteButton = true, onAddT
         
         <div className="flex items-center justify-between">
           <span className="text-2xl font-bold text-green-600">${motorcycle.price_usd.toLocaleString()}</span>
-          <button 
-            onClick={handleCardClick}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            View Details
-          </button>
+          <div className="flex space-x-2">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToComparison && onAddToComparison(motorcycle);
+              }}
+              disabled={comparisonList && comparisonList.some(item => item.id === motorcycle.id)}
+              className={`px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                comparisonList && comparisonList.some(item => item.id === motorcycle.id)
+                  ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {comparisonList && comparisonList.some(item => item.id === motorcycle.id) ? '✓ Added' : '⚖️ Compare'}
+            </button>
+            <button 
+              onClick={handleCardClick}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              View Details
+            </button>
+          </div>
         </div>
       </div>
     </div>
