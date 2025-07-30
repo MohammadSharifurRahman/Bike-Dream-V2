@@ -788,13 +788,14 @@ async def get_user_role(current_user: User = Depends(get_current_user)):
     return current_user.role if current_user else "User"
 
 # Helper function for optional auth
-async def get_current_user_optional(authorization: Optional[str] = Header(None)) -> Optional[User]:
+async def get_current_user_optional(request: Request) -> Optional[User]:
     """Get current user if authenticated, otherwise return None"""
-    if not authorization:
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
         return None
     
     try:
-        return await get_current_user(authorization=authorization)
+        return await get_current_user(authorization=auth_header)
     except:
         return None
 
