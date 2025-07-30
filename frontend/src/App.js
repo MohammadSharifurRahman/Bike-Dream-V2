@@ -4349,6 +4349,8 @@ function App() {
           <CommunityPage />
         ) : currentView === 'achievements' ? (
           <AchievementsPage />
+        ) : currentView === 'analytics' ? (
+          <AnalyticsPage />
         ) : currentView === 'home' ? (
           // Home Page
           <>
