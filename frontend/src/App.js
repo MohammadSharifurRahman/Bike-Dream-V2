@@ -3045,7 +3045,13 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
   useEffect(() => {
     setImgSrc(src);
     setHasError(false);
-    setIsLoading(true);
+    
+    // Handle base64 images - they load instantly and don't need loading state
+    if (src && src.startsWith('data:image')) {
+      setIsLoading(false); // Base64 images don't need loading time
+    } else {
+      setIsLoading(true); // External images need loading state
+    }
   }, [src]);
   
   return (
