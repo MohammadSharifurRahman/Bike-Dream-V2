@@ -2597,7 +2597,7 @@ async def get_categories_summary(
         if region:
             region_manufacturers = {
                 "US": ["Harley-Davidson", "Indian", "Kawasaki", "Yamaha", "Honda", "Suzuki", "Ducati"],
-                "IN": ["Hero", "Bajaj", "TVS", "Royal Enfield", "Honda", "Yamaha", "Suzuki"],
+                "IN": ["Hero", "Bajaj", "TVS", "Royal Enfield", "Honda", "Yamaha", "Suzuki", "KTM"],
                 "JP": ["Honda", "Yamaha", "Suzuki", "Kawasaki"],
                 "DE": ["BMW", "KTM", "Ducati", "Honda", "Yamaha"],
                 "GB": ["Triumph", "Honda", "Yamaha", "Suzuki", "Kawasaki"],
