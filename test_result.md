@@ -1151,10 +1151,7 @@ test_plan:
     - "AutoComplete Search Bar Component Integration"
     - "Hide Unavailable Toggle Component Integration"
     - "Site-wide Search Integration"
-  stuck_tasks:
-    - "AutoComplete Search Bar Component Integration"
-    - "Hide Unavailable Toggle Component Integration"
-    - "Site-wide Search Integration"
+  stuck_tasks: []
   test_all: false
   test_priority: "stuck_first"
 
