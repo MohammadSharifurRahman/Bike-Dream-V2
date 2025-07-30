@@ -3208,8 +3208,17 @@ async def submit_user_request(
     request: Request,
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Submit a user request for vendor suggestions, features, etc."""
+    """Submit a user request for vendor suggestions, features, etc. (Public endpoint)"""
     try:
+        # Try to get current user if available (optional)
+        current_user = None
+        auth_header = request.headers.get('Authorization')
+        if auth_header:
+            try:
+                current_user = await get_current_user(authorization=auth_header)
+            except:
+                pass  # Ignore auth errors for public endpoint
+        
         # Create user request
         user_request = UserRequest(
             user_id=current_user.id if current_user else None,
