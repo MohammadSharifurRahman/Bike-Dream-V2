@@ -894,37 +894,46 @@ frontend:
     implemented: true
     working: false
     file: "/app/frontend/src/App.js"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Created AutoCompleteSearchBar component with debounced search suggestions, integrated into homepage and browse page. Component fetches suggestions from /api/motorcycles/search/suggestions endpoint and handles user selection and input changes."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL JAVASCRIPT ERRORS BLOCKING FUNCTIONALITY: Red screen runtime errors detected with 'Cannot read properties of null (reading 'contains')' and 'TypeError: Cannot read properties of null (reading 'contains')'. AutoComplete search bar component is present on homepage and browse page, but JavaScript errors prevent proper interaction. Homepage search shows dropdown but no suggestion items. Browse page search completely blocked by iframe overlay from error handler. Component implementation exists but is non-functional due to fundamental JavaScript runtime errors that must be fixed first."
 
   - task: "Hide Unavailable Toggle Component Integration"
     implemented: true
     working: false
     file: "/app/frontend/src/App.js"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Created HideUnavailableToggle component and integrated into homepage and browse page. Component provides toggle switch to hide/show discontinued and unavailable motorcycles, with clear status indication."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL JAVASCRIPT ERRORS BLOCKING FUNCTIONALITY: Hide Unavailable toggle component is visually present on homepage with proper styling ('Hide Unavailable Bikes' label and toggle switch), but JavaScript runtime errors prevent interaction testing. Red screen error overlay blocks all user interactions. Component appears correctly implemented but cannot be tested due to fundamental JavaScript errors that must be resolved first."
 
   - task: "Site-wide Search Integration"
     implemented: true
     working: false
     file: "/app/frontend/src/App.js"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Integrated search functionality into main App component with searchTerm state, handleSearchSelect and handleSearchChange functions. Added useEffect to trigger motorcycle refetch when search terms change. Updated fetchMotorcycles function to include search parameters."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL JAVASCRIPT ERRORS BLOCKING FUNCTIONALITY: Site-wide search integration cannot be tested due to red screen JavaScript runtime errors. Search input fields are present on both homepage and browse page, but iframe overlay from error handler prevents all interactions. Fundamental JavaScript errors with null reference issues ('Cannot read properties of null') must be fixed before search integration can be properly tested and validated."
 
 frontend:
   - task: "Authentication System Implementation"
