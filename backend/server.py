@@ -2471,7 +2471,7 @@ async def get_motorcycle(motorcycle_id: str, region: str = Query("US")):
 
 @api_router.get("/motorcycles/categories/summary", response_model=List[CategorySummary])
 async def get_categories_summary(hide_unavailable: Optional[bool] = Query(False, description="Hide discontinued and unavailable motorcycles")):
-    """Get categories with top motorcycles by user interest for homepage"""
+    """Get categories with top motorcycles by user interest for homepage - shows unique models only"""
     categories = ["Sport", "Cruiser", "Touring", "Adventure", "Naked", "Vintage", "Electric", "Scooter", "Standard", "Enduro", "Motocross"]
     
     category_summaries = []
@@ -2486,14 +2486,41 @@ async def get_categories_summary(hide_unavailable: Optional[bool] = Query(False,
         # Get count for this category
         count = await db.motorcycles.count_documents(base_query)
         
-        # Get top 3 motorcycles by user interest score for this category
-        featured_motorcycles = await db.motorcycles.find(base_query).sort("user_interest_score", -1).limit(3).to_list(3)
+        # Get unique models with lowest prices - use aggregation to group by manufacturer + model
+        featured_pipeline = [
+            {"$match": base_query},
+            {
+                "$group": {
+                    "_id": {
+                        "manufacturer": "$manufacturer", 
+                        "model": "$model"
+                    },
+                    "motorcycle": {"$first": "$$ROOT"},  # Get first document
+                    "lowest_price": {"$min": "$price_usd"},  # Track lowest price
+                    "user_interest_score": {"$max": "$user_interest_score"}  # Use highest interest score
+                }
+            },
+            {
+                "$replaceRoot": {
+                    "newRoot": {
+                        "$mergeObjects": [
+                            "$motorcycle",
+                            {"price_usd": "$lowest_price"}  # Use the lowest price
+                        ]
+                    }
+                }
+            },
+            {"$sort": {"user_interest_score": -1}},  # Sort by user interest
+            {"$limit": 3}
+        ]
         
-        if featured_motorcycles:  # Only include categories that have motorcycles
+        featured_results = await db.motorcycles.aggregate(featured_pipeline).to_list(3)
+        
+        if featured_results:  # Only include categories that have motorcycles
             category_summary = CategorySummary(
                 category=category,
                 count=count,
-                featured_motorcycles=[Motorcycle(**moto) for moto in featured_motorcycles]
+                featured_motorcycles=[Motorcycle(**moto) for moto in featured_results]
             )
             category_summaries.append(category_summary)
     
