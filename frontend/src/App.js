@@ -3990,7 +3990,7 @@ const UserRequestsPage = () => {
 };
 
 function App() {
-  const [currentView, setCurrentView] = useState('home'); // 'home', 'browse', 'profile', 'requests', 'garage', 'community', or 'achievements'
+  const [currentView, setCurrentView] = useState('home'); // 'home', 'browse', 'profile', 'requests', 'garage', 'community', 'achievements', or 'analytics'
   const [motorcycles, setMotorcycles] = useState([]);
   const [categories, setCategories] = useState([]);
   const [availableFeatures, setAvailableFeatures] = useState([]);
