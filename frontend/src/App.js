@@ -3028,11 +3028,12 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  const placeholderImage = "https://images.unsplash.com/photo-1558980664-2cd663cf8dde?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwxfHxtb3RvcmN5Y2xlfGVufDB8fHxibGFja19hbmRfd2hpdGV8MTc1MzgxMDQyNXww&ixlib=rb-4.1.0&q=85";
+  // Simple SVG placeholder that always works - no external dependencies
+  const placeholderSVG = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9Ijk1IiBjeT0iMTg1IiByPSI0MCIgZmlsbD0iIzRCNUM2OCIvPgo8Y2lyY2xlIGN4PSIzMDUiIGN5PSIxODUiIHI9IjQwIiBmaWxsPSIjNEI1QzY4Ii8+CjxwYXRoIGQ9Ik05NSAxMDBMMjAwIDkwTDMwNSAxMDBMMzA1IDE0NUg5NVYxMDBaIiBmaWxsPSIjMzc0MzUxIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iNDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzZCNzI4MCI+TW90b3JjeWNsZTwvdGV4dD4KPHN2Zz4=";
   
   const handleImageError = () => {
-    if (showPlaceholderOnError && imgSrc !== placeholderImage) {
-      setImgSrc(placeholderImage);
+    if (showPlaceholderOnError && imgSrc !== placeholderSVG) {
+      setImgSrc(placeholderSVG);
       setHasError(true);
     }
     setIsLoading(false);
@@ -3046,13 +3047,24 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
     setImgSrc(src);
     setHasError(false);
     
-    // Handle base64 images - they load instantly and don't need loading state
+    // Handle base64 images - they load instantly
     if (src && src.startsWith('data:image')) {
-      setIsLoading(false); // Base64 images don't need loading time
+      setIsLoading(false);
     } else {
-      setIsLoading(true); // External images need loading state
+      setIsLoading(true);
+      
+      // For external images, set a timeout to show placeholder if loading takes too long
+      const loadingTimeout = setTimeout(() => {
+        if (showPlaceholderOnError) {
+          setImgSrc(placeholderSVG);
+          setHasError(true);
+          setIsLoading(false);
+        }
+      }, 3000); // Show placeholder after 3 seconds of loading
+      
+      return () => clearTimeout(loadingTimeout);
     }
-  }, [src]);
+  }, [src, showPlaceholderOnError]);
   
   return (
     <div className="relative">
@@ -3069,8 +3081,8 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
         onLoad={handleImageLoad}
       />
       {hasError && (
-        <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded text-xs">
-          Generic Image
+        <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-xs">
+          Placeholder
         </div>
       )}
     </div>
