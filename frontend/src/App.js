@@ -5732,7 +5732,16 @@ const MainAppContent = () => {
 
   const fetchDatabaseStats = async () => {
     try {
-      const response = await axios.get(`${API}/stats`);
+      const params = new URLSearchParams();
+      if (hideUnavailable) {
+        params.append('hide_unavailable', 'true');
+      }
+      if (selectedRegion) {
+        params.append('region', selectedRegion);
+      }
+      
+      const url = `${API}/stats${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await axios.get(url);
       setDatabaseStats({
         totalMotorcycles: response.data.total_motorcycles,
         totalManufacturers: response.data.manufacturers.length // Get length of manufacturers array
