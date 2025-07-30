@@ -2470,19 +2470,24 @@ async def get_motorcycle(motorcycle_id: str, region: str = Query("US")):
     return motorcycle_with_pricing
 
 @api_router.get("/motorcycles/categories/summary", response_model=List[CategorySummary])
-async def get_categories_summary():
+async def get_categories_summary(hide_unavailable: Optional[bool] = Query(False, description="Hide discontinued and unavailable motorcycles")):
     """Get categories with top motorcycles by user interest for homepage"""
     categories = ["Sport", "Cruiser", "Touring", "Adventure", "Naked", "Vintage", "Electric", "Scooter", "Standard", "Enduro", "Motocross"]
     
     category_summaries = []
     for category in categories:
+        # Base query for this category
+        base_query = {"category": {"$regex": category, "$options": "i"}}
+        
+        # Add hide unavailable filter if requested
+        if hide_unavailable:
+            base_query["availability"] = {"$nin": ["Discontinued", "Not Available", "Out of Stock", "Collector Item"]}
+        
         # Get count for this category
-        count = await db.motorcycles.count_documents({"category": {"$regex": category, "$options": "i"}})
+        count = await db.motorcycles.count_documents(base_query)
         
         # Get top 3 motorcycles by user interest score for this category
-        featured_motorcycles = await db.motorcycles.find(
-            {"category": {"$regex": category, "$options": "i"}}
-        ).sort("user_interest_score", -1).limit(3).to_list(3)
+        featured_motorcycles = await db.motorcycles.find(base_query).sort("user_interest_score", -1).limit(3).to_list(3)
         
         if featured_motorcycles:  # Only include categories that have motorcycles
             category_summary = CategorySummary(
