@@ -6141,6 +6141,14 @@ const MainAppContent = () => {
                       {hideUnavailable ? 'Showing available only' : 'Showing all motorcycles'}
                     </div>
                   </div>
+                  
+                  {/* Country Filter for Browse Page */}
+                  <div className="flex justify-center">
+                    <CountryFilterSelect
+                      selectedRegion={selectedRegion}
+                      onRegionChange={setSelectedRegion}
+                    />
+                  </div>
                 </div>
 
                 {loading ? (
