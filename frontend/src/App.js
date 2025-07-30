@@ -4521,6 +4521,10 @@ function App() {
   // New states for Phase 1 features
   const [searchTerm, setSearchTerm] = useState('');
   const [hideUnavailable, setHideUnavailable] = useState(false);
+  
+  // New states for Phase 2 features - Motorcycle Comparison
+  const [comparisonList, setComparisonList] = useState([]);
+  const [showComparison, setShowComparison] = useState(false);
 
   // Analytics helper functions
   const logSearchAnalytics = async (searchTerm, searchType = 'general', filtersApplied = {}, resultsCount = 0, clickedResults = []) => {
