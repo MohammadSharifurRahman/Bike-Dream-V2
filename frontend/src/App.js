@@ -6104,6 +6104,33 @@ const MainAppContent = () => {
                 <div className="flex justify-center items-center h-64">
                   <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
                 </div>
+              ) : categories.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="max-w-md mx-auto">
+                    <div className="text-6xl mb-6">🏍️</div>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-4">
+                      {selectedRegion ? 
+                        `No motorcycles available in ${selectedRegion === 'IN' ? 'India' : selectedRegion === 'US' ? 'United States' : selectedRegion === 'DE' ? 'Germany' : selectedRegion === 'GB' ? 'United Kingdom' : selectedRegion === 'IT' ? 'Italy' : selectedRegion === 'JP' ? 'Japan' : selectedRegion === 'AU' ? 'Australia' : 'selected region'}` 
+                        : 'No motorcycles found'
+                      }
+                    </h3>
+                    <p className="text-gray-600 mb-6">
+                      {selectedRegion ? 
+                        'Try selecting "All Countries" to view the complete motorcycle catalog, or choose a different region.' 
+                        : 'No motorcycles match your current criteria.'
+                      }
+                    </p>
+                    <button
+                      onClick={() => {
+                        setSelectedRegion('');
+                        setHideUnavailable(false);
+                      }}
+                      className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      View All Motorcycles
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-16">
                   {categories.map((category) => (
