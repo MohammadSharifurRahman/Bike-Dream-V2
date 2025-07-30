@@ -5015,6 +5015,27 @@ function App() {
                   <p className="text-gray-600">Complete motorcycle database from 1900 to present</p>
                 </div>
 
+                {/* Search and Toggle Controls */}
+                <div className="mb-6 space-y-4">
+                  <AutoCompleteSearchBar
+                    placeholder="Search motorcycles, brands, and models..."
+                    onSearchSelect={handleSearchSelect}
+                    onSearchChange={handleSearchChange}
+                  />
+                  <div className="flex justify-between items-center">
+                    <HideUnavailableToggle
+                      isHidden={hideUnavailable}
+                      onToggle={handleHideUnavailableToggle}
+                    />
+                    <div className="text-sm text-gray-500">
+                      {searchTerm && (
+                        <span>Searching for: "<strong>{searchTerm}</strong>" • </span>
+                      )}
+                      {hideUnavailable ? 'Showing available only' : 'Showing all motorcycles'}
+                    </div>
+                  </div>
+                </div>
+
                 {loading ? (
                   <div className="flex justify-center items-center h-64">
                     <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
