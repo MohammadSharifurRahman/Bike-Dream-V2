@@ -214,7 +214,7 @@ backend:
         comment: "Implemented GET /api/motorcycles/search/suggestions endpoint with complex MongoDB aggregation pipeline to search across both motorcycle model names and manufacturer names. Returns suggestions with type indicator (manufacturer/model), display text with counts, and proper ranking by result count."
       - working: true
         agent: "testing"
-        comment: "✅ MOTORCYCLE SEARCH AUTO-SUGGESTIONS API VERIFIED: GET /api/motorcycles/search/suggestions endpoint working perfectly with comprehensive testing. Successfully tested partial manufacturer names (yam→Yamaha), full manufacturer names, motorcycle model names (R1, ninja), category searches, and edge cases. Response structure includes proper 'query', 'suggestions', and 'total' fields. Each suggestion contains 'value', 'type' (manufacturer/model), 'display_text', and 'count' fields as required. Limit parameter working correctly. Empty query handling proper. MongoDB aggregation pipeline performing complex searches across both motorcycle models and manufacturers with proper ranking by result count. All 11 test scenarios passed with 100% success rate."
+        comment: "✅ SEARCH AUTO-SUGGESTIONS API VERIFIED: GET /api/motorcycles/search/suggestions working perfectly with 11 comprehensive test scenarios. Successfully handles partial/full manufacturer names (yam→Yamaha, duc→Ducati), model names (R1, ninja), category searches, edge cases, and limit parameter validation. Response structure verified with proper 'query', 'suggestions', 'total' fields and suggestion objects containing correct 'value', 'type', 'display_text', 'count' fields."
 
   - task: "Hide Unavailable Bikes Filter API Enhancement"
     implemented: true
@@ -232,7 +232,7 @@ backend:
         comment: "Enhanced GET /api/motorcycles endpoint with hide_unavailable boolean parameter that filters out motorcycles with availability status of 'Discontinued', 'Not Available', 'Out of Stock', or 'Collector Item' when enabled."
       - working: true
         agent: "testing"
-        comment: "✅ HIDE UNAVAILABLE BIKES FILTER API VERIFIED: GET /api/motorcycles with hide_unavailable parameter working flawlessly. Successfully tested hide_unavailable=true properly filters out motorcycles with availability status 'Discontinued', 'Not Available', 'Out of Stock', and 'Collector Item'. hide_unavailable=false shows all motorcycles as expected. Combined filtering with other parameters (manufacturer, category) works correctly. Pagination integration working properly with the unavailable filter. All 5 test scenarios passed including edge cases and combined filter testing. Filter enhancement ready for production use."
+        comment: "✅ HIDE UNAVAILABLE FILTER VERIFIED: GET /api/motorcycles with hide_unavailable parameter working flawlessly with 5 comprehensive test scenarios. Successfully filters out motorcycles with availability status 'Discontinued', 'Not Available', 'Out of Stock', and 'Collector Item' when hide_unavailable=true. Works correctly with combined filtering and pagination. All backend functionality tested and production-ready."
 
 backend:
   - task: "Virtual Garage API - Add to Garage"
