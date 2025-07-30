@@ -5424,6 +5424,8 @@ function App() {
                       category={category}
                       onMotorcycleClick={setSelectedMotorcycle}
                       onViewAllClick={handleViewAllCategory}
+                      onAddToComparison={handleAddToComparison}
+                      comparisonList={comparisonList}
                     />
                   ))}
                 </div>
