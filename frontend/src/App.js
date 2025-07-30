@@ -5044,10 +5044,15 @@ function App() {
                   <div className="text-center py-12">
                     <div className="text-gray-500 text-lg">No motorcycles found matching your criteria</div>
                     <button
-                      onClick={() => {setFilters({}); setCurrentPage(1);}}
+                      onClick={() => {
+                        setFilters({});
+                        setSearchTerm('');
+                        setHideUnavailable(false);
+                        setCurrentPage(1);
+                      }}
                       className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                     >
-                      Clear Filters
+                      Clear All Filters
                     </button>
                   </div>
                 ) : (
