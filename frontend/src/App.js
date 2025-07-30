@@ -5700,6 +5700,9 @@ const MainAppContent = () => {
       if (hideUnavailable) {
         params.append('hide_unavailable', 'true');
       }
+      if (selectedRegion) {
+        params.append('region', selectedRegion);
+      }
       
       const url = `${API}/motorcycles/categories/summary${params.toString() ? '?' + params.toString() : ''}`;
       const response = await axios.get(url);
