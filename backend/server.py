@@ -2368,6 +2368,25 @@ async def get_motorcycles(
     if hide_unavailable:
         query["availability"] = {"$nin": ["Discontinued", "Not Available", "Out of Stock", "Collector Item"]}
     
+    # Region-based filtering (simplified version)
+    if region:
+        # For demo purposes, we'll filter by manufacturer popularity in different regions
+        # In a real implementation, this would be based on actual regional availability data
+        region_manufacturers = {
+            "US": ["Harley-Davidson", "Indian", "Kawasaki", "Yamaha", "Honda", "Suzuki", "Ducati"],
+            "IN": ["Hero", "Bajaj", "TVS", "Royal Enfield", "Honda", "Yamaha", "Suzuki"],
+            "JP": ["Honda", "Yamaha", "Suzuki", "Kawasaki"],
+            "DE": ["BMW", "KTM", "Ducati", "Honda", "Yamaha"],
+            "GB": ["Triumph", "Honda", "Yamaha", "Suzuki", "Kawasaki"],
+            "IT": ["Ducati", "MV Agusta", "Aprilia", "Honda", "Yamaha"],
+            "AU": ["Honda", "Yamaha", "Suzuki", "Kawasaki", "BMW"],
+        }
+        
+        if region in region_manufacturers:
+            # Filter motorcycles by manufacturers commonly available in this region
+            query["manufacturer"] = {"$in": region_manufacturers[region]}
+        # If region not specifically mapped, show all motorcycles (no additional filter)
+    
     # Technical Features filtering
     if transmission_type:
         query["transmission_type"] = transmission_type
