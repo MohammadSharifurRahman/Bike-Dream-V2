@@ -1004,6 +1004,28 @@ async def make_user_admin(request: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update user role: {str(e)}")
 
+# Test endpoint for deleting users (for testing purposes only)
+@api_router.delete("/test/delete-user")
+async def delete_test_user(request: dict):
+    """Test endpoint to delete a user (for testing purposes only)"""
+    try:
+        email = request.get("email")
+        if not email:
+            raise HTTPException(status_code=400, detail="email is required")
+        
+        # Delete user
+        result = await db.users.delete_one({"email": email})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return {"message": "User deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")
+
 # Phase 3: Admin Dashboard APIs
 @api_router.get("/admin/users")
 async def get_all_users(admin_user: User = Depends(require_admin)):
