@@ -2449,6 +2449,27 @@ const AuthModal = ({ isOpen, onClose }) => {
     </div>
   );
 };
+
+// Phase 3: Admin Button Component
+const AdminButton = () => {
+  const { user } = useAuth();
+
+  // Only show admin button for Admin and Moderator roles
+  if (!user || (user.role !== 'Admin' && user.role !== 'Moderator')) {
+    return null;
+  }
+
+  return (
+    <button
+      onClick={() => setShowAdminDashboard(true)}
+      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+      title={`Admin Dashboard (${user.role})`}
+    >
+      🛠️ Admin
+    </button>
+  );
+};
+
 // Authentication Components
 const AuthButton = () => {
   const { user, logout } = useAuth();
