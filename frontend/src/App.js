@@ -495,6 +495,295 @@ const ComparisonFloatingButton = ({ comparisonList, onShowComparison, onRemoveFr
   );
 };
 
+// Motorcycle Comparison Modal Component
+const ComparisonModal = ({ comparisonList, onClose }) => {
+  const [comparisonData, setComparisonData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchComparisonData = async () => {
+      if (!comparisonList || comparisonList.length === 0) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const motorcycleIds = comparisonList.map(m => m.id);
+        const response = await axios.post(`${API}/motorcycles/compare`, {
+          motorcycle_ids: motorcycleIds
+        });
+        
+        setComparisonData(response.data);
+      } catch (error) {
+        console.error('Error fetching comparison data:', error);
+        setError('Failed to load comparison data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchComparisonData();
+  }, [comparisonList]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      onClose();
+    }
+  };
+
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={handleBackdropClick}>
+        <div className="bg-white rounded-lg p-8 max-w-sm">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-3 text-gray-600">Loading comparison...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={handleBackdropClick}>
+        <div className="bg-white rounded-lg p-8 max-w-md">
+          <div className="text-center">
+            <div className="text-red-600 text-xl mb-4">⚠️</div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Comparison Error</h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={onClose}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!comparisonData || !comparisonData.motorcycles) {
+    return null;
+  }
+
+  const motorcycles = comparisonData.motorcycles;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={handleBackdropClick}>
+      <div className="bg-white rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">
+              Motorcycle Comparison ({motorcycles.length} bikes)
+            </h2>
+            <p className="text-gray-600 mt-1">
+              Compare specifications, features, and pricing side-by-side
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium"
+          >
+            ✕ Close
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
+          <div className="p-6">
+            {/* Basic Info Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {motorcycles.map((motorcycle, index) => (
+                <div key={motorcycle.id} className="bg-gray-50 rounded-lg p-4">
+                  <img
+                    src={motorcycle.image_url || '/placeholder-motorcycle.jpg'}
+                    alt={`${motorcycle.manufacturer} ${motorcycle.model}`}
+                    className="w-full h-48 object-cover rounded-lg mb-4"
+                    onError={(e) => {
+                      e.target.src = '/placeholder-motorcycle.jpg';
+                    }}
+                  />
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {motorcycle.manufacturer} {motorcycle.model}
+                    </h3>
+                    <p className="text-gray-600">
+                      {motorcycle.year} • {motorcycle.category}
+                    </p>
+                    <div className="mt-2 flex items-center justify-center space-x-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <svg
+                          key={star}
+                          className={`w-4 h-4 ${star <= motorcycle.ratings.average_rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      ))}
+                      <span className="text-sm text-gray-600 ml-2">
+                        ({motorcycle.ratings.total_ratings} reviews)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Comparison Table */}
+            <div className="space-y-8">
+              {/* Technical Specifications */}
+              <ComparisonSection
+                title="Technical Specifications"
+                icon="⚙️"
+                data={motorcycles}
+                fields={[
+                  { key: 'technical_specs.engine_displacement_cc', label: 'Engine Displacement', unit: 'cc' },
+                  { key: 'technical_specs.horsepower', label: 'Horsepower', unit: 'hp' },
+                  { key: 'technical_specs.torque_nm', label: 'Torque', unit: 'Nm' },
+                  { key: 'technical_specs.top_speed_kmh', label: 'Top Speed', unit: 'km/h' },
+                  { key: 'technical_specs.weight_kg', label: 'Weight', unit: 'kg' },
+                  { key: 'technical_specs.fuel_capacity_liters', label: 'Fuel Capacity', unit: 'L' },
+                  { key: 'technical_specs.mileage_kmpl', label: 'Mileage', unit: 'km/L' },
+                ]}
+              />
+
+              {/* Features & Technology */}
+              <ComparisonSection
+                title="Features & Technology"
+                icon="🔧"
+                data={motorcycles}
+                fields={[
+                  { key: 'features.transmission_type', label: 'Transmission' },
+                  { key: 'features.engine_type', label: 'Engine Type' },
+                  { key: 'features.braking_system', label: 'Braking System' },
+                  { key: 'features.suspension_type', label: 'Suspension' },
+                  { key: 'features.fuel_type', label: 'Fuel Type' },
+                  { key: 'features.abs_available', label: 'ABS Available', type: 'boolean' },
+                ]}
+              />
+
+              {/* Pricing & Availability */}
+              <ComparisonSection
+                title="Pricing & Availability"
+                icon="💰"
+                data={motorcycles}
+                fields={[
+                  { key: 'pricing.base_price_usd', label: 'Base Price', unit: 'USD', type: 'currency' },
+                  { key: 'pricing.availability', label: 'Availability' },
+                  { key: 'pricing.price_range', label: 'Price Range' },
+                ]}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-center p-4 border-t border-gray-200 bg-gray-50">
+          <button
+            onClick={onClose}
+            className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 font-medium"
+          >
+            Back to Browse
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Helper component for comparison sections
+const ComparisonSection = ({ title, icon, data, fields }) => {
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+        <span className="mr-2">{icon}</span>
+        {title}
+      </h3>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="text-left py-2 pr-4 font-semibold text-gray-700">Specification</th>
+              {data.map((motorcycle, index) => (
+                <th key={motorcycle.id} className="text-center py-2 px-4 font-semibold text-gray-700 min-w-32">
+                  {motorcycle.manufacturer}<br/>
+                  <span className="font-normal text-sm">{motorcycle.model}</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {fields.map((field, fieldIndex) => (
+              <tr key={fieldIndex} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="py-3 pr-4 font-medium text-gray-700">{field.label}</td>
+                {data.map((motorcycle) => {
+                  const value = getNestedValue(motorcycle, field.key);
+                  return (
+                    <td key={motorcycle.id} className="py-3 px-4 text-center">
+                      {formatValue(value, field.type, field.unit)}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// Helper function to get nested object values
+const getNestedValue = (obj, path) => {
+  return path.split('.').reduce((current, key) => current?.[key], obj);
+};
+
+// Helper function to format values
+const formatValue = (value, type, unit) => {
+  if (value === null || value === undefined || value === '') {
+    return <span className="text-gray-400">N/A</span>;
+  }
+  
+  if (type === 'boolean') {
+    return (
+      <span className={`px-2 py-1 rounded text-sm ${value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        {value ? 'Yes' : 'No'}
+      </span>
+    );
+  }
+  
+  if (type === 'currency') {
+    return `$${value.toLocaleString()}`;
+  }
+  
+  if (unit) {
+    return `${value} ${unit}`;
+  }
+  
+  return value;
+};
+
 // Vendor Pricing Component
 const VendorPricing = ({ motorcycle }) => {
   const [vendorPrices, setVendorPrices] = useState([]);
