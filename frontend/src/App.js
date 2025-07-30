@@ -5532,6 +5532,21 @@ function App() {
             onClose={() => setSelectedMotorcycle(null)}
           />
         )}
+        
+        {/* Phase 2: Comparison Components */}
+        <ComparisonFloatingButton
+          comparisonList={comparisonList}
+          onShowComparison={handleShowComparison}
+          onRemoveFromComparison={handleRemoveFromComparison}
+          onClearComparison={handleClearComparison}
+        />
+        
+        {showComparison && (
+          <ComparisonModal
+            comparisonList={comparisonList}
+            onClose={handleCloseComparison}
+          />
+        )}
       </div>
     </AuthProvider>
   );
