@@ -3500,6 +3500,10 @@ function App() {
       setCurrentView('requests');
     } else if (path === '/garage') {
       setCurrentView('garage');
+    } else if (path === '/community') {
+      setCurrentView('community');
+    } else if (path === '/achievements') {
+      setCurrentView('achievements');
     } else {
       setCurrentView('home');
     }
