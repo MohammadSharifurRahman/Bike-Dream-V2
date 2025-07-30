@@ -5434,7 +5434,8 @@ const UserRequestsPage = () => {
   );
 };
 
-function App() {
+// Main App Content Component (separated from App wrapper)
+const MainAppContent = () => {
   const [currentView, setCurrentView] = useState('home'); // 'home', 'browse', 'profile', 'requests', 'garage', 'community', 'achievements', or 'analytics'
   const [motorcycles, setMotorcycles] = useState([]);
   const [categories, setCategories] = useState([]);
