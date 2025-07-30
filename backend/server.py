@@ -2489,7 +2489,10 @@ async def get_motorcycle(motorcycle_id: str, region: str = Query("US")):
     return motorcycle_with_pricing
 
 @api_router.get("/motorcycles/categories/summary", response_model=List[CategorySummary])
-async def get_categories_summary(hide_unavailable: Optional[bool] = Query(False, description="Hide discontinued and unavailable motorcycles")):
+async def get_categories_summary(
+    hide_unavailable: Optional[bool] = Query(False, description="Hide discontinued and unavailable motorcycles"),
+    region: Optional[str] = Query(None, description="Filter by region availability (country code)")
+):
     """Get categories with top motorcycles by user interest for homepage - shows unique models only"""
     categories = ["Sport", "Cruiser", "Touring", "Adventure", "Naked", "Vintage", "Electric", "Scooter", "Standard", "Enduro", "Motocross"]
     
