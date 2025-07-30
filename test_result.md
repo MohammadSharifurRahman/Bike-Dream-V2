@@ -235,6 +235,19 @@ backend:
         comment: "✅ HIDE UNAVAILABLE FILTER VERIFIED: GET /api/motorcycles with hide_unavailable parameter working flawlessly with 5 comprehensive test scenarios. Successfully filters out motorcycles with availability status 'Discontinued', 'Not Available', 'Out of Stock', and 'Collector Item' when hide_unavailable=true. Works correctly with combined filtering and pagination. All backend functionality tested and production-ready."
 
 backend:
+  - task: "Motorcycle Comparison API Endpoint"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Starting Phase 2 implementation: Need to create POST /api/motorcycles/compare endpoint that accepts up to 3 motorcycle IDs and returns detailed comparison data including technical specs, vendor availability, pricing, ratings, and images for side-by-side display in frontend modal."
+
+backend:
   - task: "Virtual Garage API - Add to Garage"
     implemented: true
     working: true
