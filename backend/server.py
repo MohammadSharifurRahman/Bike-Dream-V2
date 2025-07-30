@@ -818,6 +818,167 @@ async def get_supported_regions():
         "default_region": "US"
     }
 
+# Phase 3: Scrolling Text Banner Management API
+@api_router.get("/banners")
+async def get_active_banners():
+    """Get all active banners for public display (no authentication required)"""
+    try:
+        current_time = datetime.utcnow()
+        
+        # Query for active banners with optional time filtering
+        query = {
+            "is_active": True,
+            "$or": [
+                {"starts_at": None},
+                {"starts_at": {"$lte": current_time}}
+            ],
+            "$or": [  
+                {"ends_at": None},
+                {"ends_at": {"$gte": current_time}}
+            ]
+        }
+        
+        banners_cursor = db.banners.find(query).sort("priority", -1).limit(10)
+        banners = await banners_cursor.to_list(10)
+        
+        # Format banners for frontend
+        formatted_banners = []
+        for banner in banners:
+            formatted_banners.append({
+                "id": banner["id"],
+                "message": banner["message"],
+                "priority": banner["priority"],
+                "created_at": banner["created_at"].isoformat() if banner.get("created_at") else None
+            })
+        
+        return {
+            "banners": formatted_banners,
+            "total_count": len(formatted_banners),
+            "last_updated": current_time.isoformat()
+        }
+        
+    except Exception as e:
+        print(f"Error fetching active banners: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch banners: {str(e)}")
+
+@api_router.get("/admin/banners")
+async def get_all_banners(admin_user: User = Depends(require_admin_or_moderator)):
+    """Get all banners for admin management (Admin/Moderator only)"""
+    try:
+        banners_cursor = db.banners.find({}).sort("created_at", -1)
+        banners = await banners_cursor.to_list(100)
+        
+        return {
+            "banners": banners,
+            "total_count": len(banners)
+        }
+        
+    except Exception as e:
+        print(f"Error fetching admin banners: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch admin banners: {str(e)}")
+
+@api_router.post("/admin/banners")
+async def create_banner(banner_data: BannerCreate, admin_user: User = Depends(require_admin_or_moderator)):
+    """Create new banner (Admin/Moderator only)"""
+    try:
+        # Validate time ranges
+        if banner_data.starts_at and banner_data.ends_at:
+            if banner_data.starts_at >= banner_data.ends_at:
+                raise HTTPException(status_code=400, detail="Start time must be before end time")
+        
+        # Create banner
+        banner = Banner(
+            **banner_data.dict(),
+            created_by=admin_user.id
+        )
+        
+        banner_dict = banner.dict()
+        await db.banners.insert_one(banner_dict)
+        
+        return {
+            "message": "Banner created successfully",
+            "banner": banner_dict
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error creating banner: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create banner: {str(e)}")
+
+@api_router.put("/admin/banners/{banner_id}")
+async def update_banner(banner_id: str, banner_update: BannerUpdate, admin_user: User = Depends(require_admin_or_moderator)):
+    """Update banner (Admin/Moderator only)"""
+    try:
+        # Check if banner exists
+        banner = await db.banners.find_one({"id": banner_id})
+        if not banner:
+            raise HTTPException(status_code=404, detail="Banner not found")
+        
+        # Prepare update data
+        update_data = {}
+        if banner_update.message is not None:
+            update_data["message"] = banner_update.message
+        if banner_update.is_active is not None:
+            update_data["is_active"] = banner_update.is_active
+        if banner_update.priority is not None:
+            update_data["priority"] = banner_update.priority
+        if banner_update.starts_at is not None:
+            update_data["starts_at"] = banner_update.starts_at
+        if banner_update.ends_at is not None:
+            update_data["ends_at"] = banner_update.ends_at
+        
+        # Validate time ranges if both are being updated
+        if "starts_at" in update_data and "ends_at" in update_data:
+            if update_data["starts_at"] and update_data["ends_at"]:
+                if update_data["starts_at"] >= update_data["ends_at"]:
+                    raise HTTPException(status_code=400, detail="Start time must be before end time")
+        
+        update_data["updated_at"] = datetime.utcnow()
+        
+        # Update banner
+        result = await db.banners.update_one(
+            {"id": banner_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Banner not found")
+        
+        # Return updated banner
+        updated_banner = await db.banners.find_one({"id": banner_id})
+        
+        return {
+            "message": "Banner updated successfully",
+            "banner": updated_banner
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error updating banner: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update banner: {str(e)}")
+
+@api_router.delete("/admin/banners/{banner_id}")
+async def delete_banner(banner_id: str, admin_user: User = Depends(require_admin_or_moderator)):
+    """Delete banner (Admin/Moderator only)"""
+    try:
+        result = await db.banners.delete_one({"id": banner_id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Banner not found")
+        
+        return {
+            "message": "Banner deleted successfully",
+            "banner_id": banner_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error deleting banner: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete banner: {str(e)}")
+
 # Search Auto-suggestions API endpoint
 @api_router.get("/motorcycles/search/suggestions")
 async def get_search_suggestions(q: str = Query(..., min_length=1, description="Search query"), limit: int = Query(10, le=20)):
