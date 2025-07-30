@@ -816,6 +816,27 @@ async def get_user_role(current_user: User = Depends(get_current_user)):
     """Get user role (returns 'User' for unauthenticated users)"""
     return current_user.role if current_user else "User"
 
+# Helper function for optional auth
+async def get_current_user_optional(authorization: Optional[str] = Header(None)) -> Optional[User]:
+    """Get current user if authenticated, otherwise return None"""
+    if not authorization:
+        return None
+    
+    try:
+        return await get_current_user(authorization=authorization)
+    except:
+        return None
+
+# Helper function for admin auth
+async def get_current_admin_user(authorization: str = Header(None)) -> User:
+    """Get current admin user"""
+    user = await get_current_user(authorization=authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
