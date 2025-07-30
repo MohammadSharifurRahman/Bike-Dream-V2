@@ -2772,6 +2772,343 @@ async def check_user_achievements(current_user: User = Depends(require_auth)):
         "new_achievements": new_achievements
     }
 
+# ==================== SEARCH ANALYTICS API ENDPOINTS ====================
+
+@api_router.post("/analytics/search")
+async def log_search_analytics(
+    search_term: str,
+    search_type: str = "general",
+    filters_applied: dict = None,
+    results_count: int = 0,
+    clicked_results: List[str] = None,
+    request: Request = None
+):
+    """Log search analytics for user engagement tracking"""
+    try:
+        # Get user info if available
+        user_id = None
+        session_id = None
+        
+        # Try to get user from headers
+        auth_header = request.headers.get('Authorization')
+        session_header = request.headers.get('X-Session-ID')
+        
+        if auth_header:
+            try:
+                token = auth_header.split(' ')[1]
+                payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+                user_id = payload.get('user_id')
+            except:
+                pass
+        elif session_header:
+            session_id = session_header
+            # Try to get user from session
+            user = await db.users.find_one({"session_token": session_id})
+            if user:
+                user_id = user["id"]
+        
+        # Generate session ID if not provided
+        if not session_id:
+            session_id = str(uuid.uuid4())
+        
+        # Create search analytics record
+        analytics = SearchAnalytics(
+            user_id=user_id,
+            session_id=session_id,
+            search_term=search_term,
+            search_type=search_type,
+            filters_applied=filters_applied or {},
+            results_count=results_count,
+            clicked_results=clicked_results or [],
+            user_agent=request.headers.get('User-Agent'),
+            user_location=request.headers.get('X-User-Location')  # Can be set by frontend
+        )
+        
+        await db.search_analytics.insert_one(analytics.dict())
+        
+        return {"message": "Search analytics logged successfully"}
+        
+    except Exception as e:
+        print(f"Error logging search analytics: {str(e)}")
+        return {"message": "Analytics logging failed"}
+
+@api_router.post("/analytics/engagement")
+async def log_user_engagement(
+    page_view: str,
+    time_spent: int = None,
+    actions: List[dict] = None,
+    referrer: str = None,
+    request: Request = None
+):
+    """Log user engagement for analytics"""
+    try:
+        # Get user info if available
+        user_id = None
+        session_id = None
+        
+        # Try to get user from headers
+        auth_header = request.headers.get('Authorization')
+        session_header = request.headers.get('X-Session-ID')
+        
+        if auth_header:
+            try:
+                token = auth_header.split(' ')[1]
+                payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+                user_id = payload.get('user_id')
+            except:
+                pass
+        elif session_header:
+            session_id = session_header
+            # Try to get user from session
+            user = await db.users.find_one({"session_token": session_id})
+            if user:
+                user_id = user["id"]
+        
+        # Generate session ID if not provided
+        if not session_id:
+            session_id = str(uuid.uuid4())
+        
+        # Create engagement record
+        engagement = UserEngagement(
+            user_id=user_id,
+            session_id=session_id,
+            page_view=page_view,
+            time_spent=time_spent,
+            actions=actions or [],
+            referrer=referrer
+        )
+        
+        await db.user_engagement.insert_one(engagement.dict())
+        
+        return {"message": "User engagement logged successfully"}
+        
+    except Exception as e:
+        print(f"Error logging user engagement: {str(e)}")
+        return {"message": "Engagement logging failed"}
+
+@api_router.get("/analytics/search-trends")
+async def get_search_trends(
+    days: int = Query(7, ge=1, le=90),
+    limit: int = Query(20, ge=1, le=100)
+):
+    """Get search trends and popular search terms"""
+    try:
+        # Calculate date range
+        start_date = datetime.utcnow() - timedelta(days=days)
+        
+        # Get popular search terms
+        popular_terms_pipeline = [
+            {"$match": {"timestamp": {"$gte": start_date}}},
+            {"$group": {
+                "_id": "$search_term",
+                "count": {"$sum": 1},
+                "avg_results": {"$avg": "$results_count"},
+                "last_searched": {"$max": "$timestamp"}
+            }},
+            {"$sort": {"count": -1}},
+            {"$limit": limit}
+        ]
+        
+        popular_terms = await db.search_analytics.aggregate(popular_terms_pipeline).to_list(limit)
+        
+        # Get search trends over time
+        trends_pipeline = [
+            {"$match": {"timestamp": {"$gte": start_date}}},
+            {"$group": {
+                "_id": {
+                    "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
+                    "term": "$search_term"
+                },
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"_id.date": 1}},
+            {"$limit": 100}
+        ]
+        
+        trends = await db.search_analytics.aggregate(trends_pipeline).to_list(100)
+        
+        # Get popular manufacturers
+        manufacturer_pipeline = [
+            {"$match": {"timestamp": {"$gte": start_date}, "search_type": "manufacturer"}},
+            {"$group": {
+                "_id": "$search_term",
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"count": -1}},
+            {"$limit": 10}
+        ]
+        
+        popular_manufacturers = await db.search_analytics.aggregate(manufacturer_pipeline).to_list(10)
+        
+        return {
+            "popular_terms": popular_terms,
+            "trends": trends,
+            "popular_manufacturers": popular_manufacturers,
+            "period_days": days
+        }
+        
+    except Exception as e:
+        print(f"Error getting search trends: {str(e)}")
+        return {"error": "Failed to get search trends"}
+
+@api_router.get("/analytics/user-behavior")
+async def get_user_behavior_analytics(
+    days: int = Query(7, ge=1, le=90),
+    user_id: Optional[str] = Query(None)
+):
+    """Get user behavior analytics"""
+    try:
+        # Calculate date range
+        start_date = datetime.utcnow() - timedelta(days=days)
+        
+        # Build query
+        query = {"timestamp": {"$gte": start_date}}
+        if user_id:
+            query["user_id"] = user_id
+        
+        # Get page view analytics
+        page_views_pipeline = [
+            {"$match": query},
+            {"$group": {
+                "_id": "$page_view",
+                "count": {"$sum": 1},
+                "avg_time_spent": {"$avg": "$time_spent"}
+            }},
+            {"$sort": {"count": -1}}
+        ]
+        
+        page_views = await db.user_engagement.aggregate(page_views_pipeline).to_list(None)
+        
+        # Get user actions analytics
+        actions_pipeline = [
+            {"$match": query},
+            {"$unwind": "$actions"},
+            {"$group": {
+                "_id": "$actions.action_type",
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"count": -1}}
+        ]
+        
+        actions = await db.user_engagement.aggregate(actions_pipeline).to_list(None)
+        
+        # Get user session analytics
+        session_pipeline = [
+            {"$match": query},
+            {"$group": {
+                "_id": "$session_id",
+                "pages_visited": {"$addToSet": "$page_view"},
+                "total_time": {"$sum": "$time_spent"},
+                "actions_count": {"$sum": {"$size": "$actions"}}
+            }},
+            {"$project": {
+                "pages_count": {"$size": "$pages_visited"},
+                "total_time": 1,
+                "actions_count": 1
+            }},
+            {"$group": {
+                "_id": None,
+                "avg_pages_per_session": {"$avg": "$pages_count"},
+                "avg_time_per_session": {"$avg": "$total_time"},
+                "avg_actions_per_session": {"$avg": "$actions_count"},
+                "total_sessions": {"$sum": 1}
+            }}
+        ]
+        
+        session_stats = await db.user_engagement.aggregate(session_pipeline).to_list(1)
+        
+        return {
+            "page_views": page_views,
+            "actions": actions,
+            "session_stats": session_stats[0] if session_stats else {},
+            "period_days": days
+        }
+        
+    except Exception as e:
+        print(f"Error getting user behavior analytics: {str(e)}")
+        return {"error": "Failed to get user behavior analytics"}
+
+@api_router.get("/analytics/motorcycle-interests")
+async def get_motorcycle_interests(
+    days: int = Query(30, ge=1, le=365),
+    limit: int = Query(50, ge=1, le=100)
+):
+    """Get motorcycle interest analytics based on search and engagement data"""
+    try:
+        # Calculate date range
+        start_date = datetime.utcnow() - timedelta(days=days)
+        
+        # Get most clicked motorcycles from search analytics
+        clicked_bikes_pipeline = [
+            {"$match": {"timestamp": {"$gte": start_date}}},
+            {"$unwind": "$clicked_results"},
+            {"$group": {
+                "_id": "$clicked_results",
+                "click_count": {"$sum": 1},
+                "search_terms": {"$addToSet": "$search_term"}
+            }},
+            {"$sort": {"click_count": -1}},
+            {"$limit": limit}
+        ]
+        
+        clicked_bikes = await db.search_analytics.aggregate(clicked_bikes_pipeline).to_list(limit)
+        
+        # Get motorcycle details for clicked bikes
+        motorcycle_interests = []
+        for bike in clicked_bikes:
+            motorcycle = await db.motorcycles.find_one({"id": bike["_id"]})
+            if motorcycle:
+                motorcycle_interests.append({
+                    "motorcycle": {
+                        "id": motorcycle["id"],
+                        "manufacturer": motorcycle["manufacturer"],
+                        "model": motorcycle["model"],
+                        "year": motorcycle["year"],
+                        "category": motorcycle["category"],
+                        "price_usd": motorcycle.get("price_usd"),
+                        "image_url": motorcycle.get("image_url")
+                    },
+                    "click_count": bike["click_count"],
+                    "search_terms": bike["search_terms"]
+                })
+        
+        # Get category interests
+        category_pipeline = [
+            {"$match": {"timestamp": {"$gte": start_date}}},
+            {"$group": {
+                "_id": "$filters_applied.category",
+                "count": {"$sum": 1}
+            }},
+            {"$match": {"_id": {"$ne": None}}},
+            {"$sort": {"count": -1}}
+        ]
+        
+        category_interests = await db.search_analytics.aggregate(category_pipeline).to_list(None)
+        
+        # Get manufacturer interests
+        manufacturer_pipeline = [
+            {"$match": {"timestamp": {"$gte": start_date}}},
+            {"$group": {
+                "_id": "$filters_applied.manufacturer",
+                "count": {"$sum": 1}
+            }},
+            {"$match": {"_id": {"$ne": None}}},
+            {"$sort": {"count": -1}}
+        ]
+        
+        manufacturer_interests = await db.search_analytics.aggregate(manufacturer_pipeline).to_list(None)
+        
+        return {
+            "motorcycle_interests": motorcycle_interests,
+            "category_interests": category_interests,
+            "manufacturer_interests": manufacturer_interests,
+            "period_days": days
+        }
+        
+    except Exception as e:
+        print(f"Error getting motorcycle interests: {str(e)}")
+        return {"error": "Failed to get motorcycle interests"}
+
 @api_router.get("/status", response_model=List[StatusCheck])
 async def get_status_checks():
     status_checks = await db.status_checks.find().to_list(1000)
