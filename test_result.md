@@ -967,6 +967,31 @@ frontend:
         comment: "✅ SITE-WIDE SEARCH INTEGRATION WORKING AFTER JAVASCRIPT FIXES: Critical JavaScript runtime errors have been completely resolved! Site-wide search integration is now fully functional: (1) Search inputs present and working on both homepage and browse page, (2) Homepage search successfully navigates to filtered results, (3) Browse page search integration operational (found 235 motorcycle cards), (4) Search suggestions work perfectly with manufacturer and model names, (5) No more webpack error overlays blocking interactions, (6) Search clearing functionality works properly, (7) Navigation between pages maintains search functionality. The useRef implementation and defensive programming fixes have successfully restored complete site-wide search integration. All Phase 1 search requirements are now met."
 
 frontend:
+  - task: "Motorcycle Comparison Selection Interface"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Phase 2 frontend implementation: Need to add 'Compare' buttons to motorcycle cards, implement comparison state management to track selected motorcycles (up to 3), and provide visual feedback for selected bikes. Should include comparison queue display and ability to remove motorcycles from comparison list."
+
+  - task: "Motorcycle Comparison Modal Component"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Phase 2 frontend implementation: Create comprehensive comparison modal that displays up to 3 motorcycles side-by-side with technical specs, vendor availability, pricing, ratings, images, and metadata. Must include clearly visible close button, ESC key support, click-outside-to-close, and return user to previous page."
+
+frontend:
   - task: "Authentication System Implementation"
     implemented: true
     working: true
