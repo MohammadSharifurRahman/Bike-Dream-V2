@@ -5503,6 +5503,8 @@ function App() {
                           key={motorcycle.id}
                           motorcycle={motorcycle}
                           onClick={setSelectedMotorcycle}
+                          onAddToComparison={handleAddToComparison}
+                          comparisonList={comparisonList}
                         />
                       ))}
                     </div>
