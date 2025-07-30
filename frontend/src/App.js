@@ -6156,6 +6156,21 @@ const MainAppContent = () => {
             onClose={() => setShowAdminDashboard(false)}
           />
         )}
+        
+        {/* Custom Contact Footer */}
+        <footer className="mt-16 py-8 border-t border-gray-200 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <p className="text-center text-sm text-gray-500">
+              For promotions, advertising, or vendor/manufacturer collaboration inquiries, contact the site owner at{' '}
+              <a 
+                href="mailto:sharifphduk@gmail.com" 
+                className="text-blue-600 hover:text-blue-800 underline"
+              >
+                sharifphduk@gmail.com
+              </a>
+            </p>
+          </div>
+        </footer>
       </div>
     );
 };
