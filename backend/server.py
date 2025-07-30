@@ -2206,18 +2206,56 @@ async def update_motorcycle_comment_count(motorcycle_id: str):
 
 # Database statistics
 @api_router.get("/stats", response_model=DatabaseStats)
-async def get_database_stats():
-    """Get comprehensive database statistics"""
-    total = await db.motorcycles.count_documents({})
+async def get_database_stats(
+    hide_unavailable: Optional[bool] = Query(False, description="Hide discontinued and unavailable motorcycles"),
+    region: Optional[str] = Query(None, description="Filter by region availability (country code)")
+):
+    """Get comprehensive database statistics with optional filtering"""
+    # Build base query
+    query = {}
     
-    manufacturers_pipeline = [{"$group": {"_id": "$manufacturer"}}, {"$sort": {"_id": 1}}]
-    categories_pipeline = [{"$group": {"_id": "$category"}}, {"$sort": {"_id": 1}}]
+    # Add hide unavailable filter if requested
+    if hide_unavailable:
+        query["availability"] = {"$nin": ["Discontinued", "Not Available", "Out of Stock", "Collector Item"]}
+    
+    # Add region filter if requested
+    if region:
+        region_manufacturers = {
+            "US": ["Harley-Davidson", "Indian", "Kawasaki", "Yamaha", "Honda", "Suzuki", "Ducati"],
+            "IN": ["Hero", "Bajaj", "TVS", "Royal Enfield", "Honda", "Yamaha", "Suzuki"],
+            "JP": ["Honda", "Yamaha", "Suzuki", "Kawasaki"],
+            "DE": ["BMW", "KTM", "Ducati", "Honda", "Yamaha"],
+            "GB": ["Triumph", "Honda", "Yamaha", "Suzuki", "Kawasaki"],
+            "IT": ["Ducati", "MV Agusta", "Aprilia", "Honda", "Yamaha"],
+            "AU": ["Honda", "Yamaha", "Suzuki", "Kawasaki", "BMW"],
+        }
+        
+        if region in region_manufacturers:
+            query["manufacturer"] = {"$in": region_manufacturers[region]}
+    
+    # Get filtered total count
+    total = await db.motorcycles.count_documents(query)
+    
+    # Get filtered manufacturers
+    manufacturers_pipeline = [
+        {"$match": query},
+        {"$group": {"_id": "$manufacturer"}}, 
+        {"$sort": {"_id": 1}}
+    ]
+    
+    # Get filtered categories  
+    categories_pipeline = [
+        {"$match": query},
+        {"$group": {"_id": "$category"}}, 
+        {"$sort": {"_id": 1}}
+    ]
     
     manufacturers = await db.motorcycles.aggregate(manufacturers_pipeline).to_list(None)
     categories = await db.motorcycles.aggregate(categories_pipeline).to_list(None)
     
-    # Get year range
+    # Get year range from filtered results
     year_range = await db.motorcycles.aggregate([
+        {"$match": query},
         {"$group": {"_id": None, "min_year": {"$min": "$year"}, "max_year": {"$max": "$year"}}}
     ]).to_list(1)
     
