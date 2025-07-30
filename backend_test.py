@@ -5565,6 +5565,336 @@ class MotorcycleAPITester:
         """Run comprehensive deployment readiness testing"""
         return self.run_comprehensive_deployment_testing()
 
+    # PHASE 1 SPECIFIC TESTS - Auto-Suggestions and Hide Unavailable Filter
+    def test_search_auto_suggestions_api(self):
+        """Test GET /api/motorcycles/search/suggestions - Phase 1 Feature"""
+        print("\n🔍 TESTING PHASE 1: MOTORCYCLE SEARCH AUTO-SUGGESTIONS API")
+        print("-" * 60)
+        
+        # Test cases for search suggestions
+        test_cases = [
+            ("yam", "Partial manufacturer name"),
+            ("Yamaha", "Full manufacturer name"),
+            ("R1", "Motorcycle model name"),
+            ("sport", "Category-related search"),
+            ("duc", "Partial manufacturer (Ducati)"),
+            ("ninja", "Popular model name"),
+            ("har", "Partial manufacturer (Harley)"),
+            ("", "Empty query"),
+            ("x", "Single character"),
+            ("xyz123", "Non-existent term")
+        ]
+        
+        all_passed = True
+        for query, description in test_cases:
+            try:
+                params = {"q": query}
+                if query == "":
+                    params = {}  # Test without q parameter
+                    
+                response = requests.get(f"{self.base_url}/motorcycles/search/suggestions", 
+                                      params=params, timeout=10)
+                
+                if query == "":
+                    # Empty query should return 422 or empty suggestions
+                    if response.status_code in [422, 400]:
+                        self.log_test(f"Auto-Suggestions - {description}", True, 
+                                    "Properly rejected empty query")
+                        continue
+                    elif response.status_code == 200:
+                        data = response.json()
+                        if len(data.get("suggestions", [])) == 0:
+                            self.log_test(f"Auto-Suggestions - {description}", True, 
+                                        "Empty suggestions for empty query")
+                            continue
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    # Verify response structure
+                    required_keys = ["query", "suggestions", "total"]
+                    missing_keys = [key for key in required_keys if key not in data]
+                    if missing_keys:
+                        self.log_test(f"Auto-Suggestions - {description}", False, 
+                                    f"Missing keys: {missing_keys}")
+                        all_passed = False
+                        continue
+                    
+                    # Verify suggestions structure
+                    suggestions = data.get("suggestions", [])
+                    if suggestions:
+                        first_suggestion = suggestions[0]
+                        suggestion_keys = ["value", "type", "display_text", "count"]
+                        missing_suggestion_keys = [key for key in suggestion_keys if key not in first_suggestion]
+                        if missing_suggestion_keys:
+                            self.log_test(f"Auto-Suggestions - {description}", False, 
+                                        f"Suggestion missing keys: {missing_suggestion_keys}")
+                            all_passed = False
+                            continue
+                        
+                        # Verify type is either 'manufacturer' or 'model'
+                        valid_types = all(s.get("type") in ["manufacturer", "model"] for s in suggestions)
+                        if not valid_types:
+                            self.log_test(f"Auto-Suggestions - {description}", False, 
+                                        "Invalid suggestion types found")
+                            all_passed = False
+                            continue
+                    
+                    self.log_test(f"Auto-Suggestions - {description} ('{query}')", True, 
+                                f"Found {len(suggestions)} suggestions")
+                else:
+                    self.log_test(f"Auto-Suggestions - {description}", False, 
+                                f"Status: {response.status_code}")
+                    all_passed = False
+                    
+            except Exception as e:
+                self.log_test(f"Auto-Suggestions - {description}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        # Test limit parameter
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles/search/suggestions", 
+                                  params={"q": "yamaha", "limit": 5}, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                suggestions = data.get("suggestions", [])
+                if len(suggestions) <= 5:
+                    self.log_test("Auto-Suggestions - Limit Parameter", True, 
+                                f"Limit respected: {len(suggestions)} suggestions")
+                else:
+                    self.log_test("Auto-Suggestions - Limit Parameter", False, 
+                                f"Limit exceeded: {len(suggestions)} suggestions")
+                    all_passed = False
+            else:
+                self.log_test("Auto-Suggestions - Limit Parameter", False, 
+                            f"Status: {response.status_code}")
+                all_passed = False
+        except Exception as e:
+            self.log_test("Auto-Suggestions - Limit Parameter", False, f"Error: {str(e)}")
+            all_passed = False
+        
+        return all_passed
+
+    def test_hide_unavailable_bikes_filter(self):
+        """Test GET /api/motorcycles with hide_unavailable parameter - Phase 1 Feature"""
+        print("\n🚫 TESTING PHASE 1: HIDE UNAVAILABLE BIKES FILTER API")
+        print("-" * 60)
+        
+        all_passed = True
+        
+        # Test 1: Get all motorcycles without filter
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"limit": 100}, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                all_motorcycles = self.extract_motorcycles_from_response(data)
+                total_count = len(all_motorcycles)
+                
+                # Count unavailable motorcycles
+                unavailable_statuses = ["Discontinued", "Not Available", "Out of Stock", "Collector Item"]
+                unavailable_count = sum(1 for moto in all_motorcycles 
+                                      if moto.get("availability") in unavailable_statuses)
+                available_count = total_count - unavailable_count
+                
+                self.log_test("Hide Unavailable - All Motorcycles", True, 
+                            f"Total: {total_count}, Available: {available_count}, Unavailable: {unavailable_count}")
+            else:
+                self.log_test("Hide Unavailable - All Motorcycles", False, 
+                            f"Status: {response.status_code}")
+                all_passed = False
+                return False
+        except Exception as e:
+            self.log_test("Hide Unavailable - All Motorcycles", False, f"Error: {str(e)}")
+            all_passed = False
+            return False
+        
+        # Test 2: Test hide_unavailable=true
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"hide_unavailable": "true", "limit": 100}, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                filtered_motorcycles = self.extract_motorcycles_from_response(data)
+                
+                # Verify no unavailable motorcycles are returned
+                unavailable_statuses = ["Discontinued", "Not Available", "Out of Stock", "Collector Item"]
+                has_unavailable = any(moto.get("availability") in unavailable_statuses 
+                                    for moto in filtered_motorcycles)
+                
+                if not has_unavailable:
+                    self.log_test("Hide Unavailable - Filter Enabled", True, 
+                                f"Successfully filtered out unavailable bikes: {len(filtered_motorcycles)} available")
+                else:
+                    self.log_test("Hide Unavailable - Filter Enabled", False, 
+                                "Some unavailable motorcycles still present")
+                    all_passed = False
+            else:
+                self.log_test("Hide Unavailable - Filter Enabled", False, 
+                            f"Status: {response.status_code}")
+                all_passed = False
+        except Exception as e:
+            self.log_test("Hide Unavailable - Filter Enabled", False, f"Error: {str(e)}")
+            all_passed = False
+        
+        # Test 3: Test hide_unavailable=false (should show all)
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"hide_unavailable": "false", "limit": 100}, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                all_motorcycles_false = self.extract_motorcycles_from_response(data)
+                
+                if len(all_motorcycles_false) == total_count:
+                    self.log_test("Hide Unavailable - Filter Disabled", True, 
+                                f"All motorcycles returned: {len(all_motorcycles_false)}")
+                else:
+                    self.log_test("Hide Unavailable - Filter Disabled", False, 
+                                f"Count mismatch: {len(all_motorcycles_false)} vs {total_count}")
+                    all_passed = False
+            else:
+                self.log_test("Hide Unavailable - Filter Disabled", False, 
+                            f"Status: {response.status_code}")
+                all_passed = False
+        except Exception as e:
+            self.log_test("Hide Unavailable - Filter Disabled", False, f"Error: {str(e)}")
+            all_passed = False
+        
+        # Test 4: Test with other filters combined
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={
+                                      "hide_unavailable": "true", 
+                                      "manufacturer": "Yamaha",
+                                      "limit": 50
+                                  }, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                combined_filtered = self.extract_motorcycles_from_response(data)
+                
+                # Verify all results are Yamaha and available
+                valid_results = True
+                for moto in combined_filtered:
+                    if ("yamaha" not in moto.get("manufacturer", "").lower() or
+                        moto.get("availability") in ["Discontinued", "Not Available", "Out of Stock", "Collector Item"]):
+                        valid_results = False
+                        break
+                
+                if valid_results:
+                    self.log_test("Hide Unavailable - Combined Filters", True, 
+                                f"Combined filtering works: {len(combined_filtered)} Yamaha available bikes")
+                else:
+                    self.log_test("Hide Unavailable - Combined Filters", False, 
+                                "Combined filtering failed")
+                    all_passed = False
+            else:
+                self.log_test("Hide Unavailable - Combined Filters", False, 
+                            f"Status: {response.status_code}")
+                all_passed = False
+        except Exception as e:
+            self.log_test("Hide Unavailable - Combined Filters", False, f"Error: {str(e)}")
+            all_passed = False
+        
+        # Test 5: Test pagination with hide_unavailable
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={
+                                      "hide_unavailable": "true", 
+                                      "page": 1,
+                                      "limit": 25
+                                  }, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check if pagination structure is present
+                if isinstance(data, dict) and "pagination" in data:
+                    pagination = data["pagination"]
+                    motorcycles = data.get("motorcycles", [])
+                    
+                    # Verify no unavailable motorcycles in paginated results
+                    unavailable_statuses = ["Discontinued", "Not Available", "Out of Stock", "Collector Item"]
+                    has_unavailable = any(moto.get("availability") in unavailable_statuses 
+                                        for moto in motorcycles)
+                    
+                    if not has_unavailable:
+                        self.log_test("Hide Unavailable - Pagination", True, 
+                                    f"Pagination works with filter: {len(motorcycles)} bikes, page {pagination.get('page', 1)}")
+                    else:
+                        self.log_test("Hide Unavailable - Pagination", False, 
+                                    "Unavailable bikes found in paginated results")
+                        all_passed = False
+                else:
+                    # Legacy format without pagination
+                    motorcycles = self.extract_motorcycles_from_response(data)
+                    unavailable_statuses = ["Discontinued", "Not Available", "Out of Stock", "Collector Item"]
+                    has_unavailable = any(moto.get("availability") in unavailable_statuses 
+                                        for moto in motorcycles)
+                    
+                    if not has_unavailable:
+                        self.log_test("Hide Unavailable - Pagination", True, 
+                                    f"Filter works with limit: {len(motorcycles)} available bikes")
+                    else:
+                        self.log_test("Hide Unavailable - Pagination", False, 
+                                    "Unavailable bikes found in limited results")
+                        all_passed = False
+            else:
+                self.log_test("Hide Unavailable - Pagination", False, 
+                            f"Status: {response.status_code}")
+                all_passed = False
+        except Exception as e:
+            self.log_test("Hide Unavailable - Pagination", False, f"Error: {str(e)}")
+            all_passed = False
+        
+        return all_passed
+
+    def run_phase1_tests(self):
+        """Run only Phase 1 specific tests"""
+        print("🎯 PHASE 1 BACKEND FEATURES TESTING")
+        print("=" * 60)
+        
+        # Basic connectivity check
+        if not self.test_api_root():
+            print("❌ API connectivity failed. Cannot proceed with Phase 1 tests.")
+            return False
+        
+        # Run Phase 1 specific tests
+        phase1_success = True
+        phase1_success &= self.test_search_auto_suggestions_api()
+        phase1_success &= self.test_hide_unavailable_bikes_filter()
+        
+        # Print Phase 1 summary
+        print("\n" + "=" * 60)
+        print("📊 PHASE 1 TEST SUMMARY")
+        print("=" * 60)
+        
+        phase1_tests = [result for result in self.test_results if "Auto-Suggestions" in result or "Hide Unavailable" in result]
+        phase1_passed = sum(1 for result in phase1_tests if "✅ PASS" in result)
+        phase1_failed = sum(1 for result in phase1_tests if "❌ FAIL" in result)
+        
+        print(f"Phase 1 Tests: {len(phase1_tests)}")
+        print(f"Phase 1 Passed: {phase1_passed} ✅")
+        print(f"Phase 1 Failed: {phase1_failed} ❌")
+        
+        if len(phase1_tests) > 0:
+            success_rate = (phase1_passed/len(phase1_tests))*100
+            print(f"Phase 1 Success Rate: {success_rate:.1f}%")
+            
+            if success_rate >= 90:
+                print(f"\n🎉 PHASE 1 READY: {success_rate:.1f}% success rate - Features ready for production!")
+            elif success_rate >= 70:
+                print(f"\n⚠️ PHASE 1 MOSTLY READY: {success_rate:.1f}% success rate - Minor issues need attention")
+            else:
+                print(f"\n❌ PHASE 1 NOT READY: {success_rate:.1f}% success rate - Critical issues must be resolved")
+        
+        if phase1_failed > 0:
+            print("\n❌ FAILED PHASE 1 TESTS:")
+            for result in self.test_results:
+                if ("❌ FAIL" in result and 
+                    ("Auto-Suggestions" in result or "Hide Unavailable" in result)):
+                    print(f"  {result}")
+        
+        return phase1_success
+
 def main():
     """Main test execution"""
     tester = MotorcycleAPITester()
