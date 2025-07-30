@@ -4593,6 +4593,39 @@ function App() {
     }
   };
 
+  // Handlers for new search functionality
+  const handleSearchSelect = (suggestion) => {
+    setSearchTerm(suggestion.value);
+    setCurrentPage(1);
+    // If it's a manufacturer suggestion, also set the manufacturer filter
+    if (suggestion.type === 'manufacturer') {
+      setFilters({
+        ...filters,
+        manufacturer: suggestion.value
+      });
+    }
+    // Trigger refetch with new search
+    fetchMotorcycles(1);
+  };
+
+  const handleSearchChange = (value) => {
+    setSearchTerm(value);
+    // If search is cleared, also clear manufacturer filter
+    if (!value.trim()) {
+      const newFilters = { ...filters };
+      delete newFilters.search;
+      delete newFilters.manufacturer;
+      setFilters(newFilters);
+    }
+  };
+
+  const handleHideUnavailableToggle = (isHidden) => {
+    setHideUnavailable(isHidden);
+    setCurrentPage(1);
+    // Trigger refetch with new filter
+    fetchMotorcycles(1);
+  };
+
   const fetchCategories = async () => {
     try {
       const response = await axios.get(`${API}/motorcycles/categories/summary`);
