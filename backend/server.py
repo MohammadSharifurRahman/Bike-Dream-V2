@@ -770,6 +770,23 @@ async def require_auth(x_session_id: str = Header(None), authorization: str = He
         raise HTTPException(status_code=401, detail="Authentication required")
     return user
 
+# Phase 3: Role-Based Access Control (RBAC) helpers
+async def require_admin(current_user: User = Depends(require_auth)):
+    """Require Admin role"""
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+async def require_admin_or_moderator(current_user: User = Depends(require_auth)):
+    """Require Admin or Moderator role"""
+    if current_user.role not in ["Admin", "Moderator"]:
+        raise HTTPException(status_code=403, detail="Admin or Moderator access required")
+    return current_user
+
+async def get_user_role(current_user: User = Depends(get_current_user)):
+    """Get user role (returns 'User' for unauthenticated users)"""
+    return current_user.role if current_user else "User"
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
