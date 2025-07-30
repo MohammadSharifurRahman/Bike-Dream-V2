@@ -5723,6 +5723,7 @@ const MainAppContent = () => {
   useEffect(() => {
     fetchFilterOptions();
     fetchAvailableFeatures();
+    fetchCategories(); // Initial load of categories
     seedDatabase(); // Seed on first load
   }, []);
 
