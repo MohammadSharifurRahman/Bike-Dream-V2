@@ -6014,6 +6014,14 @@ const MainAppContent = () => {
                   onToggle={handleHideUnavailableToggle}
                 />
               </div>
+              
+              {/* Country Filter */}
+              <div className="flex justify-center mt-4">
+                <CountryFilterSelect
+                  selectedRegion={selectedRegion}
+                  onRegionChange={setSelectedRegion}
+                />
+              </div>
             </div>
 
             {/* Stats Section */}
