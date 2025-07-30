@@ -429,6 +429,72 @@ const HideUnavailableToggle = ({ isHidden, onToggle, className = "" }) => {
   );
 };
 
+// Comparison Floating Button Component - Shows comparison queue
+const ComparisonFloatingButton = ({ comparisonList, onShowComparison, onRemoveFromComparison, onClearComparison }) => {
+  if (comparisonList.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50">
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 min-w-80 max-w-sm">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold text-gray-800">
+            Compare ({comparisonList.length}/3)
+          </h3>
+          <button
+            onClick={onClearComparison}
+            className="text-red-600 hover:text-red-800 text-sm font-medium"
+          >
+            Clear All
+          </button>
+        </div>
+        
+        <div className="space-y-2 mb-4 max-h-32 overflow-y-auto">
+          {comparisonList.map((motorcycle, index) => (
+            <div key={motorcycle.id} className="flex items-center justify-between bg-gray-50 rounded px-3 py-2">
+              <div className="flex items-center space-x-2">
+                <img
+                  src={motorcycle.image_url || '/placeholder-motorcycle.jpg'}
+                  alt={`${motorcycle.manufacturer} ${motorcycle.model}`}
+                  className="w-8 h-8 rounded object-cover"
+                  onError={(e) => {
+                    e.target.src = '/placeholder-motorcycle.jpg';
+                  }}
+                />
+                <div className="text-sm">
+                  <div className="font-medium text-gray-900">
+                    {motorcycle.manufacturer} {motorcycle.model}
+                  </div>
+                  <div className="text-gray-500 text-xs">
+                    {motorcycle.year} • {motorcycle.category}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => onRemoveFromComparison(motorcycle.id)}
+                className="text-red-500 hover:text-red-700 ml-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+        
+        <button
+          onClick={onShowComparison}
+          disabled={comparisonList.length === 0}
+          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+        >
+          Compare Now
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // Vendor Pricing Component
 const VendorPricing = ({ motorcycle }) => {
   const [vendorPrices, setVendorPrices] = useState([]);
