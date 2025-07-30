@@ -4006,6 +4006,51 @@ function App() {
   const [totalPages, setTotalPages] = useState(1);
   const [pagination, setPagination] = useState({});
 
+  // Analytics helper functions
+  const logSearchAnalytics = async (searchTerm, searchType = 'general', filtersApplied = {}, resultsCount = 0, clickedResults = []) => {
+    try {
+      await axios.post(`${API}/analytics/search`, {
+        search_term: searchTerm,
+        search_type: searchType,
+        filters_applied: filtersApplied,
+        results_count: resultsCount,
+        clicked_results: clickedResults
+      });
+    } catch (error) {
+      console.log('Analytics logging failed:', error); // Non-blocking
+    }
+  };
+
+  const logEngagement = async (pageView, timeSpent = null, actions = [], referrer = null) => {
+    try {
+      await axios.post(`${API}/analytics/engagement`, {
+        page_view: pageView,
+        time_spent: timeSpent,
+        actions: actions,
+        referrer: referrer
+      });
+    } catch (error) {
+      console.log('Engagement logging failed:', error); // Non-blocking
+    }
+  };
+
+  // Track page views and engagement
+  useEffect(() => {
+    // Log page view
+    logEngagement(currentView, null, [], document.referrer);
+    
+    // Track time spent on page
+    const startTime = Date.now();
+    
+    return () => {
+      const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+      if (timeSpent > 1) { // Only log if spent more than 1 second
+        logEngagement(currentView, timeSpent);
+      }
+    };
+  }, [currentView]);
+
+  // Enhanced fetchMotorcycles with analytics tracking
   const fetchMotorcycles = async (page = 1) => {
     try {
       setLoading(true);
@@ -4027,6 +4072,21 @@ function App() {
       setPagination(response.data.pagination);
       setCurrentPage(response.data.pagination.page);
       setTotalPages(response.data.pagination.total_pages);
+      
+      // Log search analytics
+      const searchTerm = filters.search || '';
+      const searchType = filters.manufacturer ? 'manufacturer' : 
+                        filters.category ? 'category' : 
+                        filters.price_range ? 'price_range' : 'general';
+      
+      if (searchTerm || Object.keys(filters).length > 0) {
+        logSearchAnalytics(
+          searchTerm,
+          searchType,
+          filters,
+          response.data.motorcycles.length
+        );
+      }
     } catch (error) {
       console.error('Error fetching motorcycles:', error);
     } finally {
