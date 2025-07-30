@@ -973,6 +973,42 @@ backend:
         comment: "✅ ANALYTICS DATA VALIDATION VERIFIED: Search analytics and user engagement data properly validated and stored in MongoDB. Analytics work correctly for both authenticated and anonymous users with proper session tracking. User identification through JWT tokens and session headers working correctly. MongoDB aggregation pipelines for analytics queries functioning properly with time-based filtering and complex data analysis."
 
 frontend:
+  - task: "Hide Unavailable Toggle Fix"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Priority 2 issue: Hide Unavailable Bikes toggle is present but not functioning properly on homepage. Toggle appears to be blocked by overlapping elements preventing proper clicks. Backend filter works correctly, but frontend toggle interaction is problematic."
+
+  - task: "Remove Made with Emergent Branding"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Priority 4 issue: 'Made with Emergent' branding visible in bottom right of all pages. Need to remove this default branding text and hyperlink to present cleaner brand experience."
+
+  - task: "Add Custom Contact Footer"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "medium" 
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Priority 5 issue: Need to add single-line footer disclaimer: 'For promotions, advertising, or vendor/manufacturer collaboration inquiries, contact the site owner at sharifphduk@gmail.com.' Small, muted gray font in footer section."
+
   - task: "AutoComplete Search Bar Component Integration"
     implemented: true
     working: true
