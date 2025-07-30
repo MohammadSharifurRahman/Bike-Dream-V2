@@ -5510,6 +5510,7 @@ const MainAppContent = () => {
   // New states for Phase 1 features
   const [searchTerm, setSearchTerm] = useState('');
   const [hideUnavailable, setHideUnavailable] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState(''); // Country filter state
   
   // New states for Phase 2 features - Motorcycle Comparison
   const [comparisonList, setComparisonList] = useState([]);
