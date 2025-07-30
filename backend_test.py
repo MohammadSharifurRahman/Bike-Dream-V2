@@ -10,7 +10,7 @@ import sys
 from typing import Dict, List, Any
 
 # Backend URL from environment
-BACKEND_URL = "https://105ccfd8-616b-49e0-8ee6-c8e34830d329.preview.emergentagent.com/api"
+BACKEND_URL = "https://e9fe904f-98da-42a5-bb13-20a82ea328b5.preview.emergentagent.com/api"
 
 class MotorcycleAPITester:
     def __init__(self):
