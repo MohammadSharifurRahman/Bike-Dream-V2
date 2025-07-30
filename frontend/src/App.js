@@ -2915,6 +2915,305 @@ const CommunityPage = () => {
   );
 };
 
+// Analytics Dashboard Page Component  
+const AnalyticsPage = () => {
+  const [searchTrends, setSearchTrends] = useState({});
+  const [userBehavior, setUserBehavior] = useState({});
+  const [motorcycleInterests, setMotorcycleInterests] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [timePeriod, setTimePeriod] = useState(7);
+
+  // Fetch search trends
+  const fetchSearchTrends = async () => {
+    try {
+      const response = await axios.get(`${API}/analytics/search-trends?days=${timePeriod}&limit=20`);
+      setSearchTrends(response.data);
+    } catch (error) {
+      console.error('Error fetching search trends:', error);
+      setSearchTrends({});
+    }
+  };
+
+  // Fetch user behavior analytics
+  const fetchUserBehavior = async () => {
+    try {
+      const response = await axios.get(`${API}/analytics/user-behavior?days=${timePeriod}`);
+      setUserBehavior(response.data);
+    } catch (error) {
+      console.error('Error fetching user behavior:', error);
+      setUserBehavior({});
+    }
+  };
+
+  // Fetch motorcycle interests
+  const fetchMotorcycleInterests = async () => {
+    try {
+      const response = await axios.get(`${API}/analytics/motorcycle-interests?days=${timePeriod}&limit=10`);
+      setMotorcycleInterests(response.data);
+    } catch (error) {
+      console.error('Error fetching motorcycle interests:', error);
+      setMotorcycleInterests({});
+    }
+  };
+
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchSearchTrends(),
+        fetchUserBehavior(),
+        fetchMotorcycleInterests()
+      ]);
+      setLoading(false);
+    };
+
+    loadAnalytics();
+  }, [timePeriod]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">Analytics Dashboard</h1>
+              <p className="text-gray-600 mt-2">User engagement and search trends</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Time Period</label>
+              <select
+                value={timePeriod}
+                onChange={(e) => setTimePeriod(parseInt(e.target.value))}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value={1}>Last 24 hours</option>
+                <option value={7}>Last 7 days</option>
+                <option value={30}>Last 30 days</option>
+                <option value={90}>Last 90 days</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Search Trends */}
+        <div className="bg-white rounded-xl shadow-lg mb-8">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-800">Search Trends</h2>
+          </div>
+          
+          <div className="p-6">
+            {/* Popular Search Terms */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Popular Search Terms</h3>
+              {searchTrends.popular_terms && searchTrends.popular_terms.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {searchTrends.popular_terms.slice(0, 10).map((term, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <div className="font-medium text-gray-800">"{term._id}"</div>
+                        <div className="text-sm text-gray-600">
+                          {term.count} searches • Avg results: {Math.round(term.avg_results)}
+                        </div>
+                      </div>
+                      <div className="text-blue-600 font-bold">#{index + 1}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-8">No search data available</div>
+              )}
+            </div>
+
+            {/* Popular Manufacturers */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Popular Manufacturers</h3>
+              {searchTrends.popular_manufacturers && searchTrends.popular_manufacturers.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  {searchTrends.popular_manufacturers.map((manufacturer, index) => (
+                    <div key={index} className="text-center p-4 bg-blue-50 rounded-lg">
+                      <div className="font-medium text-blue-800">{manufacturer._id}</div>
+                      <div className="text-sm text-blue-600">{manufacturer.count} searches</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-4">No manufacturer search data</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* User Behavior */}
+        <div className="bg-white rounded-xl shadow-lg mb-8">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-800">User Behavior</h2>
+          </div>
+          
+          <div className="p-6">
+            {/* Session Stats */}
+            {userBehavior.session_stats && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div className="bg-blue-50 p-4 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {userBehavior.session_stats.total_sessions || 0}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Sessions</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {Math.round(userBehavior.session_stats.avg_pages_per_session || 0)}
+                  </div>
+                  <div className="text-sm text-gray-600">Avg Pages/Session</div>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {Math.round(userBehavior.session_stats.avg_time_per_session || 0)}s
+                  </div>
+                  <div className="text-sm text-gray-600">Avg Session Time</div>
+                </div>
+                <div className="bg-yellow-50 p-4 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {Math.round(userBehavior.session_stats.avg_actions_per_session || 0)}
+                  </div>
+                  <div className="text-sm text-gray-600">Avg Actions/Session</div>
+                </div>
+              </div>
+            )}
+
+            {/* Page Views */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Popular Pages</h3>
+              {userBehavior.page_views && userBehavior.page_views.length > 0 ? (
+                <div className="space-y-3">
+                  {userBehavior.page_views.slice(0, 8).map((page, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <div className="font-medium text-gray-800 capitalize">{page._id}</div>
+                        <div className="text-sm text-gray-600">
+                          Avg time: {Math.round(page.avg_time_spent || 0)} seconds
+                        </div>
+                      </div>
+                      <div className="text-blue-600 font-bold">{page.count} views</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-4">No page view data available</div>
+              )}
+            </div>
+
+            {/* User Actions */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">User Actions</h3>
+              {userBehavior.actions && userBehavior.actions.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {userBehavior.actions.map((action, index) => (
+                    <div key={index} className="text-center p-4 bg-green-50 rounded-lg">
+                      <div className="font-medium text-green-800 capitalize">
+                        {action._id?.replace('_', ' ') || 'Unknown Action'}
+                      </div>
+                      <div className="text-sm text-green-600">{action.count} times</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-4">No action data available</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Motorcycle Interests */}
+        <div className="bg-white rounded-xl shadow-lg">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-800">Motorcycle Interests</h2>
+          </div>
+          
+          <div className="p-6">
+            {/* Popular Motorcycles */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Most Clicked Motorcycles</h3>
+              {motorcycleInterests.motorcycle_interests && motorcycleInterests.motorcycle_interests.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {motorcycleInterests.motorcycle_interests.slice(0, 6).map((item, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <img
+                        src={item.motorcycle.image_url}
+                        alt={`${item.motorcycle.manufacturer} ${item.motorcycle.model}`}
+                        className="w-full h-32 object-cover rounded-lg mb-3"
+                      />
+                      <h4 className="font-medium text-gray-800">
+                        {item.motorcycle.manufacturer} {item.motorcycle.model}
+                      </h4>
+                      <div className="text-sm text-gray-600">
+                        {item.motorcycle.year} • ${item.motorcycle.price_usd?.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-blue-600 mt-2">
+                        {item.click_count} clicks
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-8">No motorcycle interest data</div>
+              )}
+            </div>
+
+            {/* Category and Manufacturer Interests */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Categories */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Popular Categories</h3>
+                {motorcycleInterests.category_interests && motorcycleInterests.category_interests.length > 0 ? (
+                  <div className="space-y-2">
+                    {motorcycleInterests.category_interests.slice(0, 6).map((category, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                        <span className="font-medium text-purple-800">{category._id}</span>
+                        <span className="text-purple-600">{category.count} searches</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 text-center py-4">No category data</div>
+                )}
+              </div>
+
+              {/* Manufacturers */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Popular Brands</h3>
+                {motorcycleInterests.manufacturer_interests && motorcycleInterests.manufacturer_interests.length > 0 ? (
+                  <div className="space-y-2">
+                    {motorcycleInterests.manufacturer_interests.slice(0, 6).map((manufacturer, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                        <span className="font-medium text-blue-800">{manufacturer._id}</span>
+                        <span className="text-blue-600">{manufacturer.count} searches</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 text-center py-4">No manufacturer data</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Achievements Page Component
 const AchievementsPage = () => {
   const { user } = useContext(AuthContext);
