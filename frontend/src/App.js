@@ -4296,6 +4296,14 @@ function App() {
                 >
                   Achievements
                 </button>
+                <button
+                  onClick={() => {setCurrentView('analytics'); window.history.pushState({}, '', '/analytics');}}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    currentView === 'analytics' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  Analytics
+                </button>
                 <AuthButton />
                 {currentView === 'browse' && (
                   <>
