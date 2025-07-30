@@ -216,6 +216,162 @@ const StarRating = ({ rating, onRatingChange, readOnly = false }) => {
   );
 };
 
+// AutoComplete Search Bar Component
+const AutoCompleteSearchBar = ({ 
+  placeholder = "Search motorcycles and brands...", 
+  onSearchSelect = () => {}, 
+  onSearchChange = () => {},
+  className = "" 
+}) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [debounceTimeout, setDebounceTimeout] = useState(null);
+
+  const fetchSuggestions = async (query) => {
+    if (!query || query.length < 1) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API}/motorcycles/search/suggestions?q=${encodeURIComponent(query)}&limit=8`);
+      setSuggestions(response.data.suggestions || []);
+      setShowSuggestions(response.data.suggestions.length > 0);
+    } catch (error) {
+      console.error('Error fetching search suggestions:', error);
+      setSuggestions([]);
+      setShowSuggestions(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    onSearchChange(value);
+
+    // Clear previous timeout
+    if (debounceTimeout) {
+      clearTimeout(debounceTimeout);
+    }
+
+    // Set new timeout for debounced search
+    const timeout = setTimeout(() => {
+      fetchSuggestions(value);
+    }, 300);
+    setDebounceTimeout(timeout);
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setSearchTerm(suggestion.value);
+    setShowSuggestions(false);
+    onSearchSelect(suggestion);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      setShowSuggestions(false);
+      onSearchSelect({ 
+        value: searchTerm.trim(), 
+        type: 'search', 
+        display_text: searchTerm.trim() 
+      });
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setShowSuggestions(false);
+    }
+  };
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (debounceTimeout) {
+        clearTimeout(debounceTimeout);
+      }
+    };
+  }, [debounceTimeout]);
+
+  return (
+    <div className={`relative ${className}`}>
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onFocus={() => {
+              if (suggestions.length > 0) {
+                setShowSuggestions(true);
+              }
+            }}
+            onBlur={(e) => {
+              // Delay hiding suggestions to allow click events
+              setTimeout(() => {
+                if (!e.currentTarget.contains(document.activeElement)) {
+                  setShowSuggestions(false);
+                }
+              }, 200);
+            }}
+            placeholder={placeholder}
+            className="w-full px-4 py-3 pl-10 pr-4 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm text-gray-900 placeholder-gray-500"
+          />
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          {loading && (
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            </div>
+          )}
+        </div>
+        <button type="submit" className="sr-only">Search</button>
+      </form>
+
+      {/* Suggestions Dropdown */}
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+          {suggestions.map((suggestion, index) => (
+            <button
+              key={`${suggestion.type}-${suggestion.value}-${index}`}
+              onClick={() => handleSuggestionClick(suggestion)}
+              className="w-full px-4 py-3 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none border-b border-gray-100 last:border-b-0 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-2 h-2 rounded-full ${
+                    suggestion.type === 'manufacturer' ? 'bg-green-500' : 'bg-blue-500'
+                  }`}></div>
+                  <div>
+                    <div className="text-gray-900 font-medium">{suggestion.value}</div>
+                    <div className="text-sm text-gray-500">
+                      {suggestion.type === 'manufacturer' ? 'Brand' : 'Model'} • {suggestion.count} result{suggestion.count !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </div>
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Vendor Pricing Component
 const VendorPricing = ({ motorcycle }) => {
   const [vendorPrices, setVendorPrices] = useState([]);
