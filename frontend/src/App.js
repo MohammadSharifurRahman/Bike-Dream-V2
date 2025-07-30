@@ -228,6 +228,7 @@ const AutoCompleteSearchBar = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [debounceTimeout, setDebounceTimeout] = useState(null);
+  const containerRef = useRef(null);
 
   const fetchSuggestions = async (query) => {
     if (!query || query.length < 1) {
@@ -299,6 +300,31 @@ const AutoCompleteSearchBar = ({
     }
   };
 
+  // Improved blur handler with better null checks
+  const handleBlur = (e) => {
+    // Use a timeout to allow for suggestion clicks
+    setTimeout(() => {
+      try {
+        const container = containerRef.current;
+        const activeElement = document.activeElement;
+        
+        // More defensive checks
+        if (!container || !activeElement) {
+          setShowSuggestions(false);
+          return;
+        }
+        
+        // Check if the active element is within our container
+        if (!container.contains(activeElement)) {
+          setShowSuggestions(false);
+        }
+      } catch (error) {
+        // Fallback: just hide suggestions on any error
+        setShowSuggestions(false);
+      }
+    }, 200);
+  };
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -309,7 +335,7 @@ const AutoCompleteSearchBar = ({
   }, [debounceTimeout]);
 
   return (
-    <div className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative ${className}`}>
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
           <input
@@ -322,15 +348,7 @@ const AutoCompleteSearchBar = ({
                 setShowSuggestions(true);
               }
             }}
-            onBlur={(e) => {
-              // Delay hiding suggestions to allow click events
-              setTimeout(() => {
-                const activeElement = document.activeElement;
-                if (!activeElement || !e.currentTarget.contains(activeElement)) {
-                  setShowSuggestions(false);
-                }
-              }, 200);
-            }}
+            onBlur={handleBlur}
             placeholder={placeholder}
             className="w-full px-4 py-3 pl-10 pr-4 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm text-gray-900 placeholder-gray-500"
           />
