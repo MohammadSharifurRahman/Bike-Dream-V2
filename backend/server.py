@@ -868,9 +868,24 @@ async def get_all_banners(admin_user: User = Depends(require_admin_or_moderator)
         banners_cursor = db.banners.find({}).sort("created_at", -1)
         banners = await banners_cursor.to_list(100)
         
+        # Format banners for JSON serialization
+        formatted_banners = []
+        for banner in banners:
+            formatted_banners.append({
+                "id": banner["id"],
+                "message": banner["message"],
+                "is_active": banner["is_active"],
+                "priority": banner["priority"],
+                "created_by": banner["created_by"],
+                "created_at": banner["created_at"].isoformat() if banner.get("created_at") else None,
+                "updated_at": banner["updated_at"].isoformat() if banner.get("updated_at") else None,
+                "starts_at": banner["starts_at"].isoformat() if banner.get("starts_at") else None,
+                "ends_at": banner["ends_at"].isoformat() if banner.get("ends_at") else None
+            })
+        
         return {
-            "banners": banners,
-            "total_count": len(banners)
+            "banners": formatted_banners,
+            "total_count": len(formatted_banners)
         }
         
     except Exception as e:
