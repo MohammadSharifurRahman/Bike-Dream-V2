@@ -4425,15 +4425,10 @@ class MotorcycleAPITester:
     def test_log_search_analytics(self):
         """Test POST /api/analytics/search - Log search analytics"""
         try:
-            analytics_data = {
+            params = {
                 "search_term": "Yamaha R1",
                 "search_type": "general",
-                "filters_applied": {
-                    "manufacturer": "Yamaha",
-                    "category": "Sport"
-                },
-                "results_count": 15,
-                "clicked_results": ["moto_id_1", "moto_id_2"]
+                "results_count": 15
             }
             
             headers = {}
@@ -4441,7 +4436,7 @@ class MotorcycleAPITester:
                 headers["X-Session-Id"] = self.test_user_session
             
             response = requests.post(f"{self.base_url}/analytics/search", 
-                                   json=analytics_data, headers=headers, timeout=10)
+                                   params=params, headers=headers, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
@@ -4461,13 +4456,9 @@ class MotorcycleAPITester:
     def test_log_user_engagement(self):
         """Test POST /api/analytics/engagement - Log user engagement"""
         try:
-            engagement_data = {
+            params = {
                 "page_view": "/motorcycles/yamaha-r1-2024",
                 "time_spent": 120,
-                "actions": [
-                    {"action_type": "favorite", "timestamp": "2024-01-01T12:00:00Z"},
-                    {"action_type": "view_details", "timestamp": "2024-01-01T12:01:00Z"}
-                ],
                 "referrer": "https://google.com"
             }
             
@@ -4476,7 +4467,7 @@ class MotorcycleAPITester:
                 headers["X-Session-Id"] = self.test_user_session
             
             response = requests.post(f"{self.base_url}/analytics/engagement", 
-                                   json=engagement_data, headers=headers, timeout=10)
+                                   params=params, headers=headers, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
