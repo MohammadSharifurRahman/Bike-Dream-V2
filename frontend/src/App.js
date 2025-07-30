@@ -2016,6 +2016,8 @@ const ProfilePage = () => {
                   motorcycle={motorcycle}
                   onClick={() => {}}
                   showFavoriteButton={false}
+                  onAddToComparison={handleAddToComparison}
+                  comparisonList={comparisonList}
                 />
               ))}
             </div>
