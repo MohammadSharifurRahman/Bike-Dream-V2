@@ -2456,7 +2456,7 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
   );
 };
 
-const MotorcycleCard = ({ motorcycle, onClick, showFavoriteButton = true }) => {
+const MotorcycleCard = ({ motorcycle, onClick, showFavoriteButton = true, onAddToComparison, comparisonList }) => {
   const { user } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isCheckingFavorite, setIsCheckingFavorite] = useState(false);
