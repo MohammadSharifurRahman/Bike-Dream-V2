@@ -5811,12 +5811,14 @@ const MainAppContent = () => {
 
   // New useEffect for search term, hide unavailable, and region changes
   useEffect(() => {
+    console.log('Filter useEffect triggered:', { currentView, searchTerm, hideUnavailable, selectedRegion });
     if (currentView === 'browse') {
       setCurrentPage(1);
       fetchMotorcycles(1);
     }
     // Also update categories when hideUnavailable or selectedRegion changes (affects homepage)
     if (currentView === 'home') {
+      console.log('Calling fetchCategories with region:', selectedRegion);
       fetchCategories();
     }
   }, [searchTerm, hideUnavailable, selectedRegion]);
