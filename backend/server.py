@@ -979,6 +979,116 @@ async def delete_banner(banner_id: str, admin_user: User = Depends(require_admin
         print(f"Error deleting banner: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete banner: {str(e)}")
 
+# Phase 3: Admin Dashboard APIs
+@api_router.get("/admin/users")
+async def get_all_users(admin_user: User = Depends(require_admin)):
+    """Get all users for admin management (Admin only)"""
+    try:
+        users_cursor = db.users.find({}).sort("created_at", -1)
+        users = await users_cursor.to_list(1000)
+        
+        # Remove sensitive information
+        safe_users = []
+        for user in users:
+            safe_user = {
+                "id": user["id"],
+                "email": user["email"],
+                "name": user["name"],
+                "role": user.get("role", "User"),
+                "auth_method": user.get("auth_method", "password"),
+                "created_at": user["created_at"],
+                "favorite_count": len(user.get("favorite_motorcycles", []))
+            }
+            safe_users.append(safe_user)
+        
+        return {
+            "users": safe_users,
+            "total_count": len(safe_users)
+        }
+        
+    except Exception as e:
+        print(f"Error fetching users: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch users: {str(e)}")
+
+@api_router.put("/admin/users/{user_id}/role")
+async def update_user_role(user_id: str, new_role: str, admin_user: User = Depends(require_admin)):
+    """Update user role (Admin only)"""
+    try:
+        if new_role not in ["Admin", "Moderator", "User"]:
+            raise HTTPException(status_code=400, detail="Invalid role. Must be Admin, Moderator, or User")
+        
+        # Prevent admin from demoting themselves
+        if user_id == admin_user.id and new_role != "Admin":
+            raise HTTPException(status_code=400, detail="Cannot change your own admin role")
+        
+        result = await db.users.update_one(
+            {"id": user_id},
+            {"$set": {"role": new_role, "updated_at": datetime.utcnow()}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return {
+            "message": f"User role updated to {new_role}",
+            "user_id": user_id,
+            "new_role": new_role
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error updating user role: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update user role: {str(e)}")
+
+@api_router.get("/admin/stats")
+async def get_admin_stats(admin_user: User = Depends(require_admin_or_moderator)):
+    """Get admin dashboard statistics (Admin/Moderator only)"""
+    try:
+        # Get various counts
+        total_users = await db.users.count_documents({})
+        total_motorcycles = await db.motorcycles.count_documents({})
+        total_comments = await db.comments.count_documents({})
+        total_ratings = await db.ratings.count_documents({})
+        total_banners = await db.banners.count_documents({})
+        active_banners = await db.banners.count_documents({"is_active": True})
+        
+        # Get user role distribution
+        role_pipeline = [
+            {"$group": {"_id": "$role", "count": {"$sum": 1}}},
+            {"$sort": {"_id": 1}}
+        ]
+        role_cursor = db.users.aggregate(role_pipeline)
+        role_distribution = await role_cursor.to_list(10)
+        
+        # Get recent activity (last 7 days)
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        recent_users = await db.users.count_documents({"created_at": {"$gte": seven_days_ago}})
+        recent_comments = await db.comments.count_documents({"created_at": {"$gte": seven_days_ago}})
+        recent_ratings = await db.ratings.count_documents({"created_at": {"$gte": seven_days_ago}})
+        
+        return {
+            "total_stats": {
+                "total_users": total_users,
+                "total_motorcycles": total_motorcycles,
+                "total_comments": total_comments,
+                "total_ratings": total_ratings,
+                "total_banners": total_banners,
+                "active_banners": active_banners
+            },
+            "role_distribution": {item["_id"]: item["count"] for item in role_distribution},
+            "recent_activity": {
+                "new_users_7d": recent_users,
+                "new_comments_7d": recent_comments,
+                "new_ratings_7d": recent_ratings
+            },
+            "generated_at": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        print(f"Error generating admin stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate admin stats: {str(e)}")
+
 # Search Auto-suggestions API endpoint
 @api_router.get("/motorcycles/search/suggestions")
 async def get_search_suggestions(q: str = Query(..., min_length=1, description="Search query"), limit: int = Query(10, le=20)):
