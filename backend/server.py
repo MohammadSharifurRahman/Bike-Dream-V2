@@ -2575,53 +2575,70 @@ async def seed_ratings_only():
         
         import random
         ratings_added = 0
+        ratings_inserted = 0
         
         for motorcycle in motorcycles_without_ratings:
             if random.random() < 0.6:  # 60% chance to get ratings
-                category = motorcycle.get('category', 'Sport')
-                
-                # Generate 1-5 ratings for this motorcycle
-                num_ratings = random.randint(1, 5)
-                total_rating = 0
-                
-                for i in range(num_ratings):
-                    # Generate rating (biased towards higher ratings: 3-5 stars)
-                    rating = random.choices([3, 4, 5], weights=[1, 3, 4])[0]
-                    total_rating += rating
+                try:
+                    category = motorcycle.get('category', 'Sport')
                     
-                    # Select random user and review
-                    user = random.choice(sample_users)
-                    review_texts = sample_reviews.get(category, sample_reviews['Sport'])
-                    review_text = random.choice(review_texts)
+                    # Generate 1-5 ratings for this motorcycle
+                    num_ratings = random.randint(1, 5)
+                    total_rating = 0
                     
-                    # Create rating document
-                    rating_doc = {
-                        "id": str(uuid.uuid4()),
-                        "user_id": user["id"],
-                        "user_name": user["name"],
-                        "user_picture": user["picture"],
-                        "motorcycle_id": motorcycle["id"],
-                        "rating": rating,
-                        "review_text": review_text,
-                        "created_at": datetime.utcnow(),
-                        "updated_at": datetime.utcnow()
-                    }
-                    
-                    # Insert rating
-                    await db.ratings.insert_one(rating_doc)
-                
-                # Update motorcycle with average rating
-                average_rating = total_rating / num_ratings
-                await db.motorcycles.update_one(
-                    {"id": motorcycle["id"]},
-                    {
-                        "$set": {
-                            "average_rating": round(average_rating, 1),
-                            "total_ratings": num_ratings
+                    for i in range(num_ratings):
+                        # Generate rating (biased towards higher ratings: 3-5 stars)
+                        # Use weighted random selection - more 4s and 5s
+                        rating_options = [3, 4, 4, 4, 5, 5, 5, 5]  # Weighted towards higher ratings
+                        rating = random.choice(rating_options)
+                        total_rating += rating
+                        
+                        # Select random user and review
+                        user = random.choice(sample_users)
+                        review_texts = sample_reviews.get(category, sample_reviews['Sport'])
+                        review_text = random.choice(review_texts)
+                        
+                        # Create rating document
+                        rating_doc = {
+                            "id": str(uuid.uuid4()),
+                            "user_id": user["id"],
+                            "user_name": user["name"],
+                            "user_picture": user["picture"],
+                            "motorcycle_id": motorcycle["id"],
+                            "rating": rating,
+                            "review_text": review_text,
+                            "created_at": datetime.utcnow(),
+                            "updated_at": datetime.utcnow()
                         }
-                    }
-                )
-                ratings_added += 1
+                        
+                        # Insert rating with error handling
+                        try:
+                            await db.ratings.insert_one(rating_doc)
+                            ratings_inserted += 1
+                        except Exception as e:
+                            print(f"Error inserting rating: {str(e)}")
+                            continue
+                    
+                    # Update motorcycle with average rating
+                    average_rating = total_rating / num_ratings
+                    try:
+                        await db.motorcycles.update_one(
+                            {"id": motorcycle["id"]},
+                            {
+                                "$set": {
+                                    "average_rating": round(average_rating, 1),
+                                    "total_ratings": num_ratings
+                                }
+                            }
+                        )
+                        ratings_added += 1
+                    except Exception as e:
+                        print(f"Error updating motorcycle {motorcycle['id']}: {str(e)}")
+                        continue
+                        
+                except Exception as e:
+                    print(f"Error processing motorcycle {motorcycle.get('id', 'unknown')}: {str(e)}")
+                    continue
         
         return {
             "message": f"Successfully added sample ratings to {ratings_added} motorcycles",
