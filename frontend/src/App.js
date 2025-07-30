@@ -5751,6 +5751,10 @@ const MainAppContent = () => {
       setCurrentPage(1);
       fetchMotorcycles(1);
     }
+    // Also update categories when hideUnavailable changes (affects homepage)
+    if (currentView === 'home') {
+      fetchCategories();
+    }
   }, [searchTerm, hideUnavailable]);
 
   // Handle route changes
