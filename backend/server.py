@@ -808,6 +808,34 @@ async def get_current_admin_user(authorization: str = Header(None)) -> User:
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
+@api_router.post("/admin/requests/cleanup")
+async def cleanup_old_requests(
+    days: int = Query(90, description="Keep requests newer than this many days"),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Clean up old requests (Admin only) - maintains 90-day rolling archive"""
+    try:
+        # Calculate cutoff date
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        
+        # Count requests to be deleted
+        delete_query = {"created_at": {"$lt": cutoff_date}}
+        count_to_delete = await db.user_requests.count_documents(delete_query)
+        
+        # Delete old requests
+        result = await db.user_requests.delete_many(delete_query)
+        
+        return {
+            "message": f"Cleanup completed successfully",
+            "requests_deleted": result.deleted_count,
+            "archive_days": days,
+            "cutoff_date": cutoff_date.isoformat()
+        }
+        
+    except Exception as e:
+        logging.error(f"Error during cleanup: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to cleanup old requests")
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
