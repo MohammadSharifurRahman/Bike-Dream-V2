@@ -2680,6 +2680,8 @@ const CategorySection = ({ category, onMotorcycleClick, onViewAllClick }) => (
           key={motorcycle.id}
           motorcycle={motorcycle}
           onClick={onMotorcycleClick}
+          onAddToComparison={onMotorcycleClick.handleAddToComparison}
+          comparisonList={onMotorcycleClick.comparisonList}
         />
       ))}
     </div>
