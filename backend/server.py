@@ -3200,6 +3200,257 @@ async def update_user_request(request_id: str, update_data: UserRequestUpdate):
     
     return {"message": "Request updated successfully"}
 
+# ==================== USER REQUEST AGGREGATION SYSTEM ====================
+
+@api_router.post("/requests")
+async def submit_user_request(
+    request_data: UserRequestCreate,
+    request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Submit a user request for vendor suggestions, features, etc."""
+    try:
+        # Create user request
+        user_request = UserRequest(
+            user_id=current_user.id if current_user else None,
+            user_email=request_data.user_email or (current_user.email if current_user else None),
+            request_type=request_data.request_type,
+            category=request_data.category,
+            title=request_data.title,
+            content=request_data.content,
+            priority=request_data.priority,
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent")
+        )
+        
+        # Store in database
+        await db.user_requests.insert_one(user_request.dict())
+        
+        return {
+            "message": "Request submitted successfully",
+            "request_id": user_request.id,
+            "status": "pending"
+        }
+        
+    except Exception as e:
+        logging.error(f"Error submitting user request: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to submit request")
+
+@api_router.get("/admin/requests")
+async def get_user_requests(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    status: Optional[str] = Query(None),
+    request_type: Optional[str] = Query(None),
+    priority: Optional[str] = Query(None),
+    days: Optional[int] = Query(None, description="Filter by days back from today"),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Get user requests with filtering (Admin only)"""
+    try:
+        # Build query
+        query = {}
+        
+        if status:
+            query["status"] = status
+        if request_type:
+            query["request_type"] = request_type
+        if priority:
+            query["priority"] = priority
+        if days:
+            date_threshold = datetime.utcnow() - timedelta(days=days)
+            query["created_at"] = {"$gte": date_threshold}
+        
+        # Get total count
+        total_count = await db.user_requests.count_documents(query)
+        
+        # Calculate skip for pagination
+        skip = (page - 1) * limit
+        
+        # Get requests
+        requests = await db.user_requests.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Calculate pagination info
+        total_pages = (total_count + limit - 1) // limit
+        has_next = page < total_pages
+        has_previous = page > 1
+        
+        return {
+            "requests": [UserRequest(**req) for req in requests],
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total_count": total_count,
+                "total_pages": total_pages,
+                "has_next": has_next,
+                "has_previous": has_previous
+            }
+        }
+        
+    except Exception as e:
+        logging.error(f"Error fetching user requests: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch requests")
+
+@api_router.put("/admin/requests/{request_id}")
+async def update_user_request(
+    request_id: str,
+    update_data: UserRequestUpdate,
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Update user request status and notes (Admin only)"""
+    try:
+        # Check if request exists
+        existing_request = await db.user_requests.find_one({"id": request_id})
+        if not existing_request:
+            raise HTTPException(status_code=404, detail="Request not found")
+        
+        # Prepare update data
+        update_dict = {k: v for k, v in update_data.dict().items() if v is not None}
+        if update_dict:
+            update_dict["updated_at"] = datetime.utcnow()
+            
+            # Update request
+            await db.user_requests.update_one(
+                {"id": request_id},
+                {"$set": update_dict}
+            )
+        
+        return {"message": "Request updated successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating user request: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update request")
+
+@api_router.get("/admin/requests/export")
+async def export_user_requests(
+    days: int = Query(90, description="Number of days to include in export"),
+    format: str = Query("txt", description="Export format: txt or json"),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Export user requests as downloadable file (Admin only)"""
+    try:
+        # Calculate date range
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=days)
+        
+        # Get requests in date range
+        query = {"created_at": {"$gte": start_date, "$lte": end_date}}
+        requests = await db.user_requests.find(query).sort("created_at", -1).to_list(None)
+        
+        if format == "txt":
+            # Generate text format
+            content = f"BIKE-DREAM USER REQUESTS EXPORT\n"
+            content += f"Export Date: {end_date.strftime('%Y-%m-%d %H:%M:%S')} UTC\n"
+            content += f"Date Range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}\n"
+            content += f"Total Requests: {len(requests)}\n"
+            content += "=" * 80 + "\n\n"
+            
+            for req in requests:
+                content += f"[{req['created_at'].strftime('%Y-%m-%d %H:%M:%S')}] - {req.get('user_email', 'Anonymous')}\n"
+                content += f"Request Type: {req['request_type']}\n"
+                content += f"Priority: {req['priority']} | Status: {req['status']}\n"
+                if req.get('category'):
+                    content += f"Category: {req['category']}\n"
+                content += f"Title: {req['title']}\n"
+                content += f"Content: {req['content']}\n"
+                if req.get('admin_notes'):
+                    content += f"Admin Notes: {req['admin_notes']}\n"
+                content += "-" * 40 + "\n\n"
+            
+            # Return as downloadable file
+            from fastapi.responses import Response
+            return Response(
+                content=content,
+                media_type="text/plain",
+                headers={"Content-Disposition": f"attachment; filename=user_requests_{days}days_{end_date.strftime('%Y%m%d')}.txt"}
+            )
+            
+        else:  # JSON format
+            # Convert datetime objects to strings for JSON serialization
+            export_data = []
+            for req in requests:
+                req_copy = req.copy()
+                req_copy["created_at"] = req_copy["created_at"].isoformat()
+                if req_copy.get("updated_at"):
+                    req_copy["updated_at"] = req_copy["updated_at"].isoformat()
+                export_data.append(req_copy)
+            
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                content={
+                    "export_info": {
+                        "export_date": end_date.isoformat(),
+                        "date_range": {
+                            "start": start_date.isoformat(),
+                            "end": end_date.isoformat()
+                        },
+                        "total_requests": len(requests),
+                        "format": "json"
+                    },
+                    "requests": export_data
+                },
+                headers={"Content-Disposition": f"attachment; filename=user_requests_{days}days_{end_date.strftime('%Y%m%d')}.json"}
+            )
+        
+    except Exception as e:
+        logging.error(f"Error exporting user requests: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to export requests")
+
+@api_router.get("/admin/requests/stats")
+async def get_request_statistics(
+    days: int = Query(30, description="Number of days for statistics"),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Get user request statistics (Admin only)"""
+    try:
+        # Calculate date threshold
+        date_threshold = datetime.utcnow() - timedelta(days=days)
+        
+        # Aggregate statistics
+        pipeline = [
+            {"$match": {"created_at": {"$gte": date_threshold}}},
+            {"$group": {
+                "_id": None,
+                "total_requests": {"$sum": 1},
+                "by_type": {"$push": "$request_type"},
+                "by_status": {"$push": "$status"},
+                "by_priority": {"$push": "$priority"}
+            }}
+        ]
+        
+        result = await db.user_requests.aggregate(pipeline).to_list(1)
+        
+        if not result:
+            return {
+                "period_days": days,
+                "total_requests": 0,
+                "by_type": {},
+                "by_status": {},
+                "by_priority": {}
+            }
+        
+        data = result[0]
+        
+        # Count occurrences
+        from collections import Counter
+        type_counts = Counter(data["by_type"])
+        status_counts = Counter(data["by_status"])
+        priority_counts = Counter(data["by_priority"])
+        
+        return {
+            "period_days": days,
+            "total_requests": data["total_requests"],
+            "by_type": dict(type_counts),
+            "by_status": dict(status_counts),
+            "by_priority": dict(priority_counts)
+        }
+        
+    except Exception as e:
+        logging.error(f"Error getting request statistics: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get statistics")
+
 # ==================== VIRTUAL GARAGE API ENDPOINTS ====================
 
 @api_router.post("/garage")
