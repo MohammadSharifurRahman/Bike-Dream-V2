@@ -1269,9 +1269,12 @@ const UserManagement = ({ users, onUsersChange }) => {
   const updateUserRole = async (userId, newRole) => {
     try {
       const token = localStorage.getItem('auth_token');
-      await axios.put(`${API}/admin/users/${userId}/role?new_role=${newRole}`, 
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await axios.put(`${API}/admin/users/${userId}/role`, 
+        null,
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          params: { new_role: newRole }
+        }
       );
       onUsersChange();
       alert(`User role updated to ${newRole} successfully!`);
