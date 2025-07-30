@@ -3566,6 +3566,22 @@ function App() {
                 >
                   My Garage
                 </button>
+                <button
+                  onClick={() => {setCurrentView('community'); window.history.pushState({}, '', '/community');}}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    currentView === 'community' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  Community
+                </button>
+                <button
+                  onClick={() => {setCurrentView('achievements'); window.history.pushState({}, '', '/achievements');}}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    currentView === 'achievements' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  Achievements
+                </button>
                 <AuthButton />
                 {currentView === 'browse' && (
                   <>
