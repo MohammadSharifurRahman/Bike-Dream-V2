@@ -5456,6 +5456,9 @@ function App() {
   
   // New states for Phase 3 features - Admin Dashboard
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  
+  // Get user from auth context
+  const { user } = useAuth();
 
   // Analytics helper functions
   const logSearchAnalytics = async (searchTerm, searchType = 'general', filtersApplied = {}, resultsCount = 0, clickedResults = []) => {
