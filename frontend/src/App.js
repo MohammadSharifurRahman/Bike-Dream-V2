@@ -5453,6 +5453,9 @@ function App() {
   // New states for Phase 2 features - Motorcycle Comparison
   const [comparisonList, setComparisonList] = useState([]);
   const [showComparison, setShowComparison] = useState(false);
+  
+  // New states for Phase 3 features - Admin Dashboard
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
 
   // Analytics helper functions
   const logSearchAnalytics = async (searchTerm, searchType = 'general', filtersApplied = {}, resultsCount = 0, clickedResults = []) => {
