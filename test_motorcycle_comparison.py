@@ -58,7 +58,7 @@ class MotorcycleComparisonTester:
         
         try:
             motorcycle_id = self.motorcycle_ids[0]
-            payload = {"motorcycle_ids": [motorcycle_id]}
+            payload = [motorcycle_id]
             
             response = requests.post(f"{self.base_url}/motorcycles/compare", 
                                    json=payload, timeout=15)
