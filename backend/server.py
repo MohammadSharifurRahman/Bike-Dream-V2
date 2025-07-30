@@ -1812,6 +1812,10 @@ async def get_motorcycles(
         if specialisation_list:
             query["specialisations"] = {"$in": specialisation_list}
     
+    # Hide unavailable motorcycles filter
+    if hide_unavailable:
+        query["availability"] = {"$nin": ["Discontinued", "Not Available", "Out of Stock", "Collector Item"]}
+    
     # Technical Features filtering
     if transmission_type:
         query["transmission_type"] = transmission_type
