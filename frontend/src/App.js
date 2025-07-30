@@ -2660,7 +2660,7 @@ const MotorcycleCard = ({ motorcycle, onClick, showFavoriteButton = true, onAddT
   );
 };
 
-const CategorySection = ({ category, onMotorcycleClick, onViewAllClick }) => (
+const CategorySection = ({ category, onMotorcycleClick, onViewAllClick, onAddToComparison, comparisonList }) => (
   <div className="mb-12">
     <div className="flex items-center justify-between mb-6">
       <div>
@@ -2680,8 +2680,8 @@ const CategorySection = ({ category, onMotorcycleClick, onViewAllClick }) => (
           key={motorcycle.id}
           motorcycle={motorcycle}
           onClick={onMotorcycleClick}
-          onAddToComparison={onMotorcycleClick.handleAddToComparison}
-          comparisonList={onMotorcycleClick.comparisonList}
+          onAddToComparison={onAddToComparison}
+          comparisonList={comparisonList}
         />
       ))}
     </div>
