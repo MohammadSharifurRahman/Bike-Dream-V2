@@ -5825,10 +5825,11 @@ const MainAppContent = () => {
       setCurrentPage(1);
       fetchMotorcycles(1);
     }
-    // Also update categories when hideUnavailable or selectedRegion changes (affects homepage)
+    // Also update categories and stats when hideUnavailable or selectedRegion changes (affects homepage)
     if (currentView === 'home') {
       console.log('Calling fetchCategories with region:', selectedRegion);
       fetchCategories();
+      fetchDatabaseStats(); // Update stats too!
     }
   }, [searchTerm, hideUnavailable, selectedRegion]);
 
