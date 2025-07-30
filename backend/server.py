@@ -328,6 +328,35 @@ class UpdateJobStatus(BaseModel):
 # User Request Models
 class UserRequest(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: Optional[str] = None  # If user is logged in
+    user_email: Optional[str] = None  # If provided
+    request_type: str  # "add_vendor", "add_manufacturer", "regional_availability", "feature_request", "bug_report", "other"
+    category: Optional[str] = None  # For categorization
+    title: str  # Brief title/summary
+    content: str  # Detailed request content
+    priority: str = "normal"  # "low", "normal", "high", "urgent"
+    status: str = "pending"  # "pending", "reviewed", "in_progress", "completed", "rejected"
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
+    admin_notes: Optional[str] = None  # For admin use
+
+class UserRequestCreate(BaseModel):
+    user_email: Optional[EmailStr] = None
+    request_type: str = Field(pattern="^(add_vendor|add_manufacturer|regional_availability|feature_request|bug_report|other)$")
+    category: Optional[str] = None
+    title: str = Field(min_length=5, max_length=200)
+    content: str = Field(min_length=10, max_length=2000)
+    priority: str = Field("normal", pattern="^(low|normal|high|urgent)$")
+
+class UserRequestUpdate(BaseModel):
+    status: Optional[str] = Field(None, pattern="^(pending|reviewed|in_progress|completed|rejected)$")
+    priority: Optional[str] = Field(None, pattern="^(low|normal|high|urgent)$")
+    admin_notes: Optional[str] = Field(None, max_length=1000)
+
+class UserRequest(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
     title: str
     description: str
