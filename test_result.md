@@ -1047,7 +1047,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Virtual Garage and Price Alerts GET endpoints testing completed successfully"
+    - "Rider Groups, Achievement System, and Search Analytics systems testing completed successfully"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
