@@ -3024,66 +3024,61 @@ const UserActivityPage = ({ onBack }) => {
 
 // Enhanced Image Component with Error Handling
 const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true }) => {
-  const [imgSrc, setImgSrc] = useState(src);
-  const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Simple SVG placeholder that always works - no external dependencies
-  const placeholderSVG = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9Ijk1IiBjeT0iMTg1IiByPSI0MCIgZmlsbD0iIzRCNUM2OCIvPgo8Y2lyY2xlIGN4PSIzMDUiIGN5PSIxODUiIHI9IjQwIiBmaWxsPSIjNEI1QzY4Ii8+CjxwYXRoIGQ9Ik05NSAxMDBMMjAwIDkwTDMwNSAxMDBMMzA1IDE0NUg5NVYxMDBaIiBmaWxsPSIjMzc0MzUxIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iNDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzZCNzI4MCI+TW90b3JjeWNsZTwvdGV4dD4KPHN2Zz4=";
-  
-  const handleImageError = () => {
-    if (showPlaceholderOnError && imgSrc !== placeholderSVG) {
-      setImgSrc(placeholderSVG);
-      setHasError(true);
-    }
-    setIsLoading(false);
-  };
+  const [showImage, setShowImage] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   
   const handleImageLoad = () => {
-    setIsLoading(false);
+    setImageLoaded(true);
+    setShowImage(true);
+  };
+  
+  const handleImageError = () => {
+    setImageLoaded(false);
+    setShowImage(false);
   };
   
   useEffect(() => {
-    setImgSrc(src);
-    setHasError(false);
+    setShowImage(false);
+    setImageLoaded(false);
     
-    // Handle base64 images - they load instantly
-    if (src && src.startsWith('data:image')) {
-      setIsLoading(false);
-    } else {
-      setIsLoading(true);
-      
-      // For external images, set a timeout to show placeholder if loading takes too long
-      const loadingTimeout = setTimeout(() => {
-        if (showPlaceholderOnError) {
-          setImgSrc(placeholderSVG);
-          setHasError(true);
-          setIsLoading(false);
-        }
-      }, 3000); // Show placeholder after 3 seconds of loading
-      
-      return () => clearTimeout(loadingTimeout);
-    }
-  }, [src, showPlaceholderOnError]);
+    // Set a very short timeout - if image doesn't load quickly, show CSS placeholder
+    const timeout = setTimeout(() => {
+      if (!imageLoaded) {
+        setShowImage(false);
+      }
+    }, 1000); // Only 1 second timeout
+    
+    return () => clearTimeout(timeout);
+  }, [src, imageLoaded]);
   
   return (
     <div className="relative">
-      {isLoading && (
-        <div className={`${className} bg-gray-200 animate-pulse flex items-center justify-center`}>
-          <span className="text-gray-400 text-sm">Loading...</span>
+      {/* Always show CSS placeholder as background */}
+      <div className={`${className} bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-gray-300 flex flex-col items-center justify-center`}>
+        {/* Motorcycle icon using CSS */}
+        <div className="text-gray-400 mb-2">
+          <svg width="48" height="32" viewBox="0 0 48 32" fill="currentColor">
+            <circle cx="10" cy="24" r="6"/>
+            <circle cx="38" cy="24" r="6"/>
+            <path d="M10 12L20 10L38 12L38 18H10V12Z"/>
+            <text x="24" y="8" textAnchor="middle" fontSize="8" fill="currentColor">Motorcycle</text>
+          </svg>
         </div>
-      )}
-      <img 
-        src={imgSrc}
-        alt={alt}
-        className={`${className} ${isLoading ? 'hidden' : ''}`}
-        onError={handleImageError}
-        onLoad={handleImageLoad}
-      />
-      {hasError && (
-        <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-xs">
-          Placeholder
-        </div>
+        <span className="text-xs text-gray-500 text-center px-2">
+          {alt || 'Motorcycle Image'}
+        </span>
+      </div>
+      
+      {/* Try to load the actual image invisibly */}
+      {src && (
+        <img 
+          src={src}
+          alt={alt}
+          className={`absolute inset-0 ${className} ${showImage ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+          onError={handleImageError}
+          onLoad={handleImageLoad}
+          style={{ display: showImage ? 'block' : 'none' }}
+        />
       )}
     </div>
   );
