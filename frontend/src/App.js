@@ -782,6 +782,63 @@ const formatValue = (value, type, unit) => {
   return value;
 };
 
+// Phase 3: Scrolling Text Banner Component
+const ScrollingBanner = () => {
+  const [banners, setBanners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await axios.get(`${API}/banners`);
+        setBanners(response.data.banners || []);
+      } catch (error) {
+        console.error('Error fetching banners:', error);
+        setError('Failed to load announcements');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBanners();
+    
+    // Refresh banners every 5 minutes
+    const interval = setInterval(fetchBanners, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading || error || banners.length === 0) {
+    return null;
+  }
+
+  // Create continuous scrolling text from all banner messages
+  const scrollingText = banners.map(banner => banner.message).join(' • ');
+
+  return (
+    <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 overflow-hidden">
+      <div className="relative whitespace-nowrap">
+        <div className="animate-marquee inline-block">
+          <span className="text-sm font-medium">
+            🎉 {scrollingText} 🎉 {scrollingText} 
+          </span>
+        </div>
+      </div>
+      <style jsx>{`
+        @keyframes marquee {
+          0% { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
+        }
+        .animate-marquee {
+          animation: marquee 30s linear infinite;
+        }
+      `}</style>
+    </div>
+  );
+};
+
 // Vendor Pricing Component
 const VendorPricing = ({ motorcycle }) => {
   const [vendorPrices, setVendorPrices] = useState([]);
