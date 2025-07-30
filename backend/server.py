@@ -2809,6 +2809,67 @@ async def seed_ratings_only():
         logging.error(f"Error seeding ratings: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Rating seeding failed: {str(e)}")
 
+@api_router.post("/motorcycles/fix-images")
+async def fix_motorcycle_images():
+    """Fix motorcycle images with fast-loading, reliable image URLs"""
+    try:
+        # Curated list of fast-loading motorcycle images
+        reliable_images = {
+            # Indian motorcycle brands - using reliable generic motorcycle images
+            ("Hero", ""): "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=400&h=250&fit=crop&auto=format",
+            ("Bajaj", ""): "https://images.unsplash.com/photo-1591231720264-80b4c3b9bc76?w=400&h=250&fit=crop&auto=format", 
+            ("TVS", ""): "https://images.unsplash.com/photo-1558618047-3c8c76ca7d2b?w=400&h=250&fit=crop&auto=format",
+            ("Royal Enfield", ""): "https://images.unsplash.com/photo-1544552866-d3ed42536cfd?w=400&h=250&fit=crop&auto=format",
+            
+            # International brands - optimized images
+            ("Honda", ""): "https://images.unsplash.com/photo-1558618047-3c8c76ca7d2b?w=400&h=250&fit=crop&auto=format",
+            ("Yamaha", ""): "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=400&h=250&fit=crop&auto=format",
+            ("Suzuki", ""): "https://images.unsplash.com/photo-1544552866-d3ed42536cfd?w=400&h=250&fit=crop&auto=format",
+            ("Kawasaki", ""): "https://images.unsplash.com/photo-1591231720264-80b4c3b9bc76?w=400&h=250&fit=crop&auto=format",
+            ("KTM", ""): "https://images.unsplash.com/photo-1591231720264-80b4c3b9bc76?w=400&h=250&fit=crop&auto=format",
+            ("BMW", ""): "https://images.unsplash.com/photo-1544552866-d3ed42536cfd?w=400&h=250&fit=crop&auto=format",
+            ("Ducati", ""): "https://images.unsplash.com/photo-1591231720264-80b4c3b9bc76?w=400&h=250&fit=crop&auto=format",
+            ("Harley-Davidson", ""): "https://images.unsplash.com/photo-1544552866-d3ed42536cfd?w=400&h=250&fit=crop&auto=format",
+            ("Triumph", ""): "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=400&h=250&fit=crop&auto=format"
+        }
+        
+        updated_count = 0
+        
+        # Get all motorcycles
+        all_motorcycles = await db.motorcycles.find({}).to_list(None)
+        
+        for motorcycle in all_motorcycles:
+            manufacturer = motorcycle.get('manufacturer', '')
+            
+            # Find appropriate image for this manufacturer
+            new_image = None
+            for (mfr, mdl), img_url in reliable_images.items():
+                if mfr == manufacturer:
+                    new_image = img_url
+                    break
+            
+            # Use a default motorcycle image if no specific mapping
+            if not new_image:
+                new_image = "https://images.unsplash.com/photo-1558618047-3c8c76ca7d2b?w=400&h=250&fit=crop&auto=format"
+            
+            # Update motorcycle with new fast-loading image
+            await db.motorcycles.update_one(
+                {"id": motorcycle["id"]},
+                {"$set": {"image_url": new_image}}
+            )
+            updated_count += 1
+        
+        return {
+            "message": f"Successfully updated images for {updated_count} motorcycles with fast-loading URLs",
+            "updated_count": updated_count,
+            "total_processed": len(all_motorcycles),
+            "status": "Fast-loading images updated!"
+        }
+        
+    except Exception as e:
+        logging.error(f"Error fixing motorcycle images: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Image fix failed: {str(e)}")
+
 @api_router.post("/motorcycles/update-images")
 async def update_motorcycle_images():
     """Update motorcycle images with more authentic ones"""
