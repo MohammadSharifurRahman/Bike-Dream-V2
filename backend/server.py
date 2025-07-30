@@ -3205,8 +3205,7 @@ async def update_user_request(request_id: str, update_data: UserRequestUpdate):
 @api_router.post("/requests")
 async def submit_user_request(
     request_data: UserRequestCreate,
-    request: Request,
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    request: Request
 ):
     """Submit a user request for vendor suggestions, features, etc. (Public endpoint)"""
     try:
