@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Build Byke-Dream motorcycle database website with comprehensive motorcycle catalog, advanced search/filtering, detailed motorcycle pages, and user engagement features"
+user_problem_statement: "Build Byke-Dream motorcycle database website with comprehensive motorcycle catalog, advanced search/filtering, detailed motorcycle pages, and user engagement features. New requirements: 1) Motorcycle search with auto-suggestions site-wide, 2) Motorcycle comparison tool for up to 3 bikes, 3) Toggle to hide discontinued/unavailable bikes, 4) Scrolling text banner for vendor discounts/ads with admin panel, 5) User role management (Admin/Moderator/User) with separate admin dashboard"
 
   - task: "Email/Password Authentication System"
     implemented: true
