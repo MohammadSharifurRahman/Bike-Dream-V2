@@ -2572,8 +2572,6 @@ async def seed_ratings_only():
         }).to_list(2000)
         
         print(f"Found {len(motorcycles_without_ratings)} motorcycles without ratings")
-        print(f"Sample user count: {len(sample_users)}")
-        print(f"Sample review categories: {list(sample_reviews.keys())}")
         
         import random
         ratings_added = 0
@@ -2583,7 +2581,6 @@ async def seed_ratings_only():
             if random.random() < 0.6:  # 60% chance to get ratings
                 try:
                     category = motorcycle.get('category', 'Sport')
-                    print(f"Processing motorcycle: {motorcycle.get('manufacturer')} {motorcycle.get('model')} (Category: {category})")
                     
                     # Generate 1-5 ratings for this motorcycle
                     num_ratings = random.randint(1, 5)
@@ -2618,10 +2615,8 @@ async def seed_ratings_only():
                         try:
                             await db.ratings.insert_one(rating_doc)
                             ratings_inserted += 1
-                            if ratings_inserted <= 3:  # Log first few insertions
-                                print(f"✅ Inserted rating {ratings_inserted}: {rating} stars for {motorcycle.get('model')}")
                         except Exception as e:
-                            print(f"❌ Error inserting rating: {str(e)}")
+                            print(f"Error inserting rating: {str(e)}")
                             continue
                     
                     # Update motorcycle with average rating
@@ -2637,20 +2632,13 @@ async def seed_ratings_only():
                             }
                         )
                         ratings_added += 1
-                        if ratings_added <= 3:  # Log first few updates
-                            print(f"✅ Updated motorcycle {ratings_added}: {motorcycle.get('model')} -> {round(average_rating, 1)} avg, {num_ratings} reviews")
                     except Exception as e:
-                        print(f"❌ Error updating motorcycle {motorcycle['id']}: {str(e)}")
+                        print(f"Error updating motorcycle {motorcycle['id']}: {str(e)}")
                         continue
                         
                 except Exception as e:
-                    print(f"❌ Error processing motorcycle {motorcycle.get('id', 'unknown')}: {str(e)}")
+                    print(f"Error processing motorcycle {motorcycle.get('id', 'unknown')}: {str(e)}")
                     continue
-            
-            # Break after processing first 10 for debugging
-            if ratings_added >= 10:
-                print(f"🛑 Stopping after processing 10 motorcycles for debugging")
-                break
         
         return {
             "message": f"Successfully added sample ratings to {ratings_added} motorcycles",
