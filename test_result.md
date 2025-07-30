@@ -198,6 +198,31 @@ user_problem_statement: "Build Byke-Dream motorcycle database website with compr
         comment: "✅ AUTHENTICATION ERROR HANDLING VERIFIED: Invalid login credentials properly rejected with 401 status. Unauthorized access to protected endpoints returns 401 status. Registration validation working for email format and password requirements. Proper error messages returned for authentication failures. Security measures implemented to prevent unauthorized access to user data and protected functionality."
 
 backend:
+  - task: "Motorcycle Search Auto-Suggestions API"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Starting Phase 1 implementation: Need to create /api/motorcycles/search/suggestions endpoint that returns autocomplete suggestions for both motorcycle names and brand names simultaneously as users type."
+
+  - task: "Hide Unavailable Bikes Filter API Enhancement"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Need to enhance existing motorcycle listing API to support filtering out discontinued/unavailable motorcycles when hide_unavailable parameter is provided."
+
+backend:
   - task: "Virtual Garage API - Add to Garage"
     implemented: true
     working: true
