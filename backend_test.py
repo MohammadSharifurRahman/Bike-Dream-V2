@@ -4783,6 +4783,39 @@ class MotorcycleAPITester:
         # Test database expansion to 2530+ motorcycles
         self.test_database_expansion_2530_plus()
         
+        # ==================== NEW TESTS FOR TASK 3 & 4 ====================
+        
+        # Rider Groups API Testing
+        print("\n🏍️ Testing Rider Groups System...")
+        print("-" * 60)
+        if self.test_user_session:
+            self.test_create_rider_group()
+            self.test_get_rider_groups()
+            self.test_get_rider_group_details()
+            self.test_join_rider_group()
+            self.test_get_my_rider_groups()
+        else:
+            print("⚠️ Skipping Rider Groups tests - No user session available")
+        
+        # Achievement System API Testing
+        print("\n🏆 Testing Achievement System...")
+        print("-" * 60)
+        self.test_get_achievements()
+        if self.test_user_session:
+            self.test_get_user_achievements()
+            self.test_check_achievements()
+        else:
+            print("⚠️ Skipping user-specific Achievement tests - No user session available")
+        
+        # Search Analytics API Testing
+        print("\n📊 Testing Search Analytics System...")
+        print("-" * 60)
+        self.test_log_search_analytics()
+        self.test_log_user_engagement()
+        self.test_get_search_trends()
+        self.test_get_user_behavior_analytics()
+        self.test_get_motorcycle_interests()
+        
         # Summary
         print("\n" + "=" * 60)
         print("📊 TEST SUMMARY")
