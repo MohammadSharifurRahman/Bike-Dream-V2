@@ -239,8 +239,9 @@ const AutoCompleteSearchBar = ({
     try {
       setLoading(true);
       const response = await axios.get(`${API}/motorcycles/search/suggestions?q=${encodeURIComponent(query)}&limit=8`);
-      setSuggestions(response.data.suggestions || []);
-      setShowSuggestions(response.data.suggestions.length > 0);
+      const suggestions = response.data.suggestions || [];
+      setSuggestions(suggestions);
+      setShowSuggestions(suggestions.length > 0);
     } catch (error) {
       console.error('Error fetching search suggestions:', error);
       setSuggestions([]);
