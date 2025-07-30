@@ -839,6 +839,506 @@ const ScrollingBanner = () => {
   );
 };
 
+// Phase 3: Admin Dashboard Components
+const AdminDashboard = ({ user, onClose }) => {
+  const [activeTab, setActiveTab] = useState('stats');
+  const [stats, setStats] = useState(null);
+  const [banners, setBanners] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('auth_token');
+      const response = await axios.get(`${API}/admin/stats`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setStats(response.data);
+    } catch (error) {
+      console.error('Error fetching admin stats:', error);
+      setError('Failed to load admin statistics');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBanners = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('auth_token');
+      const response = await axios.get(`${API}/admin/banners`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setBanners(response.data.banners || []);
+    } catch (error) {
+      console.error('Error fetching banners:', error);
+      setError('Failed to load banners');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    if (user.role !== 'Admin') return; // Only admins can view users
+    
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('auth_token');
+      const response = await axios.get(`${API}/admin/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUsers(response.data.users || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setError('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'stats') {
+      fetchStats();
+    } else if (activeTab === 'banners') {
+      fetchBanners();
+    } else if (activeTab === 'users') {
+      fetchUsers();
+    }
+  }, [activeTab, user.role]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      onClose();
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Admin Dashboard</h2>
+            <p className="text-gray-600">Welcome, {user.name} ({user.role})</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium"
+          >
+            ✕ Close
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={`px-6 py-3 font-medium ${
+              activeTab === 'stats' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            📊 Statistics
+          </button>
+          <button
+            onClick={() => setActiveTab('banners')}
+            className={`px-6 py-3 font-medium ${
+              activeTab === 'banners' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            📢 Banner Management
+          </button>
+          {user.role === 'Admin' && (
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`px-6 py-3 font-medium ${
+                activeTab === 'users' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              👥 User Management
+            </button>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[calc(90vh-160px)] p-6">
+          {error && (
+            <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-gray-600">Loading...</span>
+            </div>
+          ) : (
+            <>
+              {activeTab === 'stats' && <AdminStats stats={stats} />}
+              {activeTab === 'banners' && <BannerManagement banners={banners} onBannersChange={fetchBanners} />}
+              {activeTab === 'users' && user.role === 'Admin' && <UserManagement users={users} onUsersChange={fetchUsers} />}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Admin Statistics Component
+const AdminStats = ({ stats }) => {
+  if (!stats) return <div>No statistics available</div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-blue-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold text-blue-800 mb-2">Total Users</h3>
+          <p className="text-3xl font-bold text-blue-600">{stats.total_stats.total_users}</p>
+          <p className="text-sm text-blue-600 mt-1">+{stats.recent_activity.new_users_7d} this week</p>
+        </div>
+
+        <div className="bg-green-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold text-green-800 mb-2">Motorcycles</h3>
+          <p className="text-3xl font-bold text-green-600">{stats.total_stats.total_motorcycles}</p>
+          <p className="text-sm text-green-600 mt-1">Complete database</p>
+        </div>
+
+        <div className="bg-purple-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold text-purple-800 mb-2">Comments</h3>
+          <p className="text-3xl font-bold text-purple-600">{stats.total_stats.total_comments}</p>
+          <p className="text-sm text-purple-600 mt-1">+{stats.recent_activity.new_comments_7d} this week</p>
+        </div>
+
+        <div className="bg-yellow-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Ratings</h3>
+          <p className="text-3xl font-bold text-yellow-600">{stats.total_stats.total_ratings}</p>
+          <p className="text-sm text-yellow-600 mt-1">+{stats.recent_activity.new_ratings_7d} this week</p>
+        </div>
+
+        <div className="bg-indigo-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold text-indigo-800 mb-2">Active Banners</h3>
+          <p className="text-3xl font-bold text-indigo-600">{stats.total_stats.active_banners}</p>
+          <p className="text-sm text-indigo-600 mt-1">of {stats.total_stats.total_banners} total</p>
+        </div>
+      </div>
+
+      <div className="bg-gray-50 p-6 rounded-lg">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">User Role Distribution</h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="text-center">
+            <p className="text-2xl font-bold text-red-600">{stats.role_distribution.Admin || 0}</p>
+            <p className="text-sm text-gray-600">Admins</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-orange-600">{stats.role_distribution.Moderator || 0}</p>
+            <p className="text-sm text-gray-600">Moderators</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-blue-600">{stats.role_distribution.User || 0}</p>
+            <p className="text-sm text-gray-600">Users</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Banner Management Component
+const BannerManagement = ({ banners, onBannersChange }) => {
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingBanner, setEditingBanner] = useState(null);
+  const [formData, setFormData] = useState({
+    message: '',
+    priority: 0,
+    starts_at: '',
+    ends_at: ''
+  });
+
+  const handleCreateBanner = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('auth_token');
+      const payload = {
+        message: formData.message,
+        priority: parseInt(formData.priority) || 0,
+        starts_at: formData.starts_at || null,
+        ends_at: formData.ends_at || null
+      };
+
+      await axios.post(`${API}/admin/banners`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setFormData({ message: '', priority: 0, starts_at: '', ends_at: '' });
+      setShowCreateForm(false);
+      onBannersChange();
+      alert('Banner created successfully!');
+    } catch (error) {
+      console.error('Error creating banner:', error);
+      alert('Failed to create banner. Please try again.');
+    }
+  };
+
+  const handleDeleteBanner = async (bannerId) => {
+    if (!confirm('Are you sure you want to delete this banner?')) return;
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      await axios.delete(`${API}/admin/banners/${bannerId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      onBannersChange();
+      alert('Banner deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting banner:', error);
+      alert('Failed to delete banner. Please try again.');
+    }
+  };
+
+  const toggleBannerStatus = async (bannerId, currentStatus) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      await axios.put(`${API}/admin/banners/${bannerId}`, 
+        { is_active: !currentStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      onBannersChange();
+    } catch (error) {
+      console.error('Error updating banner status:', error);
+      alert('Failed to update banner status. Please try again.');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-semibold text-gray-800">Banner Management</h3>
+        <button
+          onClick={() => setShowCreateForm(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+        >
+          + Create Banner
+        </button>
+      </div>
+
+      {showCreateForm && (
+        <div className="bg-gray-50 p-6 rounded-lg border">
+          <h4 className="text-lg font-medium text-gray-800 mb-4">Create New Banner</h4>
+          <form onSubmit={handleCreateBanner} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Message (1-500 characters)
+              </label>
+              <textarea
+                value={formData.message}
+                onChange={(e) => setFormData({...formData, message: e.target.value})}
+                required
+                maxLength={500}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter banner message... (use emojis: 🎉 🚀 💰 ⚡)"
+              />
+              <p className="text-xs text-gray-500 mt-1">{formData.message.length}/500 characters</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Priority (0-100)</label>
+                <input
+                  type="number"
+                  value={formData.priority}
+                  onChange={(e) => setFormData({...formData, priority: e.target.value})}
+                  min={0}
+                  max={100}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Start Date (Optional)</label>
+                <input
+                  type="datetime-local"
+                  value={formData.starts_at}
+                  onChange={(e) => setFormData({...formData, starts_at: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
+                <input
+                  type="datetime-local"
+                  value={formData.ends_at}
+                  onChange={(e) => setFormData({...formData, ends_at: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex space-x-4">
+              <button
+                type="submit"
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+              >
+                Create Banner
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateForm(false);
+                  setFormData({ message: '', priority: 0, starts_at: '', ends_at: '' });
+                }}
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {banners.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          No banners created yet. Click "Create Banner" to add your first announcement.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {banners.map((banner) => (
+            <div key={banner.id} className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      banner.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {banner.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                      Priority: {banner.priority}
+                    </span>
+                  </div>
+                  <p className="text-gray-800 mb-2">{banner.message}</p>
+                  <p className="text-sm text-gray-500">
+                    Created: {new Date(banner.created_at).toLocaleDateString()}
+                    {banner.starts_at && ` • Starts: ${new Date(banner.starts_at).toLocaleDateString()}`}
+                    {banner.ends_at && ` • Ends: ${new Date(banner.ends_at).toLocaleDateString()}`}
+                  </p>
+                </div>
+                <div className="flex space-x-2 ml-4">
+                  <button
+                    onClick={() => toggleBannerStatus(banner.id, banner.is_active)}
+                    className={`px-3 py-1 rounded text-sm font-medium ${
+                      banner.is_active 
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                        : 'bg-green-100 text-green-700 hover:bg-green-200'
+                    }`}
+                  >
+                    {banner.is_active ? 'Deactivate' : 'Activate'}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteBanner(banner.id)}
+                    className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm font-medium hover:bg-red-200"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// User Management Component (Admin only)
+const UserManagement = ({ users, onUsersChange }) => {
+  const updateUserRole = async (userId, newRole) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      await axios.put(`${API}/admin/users/${userId}/role`, 
+        { new_role: newRole },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      onUsersChange();
+      alert(`User role updated to ${newRole} successfully!`);
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      alert('Failed to update user role. Please try again.');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <h3 className="text-xl font-semibold text-gray-800">User Management</h3>
+      
+      {users.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">No users found.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse bg-white border border-gray-200 rounded-lg">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-700">Name</th>
+                <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-700">Email</th>
+                <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-700">Role</th>
+                <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-700">Joined</th>
+                <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-700">Favorites</th>
+                <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50">
+                  <td className="border border-gray-200 px-4 py-3">{user.name}</td>
+                  <td className="border border-gray-200 px-4 py-3">{user.email}</td>
+                  <td className="border border-gray-200 px-4 py-3">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      user.role === 'Admin' ? 'bg-red-100 text-red-800' :
+                      user.role === 'Moderator' ? 'bg-orange-100 text-orange-800' :
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td className="border border-gray-200 px-4 py-3 text-sm text-gray-600">
+                    {new Date(user.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="border border-gray-200 px-4 py-3 text-center">{user.favorite_count}</td>
+                  <td className="border border-gray-200 px-4 py-3">
+                    <select
+                      value={user.role}
+                      onChange={(e) => updateUserRole(user.id, e.target.value)}
+                      className="text-sm border border-gray-300 rounded px-2 py-1"
+                    >
+                      <option value="User">User</option>
+                      <option value="Moderator">Moderator</option>
+                      <option value="Admin">Admin</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Vendor Pricing Component
 const VendorPricing = ({ motorcycle }) => {
   const [vendorPrices, setVendorPrices] = useState([]);
