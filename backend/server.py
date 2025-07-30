@@ -863,6 +863,156 @@ async def get_search_suggestions(q: str = Query(..., min_length=1, description="
         print(f"Error in search suggestions: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch search suggestions: {str(e)}")
 
+# Motorcycle Comparison API endpoint
+@api_router.post("/motorcycles/compare")
+async def compare_motorcycles(motorcycle_ids: list[str] = Body(..., description="List of motorcycle IDs to compare (max 3)")):
+    """Compare up to 3 motorcycles side-by-side with detailed specs, pricing, and ratings"""
+    try:
+        # Validate input
+        if not motorcycle_ids or len(motorcycle_ids) == 0:
+            raise HTTPException(status_code=400, detail="At least one motorcycle ID is required")
+        
+        if len(motorcycle_ids) > 3:
+            raise HTTPException(status_code=400, detail="Maximum 3 motorcycles can be compared at once")
+        
+        # Remove duplicates while preserving order
+        unique_ids = []
+        seen = set()
+        for id in motorcycle_ids:
+            if id not in seen:
+                unique_ids.append(id)
+                seen.add(id)
+        
+        # Fetch motorcycles from database
+        comparison_data = []
+        for motorcycle_id in unique_ids:
+            motorcycle = await db.motorcycles.find_one({"id": motorcycle_id})
+            if not motorcycle:
+                raise HTTPException(status_code=404, detail=f"Motorcycle with ID '{motorcycle_id}' not found")
+            
+            # Get vendor pricing for this motorcycle
+            try:
+                vendor_pricing_data = vendor_pricing.get_vendor_prices(motorcycle, "US")
+            except Exception as e:
+                print(f"Warning: Could not fetch vendor pricing for {motorcycle_id}: {str(e)}")
+                vendor_pricing_data = []
+            
+            # Get ratings and comments count
+            ratings_pipeline = [
+                {"$match": {"motorcycle_id": motorcycle_id}},
+                {"$group": {
+                    "_id": None,
+                    "average_rating": {"$avg": "$rating"},
+                    "total_ratings": {"$sum": 1},
+                    "rating_distribution": {
+                        "$push": "$rating"
+                    }
+                }}
+            ]
+            
+            rating_result = await db.ratings.aggregate(ratings_pipeline).to_list(1)
+            rating_data = rating_result[0] if rating_result else {
+                "average_rating": 0,
+                "total_ratings": 0,
+                "rating_distribution": []
+            }
+            
+            # Calculate rating distribution
+            rating_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+            for rating in rating_data.get("rating_distribution", []):
+                if rating in rating_counts:
+                    rating_counts[rating] += 1
+            
+            # Get comments count
+            comments_count = await db.comments.count_documents({"motorcycle_id": motorcycle_id})
+            
+            # Prepare comparison data
+            comparison_item = {
+                "id": motorcycle["id"],
+                "manufacturer": motorcycle["manufacturer"],
+                "model": motorcycle["model"],
+                "year": motorcycle["year"],
+                "category": motorcycle["category"],
+                "image_url": motorcycle.get("image_url", ""),
+                "description": motorcycle.get("description", ""),
+                
+                # Technical Specifications
+                "technical_specs": {
+                    "engine_displacement_cc": motorcycle.get("engine_displacement_cc"),
+                    "horsepower": motorcycle.get("horsepower"),
+                    "torque_nm": motorcycle.get("torque_nm"),
+                    "top_speed_kmh": motorcycle.get("top_speed_kmh"),
+                    "weight_kg": motorcycle.get("weight_kg"),
+                    "fuel_capacity_liters": motorcycle.get("fuel_capacity_liters"),
+                    "mileage_kmpl": motorcycle.get("mileage_kmpl"),
+                    "seat_height_mm": motorcycle.get("seat_height_mm"),
+                    "ground_clearance_mm": motorcycle.get("ground_clearance_mm"),
+                    "wheelbase_mm": motorcycle.get("wheelbase_mm"),
+                    "wheel_size_inches": motorcycle.get("wheel_size_inches")
+                },
+                
+                # Features and Technology
+                "features": {
+                    "transmission_type": motorcycle.get("transmission_type"),
+                    "engine_type": motorcycle.get("engine_type"),
+                    "cooling_system": motorcycle.get("cooling_system"),
+                    "braking_system": motorcycle.get("braking_system"),
+                    "suspension_type": motorcycle.get("suspension_type"),
+                    "tyre_type": motorcycle.get("tyre_type"),
+                    "headlight_type": motorcycle.get("headlight_type"),
+                    "fuel_type": motorcycle.get("fuel_type"),
+                    "abs_available": motorcycle.get("abs_available"),
+                    "specialisations": motorcycle.get("specialisations", [])
+                },
+                
+                # Pricing and Availability
+                "pricing": {
+                    "base_price_usd": motorcycle.get("base_price_usd"),
+                    "price_range": motorcycle.get("price_range"),
+                    "availability": motorcycle.get("availability"),
+                    "vendor_pricing": {"vendors": vendor_pricing_data, "message": "Pricing data available" if vendor_pricing_data else "Pricing data unavailable"}
+                },
+                
+                # Ratings and Reviews
+                "ratings": {
+                    "average_rating": round(rating_data["average_rating"], 1) if rating_data["average_rating"] else 0,
+                    "total_ratings": rating_data["total_ratings"],
+                    "rating_distribution": rating_counts,
+                    "comments_count": comments_count
+                },
+                
+                # Additional Metadata
+                "metadata": {
+                    "production_years": motorcycle.get("production_years", []),
+                    "country_of_origin": motorcycle.get("country_of_origin"),
+                    "market_segment": motorcycle.get("market_segment"),
+                    "user_interest_score": motorcycle.get("user_interest_score", 0),
+                    "last_updated": motorcycle.get("updated_at")
+                }
+            }
+            
+            comparison_data.append(comparison_item)
+        
+        return {
+            "comparison_id": f"comp_{int(time.time())}",
+            "motorcycles": comparison_data,
+            "comparison_count": len(comparison_data),
+            "generated_at": datetime.utcnow().isoformat(),
+            "comparison_categories": [
+                "Technical Specifications",
+                "Features & Technology", 
+                "Pricing & Availability",
+                "Ratings & Reviews",
+                "Additional Information"
+            ]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in motorcycle comparison: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to compare motorcycles: {str(e)}")
+
 # Enhanced motorcycle routes with specialisation and features filtering
 @api_router.get("/motorcycles/filters/specialisations")
 async def get_available_specialisations():
