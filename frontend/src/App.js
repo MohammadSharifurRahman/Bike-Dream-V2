@@ -4214,6 +4214,8 @@ function App() {
       setCurrentView('community');
     } else if (path === '/achievements') {
       setCurrentView('achievements');
+    } else if (path === '/analytics') {
+      setCurrentView('analytics');
     } else {
       setCurrentView('home');
     }
