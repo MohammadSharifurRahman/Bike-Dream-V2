@@ -4899,6 +4899,26 @@ function App() {
               <HeroCarousel onViewChange={setCurrentView} />
             </div>
 
+            {/* Search Bar Section */}
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+              <div className="text-center mb-6">
+                <h2 className="text-3xl font-bold text-gray-800 mb-2">Find Your Dream Motorcycle</h2>
+                <p className="text-gray-600">Search through thousands of motorcycles and brands</p>
+              </div>
+              <AutoCompleteSearchBar
+                placeholder="Search motorcycles, brands, and models..."
+                onSearchSelect={handleSearchSelect}
+                onSearchChange={handleSearchChange}
+                className="mb-4"
+              />
+              <div className="flex justify-center">
+                <HideUnavailableToggle
+                  isHidden={hideUnavailable}
+                  onToggle={handleHideUnavailableToggle}
+                />
+              </div>
+            </div>
+
             {/* Stats Section */}
             <div className="bg-gray-50 py-16">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
