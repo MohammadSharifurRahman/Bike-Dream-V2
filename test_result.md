@@ -199,7 +199,7 @@ user_problem_statement: "Build Byke-Dream motorcycle database website with compr
 
 backend:
   - task: "Motorcycle Search Auto-Suggestions API"
-    implemented: false
+    implemented: true
     working: false
     file: "/app/backend/server.py"
     stuck_count: 0
@@ -209,9 +209,12 @@ backend:
       - working: false
         agent: "main"
         comment: "Starting Phase 1 implementation: Need to create /api/motorcycles/search/suggestions endpoint that returns autocomplete suggestions for both motorcycle names and brand names simultaneously as users type."
+      - working: false
+        agent: "main"
+        comment: "Implemented GET /api/motorcycles/search/suggestions endpoint with complex MongoDB aggregation pipeline to search across both motorcycle model names and manufacturer names. Returns suggestions with type indicator (manufacturer/model), display text with counts, and proper ranking by result count."
 
   - task: "Hide Unavailable Bikes Filter API Enhancement"
-    implemented: false
+    implemented: true
     working: false
     file: "/app/backend/server.py"
     stuck_count: 0
@@ -221,6 +224,9 @@ backend:
       - working: false
         agent: "main"
         comment: "Need to enhance existing motorcycle listing API to support filtering out discontinued/unavailable motorcycles when hide_unavailable parameter is provided."
+      - working: false
+        agent: "main"
+        comment: "Enhanced GET /api/motorcycles endpoint with hide_unavailable boolean parameter that filters out motorcycles with availability status of 'Discontinued', 'Not Available', 'Out of Stock', or 'Collector Item' when enabled."
 
 backend:
   - task: "Virtual Garage API - Add to Garage"
