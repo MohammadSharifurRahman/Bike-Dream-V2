@@ -775,6 +775,94 @@ async def get_supported_regions():
         "default_region": "US"
     }
 
+# Search Auto-suggestions API endpoint
+@api_router.get("/motorcycles/search/suggestions")
+async def get_search_suggestions(q: str = Query(..., min_length=1, description="Search query"), limit: int = Query(10, le=20)):
+    """Get autocomplete suggestions for motorcycle search - searches both motorcycle names and brand names"""
+    try:
+        if not q or len(q.strip()) < 1:
+            return {"suggestions": []}
+        
+        search_term = q.strip().lower()
+        
+        # Create regex pattern for case-insensitive search
+        regex_pattern = {"$regex": search_term, "$options": "i"}
+        
+        # Search across motorcycle model names and manufacturers
+        search_pipeline = [
+            {
+                "$match": {
+                    "$or": [
+                        {"model": regex_pattern},
+                        {"manufacturer": regex_pattern}
+                    ]
+                }
+            },
+            {
+                "$group": {
+                    "_id": {
+                        "type": {
+                            "$cond": [
+                                {"$regexMatch": {"input": "$manufacturer", "regex": search_term, "options": "i"}},
+                                "manufacturer",
+                                "model"
+                            ]
+                        },
+                        "value": {
+                            "$cond": [
+                                {"$regexMatch": {"input": "$manufacturer", "regex": search_term, "options": "i"}},
+                                "$manufacturer",
+                                "$model"
+                            ]
+                        }
+                    },
+                    "count": {"$sum": 1},
+                    "sample_model": {"$first": "$model"},
+                    "sample_manufacturer": {"$first": "$manufacturer"}
+                }
+            },
+            {
+                "$project": {
+                    "type": "$_id.type",
+                    "value": "$_id.value",
+                    "count": 1,
+                    "display_text": {
+                        "$cond": [
+                            {"$eq": ["$_id.type", "manufacturer"]},
+                            {"$concat": ["$_id.value", " (", {"$toString": "$count"}, " models)"]},
+                            {"$concat": ["$_id.value", " (", "$sample_manufacturer", ")"]}
+                        ]
+                    },
+                    "_id": 0
+                }
+            },
+            {"$sort": {"count": -1, "value": 1}},
+            {"$limit": limit}
+        ]
+        
+        suggestions_cursor = db.motorcycles.aggregate(search_pipeline)
+        suggestions = await suggestions_cursor.to_list(limit)
+        
+        # Format suggestions for frontend
+        formatted_suggestions = []
+        for suggestion in suggestions:
+            formatted_suggestions.append({
+                "value": suggestion["value"],
+                "type": suggestion["type"],  # "manufacturer" or "model"
+                "display_text": suggestion["display_text"],
+                "count": suggestion["count"]
+            })
+        
+        return {
+            "query": q,
+            "suggestions": formatted_suggestions,
+            "total": len(formatted_suggestions)
+        }
+        
+    except Exception as e:
+        print(f"Error in search suggestions: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch search suggestions: {str(e)}")
+
 # Enhanced motorcycle routes with specialisation and features filtering
 @api_router.get("/motorcycles/filters/specialisations")
 async def get_available_specialisations():
