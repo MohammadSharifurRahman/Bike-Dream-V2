@@ -2771,10 +2771,165 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+async def initialize_achievements():
+    """Initialize default achievements in the database"""
+    try:
+        # Check if achievements already exist
+        existing_count = await db.achievements.count_documents({})
+        if existing_count > 0:
+            print(f"✅ Achievements already initialized ({existing_count} achievements)")
+            return
+
+        default_achievements = [
+            # Social Achievements
+            {
+                "id": str(uuid.uuid4()),
+                "name": "First Steps",
+                "description": "Create your first favorite motorcycle",
+                "icon": "⭐",
+                "category": "social",
+                "requirement_type": "count",
+                "requirement_value": 1,
+                "requirement_field": "favorites",
+                "points": 10
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Motorcycle Enthusiast",
+                "description": "Add 5 motorcycles to your favorites",
+                "icon": "🏍️",
+                "category": "social",
+                "requirement_type": "count",
+                "requirement_value": 5,
+                "requirement_field": "favorites",
+                "points": 25
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Bike Collector",
+                "description": "Add 20 motorcycles to your favorites",
+                "icon": "🏆",
+                "category": "social",
+                "requirement_type": "count",
+                "requirement_value": 20,
+                "requirement_field": "favorites",
+                "points": 100
+            },
+            
+            # Collection Achievements  
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Garage Owner",
+                "description": "Add your first motorcycle to your virtual garage",
+                "icon": "🏠",
+                "category": "collection",
+                "requirement_type": "count",
+                "requirement_value": 1,
+                "requirement_field": "garage_items",
+                "points": 15
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Motorcycle Collector",
+                "description": "Add 5 motorcycles to your virtual garage",
+                "icon": "🚗",
+                "category": "collection",
+                "requirement_type": "count",
+                "requirement_value": 5,
+                "requirement_field": "garage_items",
+                "points": 50
+            },
+            
+            # Activity Achievements
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Reviewer",
+                "description": "Rate your first motorcycle",
+                "icon": "📝",
+                "category": "activity",
+                "requirement_type": "count",
+                "requirement_value": 1,
+                "requirement_field": "ratings",
+                "points": 10
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Expert Reviewer",
+                "description": "Rate 10 motorcycles",
+                "icon": "👨‍💼",
+                "category": "activity",
+                "requirement_type": "count",
+                "requirement_value": 10,
+                "requirement_field": "ratings",
+                "points": 75
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Conversationalist",
+                "description": "Post your first comment",
+                "icon": "💬",
+                "category": "activity",
+                "requirement_type": "count",
+                "requirement_value": 1,
+                "requirement_field": "comments",
+                "points": 10
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Community Voice",
+                "description": "Post 25 comments",
+                "icon": "📢",
+                "category": "activity",
+                "requirement_type": "count",
+                "requirement_value": 25,
+                "requirement_field": "comments",
+                "points": 150
+            },
+            
+            # Community Achievements
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Group Joiner",
+                "description": "Join your first rider group",
+                "icon": "👥",
+                "category": "social",
+                "requirement_type": "count",
+                "requirement_value": 1,
+                "requirement_field": "rider_groups",
+                "points": 20
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Social Rider",
+                "description": "Join 3 rider groups",
+                "icon": "🤝",
+                "category": "social",
+                "requirement_type": "count",
+                "requirement_value": 3,
+                "requirement_field": "rider_groups",
+                "points": 75
+            }
+        ]
+
+        # Add created_at and is_active to each achievement
+        for achievement in default_achievements:
+            achievement["created_at"] = datetime.utcnow()
+            achievement["is_active"] = True
+
+        # Insert achievements
+        await db.achievements.insert_many(default_achievements)
+        print(f"✅ Initialized {len(default_achievements)} default achievements")
+
+    except Exception as e:
+        print(f"⚠️ Error initializing achievements: {str(e)}")
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup"""
     try:
+        # Initialize achievements
+        await initialize_achievements()
+        
         # Start the daily update scheduler
         daily_scheduler.start_scheduler()
         print("🚀 Application startup completed with daily scheduler")
