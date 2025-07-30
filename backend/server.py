@@ -2932,7 +2932,7 @@ async def startup_event():
         
         # Start the daily update scheduler
         daily_scheduler.start_scheduler()
-        print("🚀 Application startup completed with daily scheduler")
+        print("🚀 Application startup completed with daily scheduler and achievements")
     except Exception as e:
         print(f"⚠️ Startup warning: {str(e)}")
 
