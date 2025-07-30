@@ -3625,6 +3625,10 @@ function App() {
           <UserRequestsPage />
         ) : currentView === 'garage' ? (
           <VirtualGaragePage />
+        ) : currentView === 'community' ? (
+          <CommunityPage />
+        ) : currentView === 'achievements' ? (
+          <AchievementsPage />
         ) : currentView === 'home' ? (
           // Home Page
           <>
