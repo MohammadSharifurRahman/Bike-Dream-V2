@@ -2505,6 +2505,21 @@ async def get_categories_summary(
         if hide_unavailable:
             base_query["availability"] = {"$nin": ["Discontinued", "Not Available", "Out of Stock", "Collector Item"]}
         
+        # Add region filter if requested
+        if region:
+            region_manufacturers = {
+                "US": ["Harley-Davidson", "Indian", "Kawasaki", "Yamaha", "Honda", "Suzuki", "Ducati"],
+                "IN": ["Hero", "Bajaj", "TVS", "Royal Enfield", "Honda", "Yamaha", "Suzuki"],
+                "JP": ["Honda", "Yamaha", "Suzuki", "Kawasaki"],
+                "DE": ["BMW", "KTM", "Ducati", "Honda", "Yamaha"],
+                "GB": ["Triumph", "Honda", "Yamaha", "Suzuki", "Kawasaki"],
+                "IT": ["Ducati", "MV Agusta", "Aprilia", "Honda", "Yamaha"],
+                "AU": ["Honda", "Yamaha", "Suzuki", "Kawasaki", "BMW"],
+            }
+            
+            if region in region_manufacturers:
+                base_query["manufacturer"] = {"$in": region_manufacturers[region]}
+        
         # Get count for this category
         count = await db.motorcycles.count_documents(base_query)
         
