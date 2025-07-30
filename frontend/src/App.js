@@ -5635,7 +5635,13 @@ const MainAppContent = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get(`${API}/motorcycles/categories/summary`);
+      const params = new URLSearchParams();
+      if (hideUnavailable) {
+        params.append('hide_unavailable', 'true');
+      }
+      
+      const url = `${API}/motorcycles/categories/summary${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await axios.get(url);
       setCategories(response.data);
     } catch (error) {
       console.error('Error fetching categories:', error);
