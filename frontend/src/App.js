@@ -6129,6 +6129,14 @@ function App() {
             onClose={handleCloseComparison}
           />
         )}
+        
+        {/* Phase 3: Admin Dashboard */}
+        {showAdminDashboard && (
+          <AdminDashboard
+            user={{ name: 'Admin User', role: 'Admin' }}
+            onClose={() => setShowAdminDashboard(false)}
+          />
+        )}
       </div>
     </AuthProvider>
   );
