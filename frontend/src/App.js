@@ -429,6 +429,61 @@ const HideUnavailableToggle = ({ isHidden, onToggle, className = "" }) => {
   );
 };
 
+// Country/Region Filter Component
+const CountryFilterSelect = ({ selectedRegion, onRegionChange, className = "" }) => {
+  const [regions, setRegions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRegions = async () => {
+      try {
+        const response = await axios.get(`${API}/pricing/regions`);
+        setRegions(response.data.regions || []);
+      } catch (error) {
+        console.error('Error fetching regions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRegions();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className={`flex items-center space-x-3 ${className}`}>
+        <span className="text-sm text-gray-500">Loading regions...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex items-center space-x-3 ${className}`}>
+      <label htmlFor="region-select" className="text-sm font-medium text-gray-700">
+        Show motorcycles available in:
+      </label>
+      <select
+        id="region-select"
+        value={selectedRegion}
+        onChange={(e) => onRegionChange(e.target.value)}
+        className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+      >
+        <option value="">All Countries</option>
+        {regions.map((region) => (
+          <option key={region.code} value={region.code}>
+            {region.name} ({region.currency})
+          </option>
+        ))}
+      </select>
+      {selectedRegion && (
+        <span className="text-xs text-gray-500">
+          Showing region-specific pricing and availability
+        </span>
+      )}
+    </div>
+  );
+};
+
 // Comparison Floating Button Component - Shows comparison queue
 const ComparisonFloatingButton = ({ comparisonList, onShowComparison, onRemoveFromComparison, onClearComparison }) => {
   if (comparisonList.length === 0) {
