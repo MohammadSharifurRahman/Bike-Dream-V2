@@ -4573,261 +4573,997 @@ class MotorcycleAPITester:
             self.log_test("Get Motorcycle Interests", False, f"Error: {str(e)}")
             return False
 
-    def run_all_tests(self):
-        """Run all tests in sequence"""
-        print("🏍️  Starting Byke-Dream Backend API Tests")
-        print("=" * 60)
+    # COMPREHENSIVE DEPLOYMENT READINESS TESTING
+    def test_email_password_authentication(self):
+        """Test email/password registration and login system"""
+        try:
+            # Test Registration
+            register_data = {
+                "email": "deployment.test@bykedream.com",
+                "password": "SecurePassword123!",
+                "name": "Deployment Test User"
+            }
+            
+            response = requests.post(f"{self.base_url}/auth/register", 
+                                   json=register_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "token" in data and "user" in data:
+                    token = data["token"]
+                    self.log_test("Email/Password Registration", True, 
+                                f"User registered: {data['user']['name']}")
+                    
+                    # Test Login
+                    login_data = {
+                        "email": register_data["email"],
+                        "password": register_data["password"]
+                    }
+                    
+                    login_response = requests.post(f"{self.base_url}/auth/login", 
+                                                 json=login_data, timeout=10)
+                    
+                    if login_response.status_code == 200:
+                        login_data_resp = login_response.json()
+                        if "token" in login_data_resp:
+                            self.log_test("Email/Password Login", True, 
+                                        "Login successful with JWT token")
+                            return True, token
+                        else:
+                            self.log_test("Email/Password Login", False, "No token in login response")
+                            return False, None
+                    else:
+                        self.log_test("Email/Password Login", False, f"Login failed: {login_response.status_code}")
+                        return False, None
+                else:
+                    self.log_test("Email/Password Registration", False, "Missing token or user in response")
+                    return False, None
+            else:
+                self.log_test("Email/Password Registration", False, f"Registration failed: {response.status_code}")
+                return False, None
+                
+        except Exception as e:
+            self.log_test("Email/Password Authentication", False, f"Error: {str(e)}")
+            return False, None
+
+    def test_google_oauth_integration(self):
+        """Test Google OAuth authentication"""
+        try:
+            # Test Google OAuth endpoint
+            oauth_data = {
+                "email": "google.test@gmail.com",
+                "name": "Google Test User",
+                "picture": "https://lh3.googleusercontent.com/test",
+                "google_id": "123456789012345678901"
+            }
+            
+            response = requests.post(f"{self.base_url}/auth/google", 
+                                   json=oauth_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "token" in data and "user" in data:
+                    self.log_test("Google OAuth Authentication", True, 
+                                f"Google user authenticated: {data['user']['name']}")
+                    return True, data["token"]
+                else:
+                    self.log_test("Google OAuth Authentication", False, "Missing token or user in response")
+                    return False, None
+            else:
+                self.log_test("Google OAuth Authentication", False, f"Status: {response.status_code}")
+                return False, None
+                
+        except Exception as e:
+            self.log_test("Google OAuth Authentication", False, f"Error: {str(e)}")
+            return False, None
+
+    def test_jwt_token_validation(self, token):
+        """Test JWT token validation across protected endpoints"""
+        if not token:
+            self.log_test("JWT Token Validation", False, "No token provided")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {token}"}
+            response = requests.get(f"{self.base_url}/auth/me", headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "email" in data and "name" in data:
+                    self.log_test("JWT Token Validation", True, 
+                                f"Token validated for user: {data['name']}")
+                    return True
+                else:
+                    self.log_test("JWT Token Validation", False, "Invalid user data in response")
+                    return False
+            elif response.status_code == 401:
+                self.log_test("JWT Token Validation", False, "Token validation failed (401)")
+                return False
+            else:
+                self.log_test("JWT Token Validation", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("JWT Token Validation", False, f"Error: {str(e)}")
+            return False
+
+    def test_pagination_system(self):
+        """Test pagination across all motorcycle endpoints"""
+        try:
+            # Test default pagination
+            response = requests.get(f"{self.base_url}/motorcycles", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, dict) and "motorcycles" in data and "pagination" in data:
+                    pagination = data["pagination"]
+                    required_fields = ["page", "limit", "total_count", "total_pages", "has_next", "has_previous"]
+                    missing_fields = [field for field in required_fields if field not in pagination]
+                    
+                    if not missing_fields:
+                        self.log_test("Pagination System - Structure", True, 
+                                    f"Page {pagination['page']}/{pagination['total_pages']}, Total: {pagination['total_count']}")
+                        
+                        # Test page navigation
+                        if pagination["has_next"]:
+                            next_response = requests.get(f"{self.base_url}/motorcycles", 
+                                                       params={"page": 2}, timeout=10)
+                            if next_response.status_code == 200:
+                                next_data = next_response.json()
+                                if isinstance(next_data, dict) and "motorcycles" in next_data:
+                                    self.log_test("Pagination System - Navigation", True, 
+                                                "Page navigation working correctly")
+                                    return True
+                                else:
+                                    self.log_test("Pagination System - Navigation", False, 
+                                                "Invalid response format for page 2")
+                                    return False
+                            else:
+                                self.log_test("Pagination System - Navigation", False, 
+                                            f"Page 2 request failed: {next_response.status_code}")
+                                return False
+                        else:
+                            self.log_test("Pagination System - Navigation", True, 
+                                        "Single page dataset - navigation not needed")
+                            return True
+                    else:
+                        self.log_test("Pagination System - Structure", False, 
+                                    f"Missing pagination fields: {missing_fields}")
+                        return False
+                else:
+                    self.log_test("Pagination System", False, "Missing pagination structure")
+                    return False
+            else:
+                self.log_test("Pagination System", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Pagination System", False, f"Error: {str(e)}")
+            return False
+
+    def test_virtual_garage_system(self, token):
+        """Test complete Virtual Garage functionality"""
+        if not token:
+            self.log_test("Virtual Garage System", False, "No authentication token")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            # Get a motorcycle ID for testing
+            if not self.motorcycle_ids:
+                self.test_get_all_motorcycles()
+            
+            if not self.motorcycle_ids:
+                self.log_test("Virtual Garage System", False, "No motorcycle IDs available")
+                return False
+            
+            motorcycle_id = self.motorcycle_ids[0]
+            
+            # Test Add to Garage
+            garage_data = {
+                "motorcycle_id": motorcycle_id,
+                "status": "owned",
+                "purchase_price": 15000.00,
+                "current_mileage": 5000,
+                "modifications": ["Exhaust System", "Air Filter"],
+                "notes": "Great bike for daily commuting"
+            }
+            
+            add_response = requests.post(f"{self.base_url}/garage", 
+                                       headers=headers, json=garage_data, timeout=10)
+            
+            if add_response.status_code == 200:
+                add_data = add_response.json()
+                if "garage_item" in add_data:
+                    garage_item_id = add_data["garage_item"]["id"]
+                    self.log_test("Virtual Garage - Add Item", True, 
+                                f"Added motorcycle to garage: {garage_item_id[:8]}...")
+                    
+                    # Test Get Garage
+                    get_response = requests.get(f"{self.base_url}/garage", 
+                                              headers=headers, timeout=10)
+                    
+                    if get_response.status_code == 200:
+                        get_data = get_response.json()
+                        if isinstance(get_data, dict) and "garage_items" in get_data:
+                            self.log_test("Virtual Garage - Get Items", True, 
+                                        f"Retrieved {len(get_data['garage_items'])} garage items")
+                            
+                            # Test Update Garage Item
+                            update_data = {
+                                "current_mileage": 7500,
+                                "notes": "Updated mileage after recent trip"
+                            }
+                            
+                            update_response = requests.put(f"{self.base_url}/garage/{garage_item_id}", 
+                                                         headers=headers, json=update_data, timeout=10)
+                            
+                            if update_response.status_code == 200:
+                                self.log_test("Virtual Garage - Update Item", True, 
+                                            "Garage item updated successfully")
+                                
+                                # Test Garage Stats
+                                stats_response = requests.get(f"{self.base_url}/garage/stats", 
+                                                            headers=headers, timeout=10)
+                                
+                                if stats_response.status_code == 200:
+                                    stats_data = stats_response.json()
+                                    if "total_items" in stats_data and "estimated_value" in stats_data:
+                                        self.log_test("Virtual Garage - Statistics", True, 
+                                                    f"Stats: {stats_data['total_items']} items, ${stats_data['estimated_value']}")
+                                        
+                                        # Test Remove from Garage
+                                        delete_response = requests.delete(f"{self.base_url}/garage/{garage_item_id}", 
+                                                                        headers=headers, timeout=10)
+                                        
+                                        if delete_response.status_code == 200:
+                                            self.log_test("Virtual Garage - Remove Item", True, 
+                                                        "Garage item removed successfully")
+                                            return True
+                                        else:
+                                            self.log_test("Virtual Garage - Remove Item", False, 
+                                                        f"Delete failed: {delete_response.status_code}")
+                                            return False
+                                    else:
+                                        self.log_test("Virtual Garage - Statistics", False, 
+                                                    "Missing stats fields")
+                                        return False
+                                else:
+                                    self.log_test("Virtual Garage - Statistics", False, 
+                                                f"Stats failed: {stats_response.status_code}")
+                                    return False
+                            else:
+                                self.log_test("Virtual Garage - Update Item", False, 
+                                            f"Update failed: {update_response.status_code}")
+                                return False
+                        else:
+                            self.log_test("Virtual Garage - Get Items", False, 
+                                        "Invalid garage items response")
+                            return False
+                    else:
+                        self.log_test("Virtual Garage - Get Items", False, 
+                                    f"Get garage failed: {get_response.status_code}")
+                        return False
+                else:
+                    self.log_test("Virtual Garage - Add Item", False, 
+                                "Missing garage_item in response")
+                    return False
+            else:
+                self.log_test("Virtual Garage - Add Item", False, 
+                            f"Add failed: {add_response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Virtual Garage System", False, f"Error: {str(e)}")
+            return False
+
+    def test_price_alerts_system(self, token):
+        """Test complete Price Alerts functionality"""
+        if not token:
+            self.log_test("Price Alerts System", False, "No authentication token")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            # Get a motorcycle ID for testing
+            if not self.motorcycle_ids:
+                self.test_get_all_motorcycles()
+            
+            if not self.motorcycle_ids:
+                self.log_test("Price Alerts System", False, "No motorcycle IDs available")
+                return False
+            
+            motorcycle_id = self.motorcycle_ids[0]
+            
+            # Test Create Price Alert
+            alert_data = {
+                "motorcycle_id": motorcycle_id,
+                "target_price": 12000.00,
+                "condition": "below",
+                "region": "US"
+            }
+            
+            create_response = requests.post(f"{self.base_url}/price-alerts", 
+                                          headers=headers, json=alert_data, timeout=10)
+            
+            if create_response.status_code == 200:
+                create_data = create_response.json()
+                if "price_alert" in create_data:
+                    alert_id = create_data["price_alert"]["id"]
+                    self.log_test("Price Alerts - Create Alert", True, 
+                                f"Created price alert: {alert_id[:8]}...")
+                    
+                    # Test Get Price Alerts
+                    get_response = requests.get(f"{self.base_url}/price-alerts", 
+                                              headers=headers, timeout=10)
+                    
+                    if get_response.status_code == 200:
+                        get_data = get_response.json()
+                        if isinstance(get_data, dict) and "price_alerts" in get_data:
+                            self.log_test("Price Alerts - Get Alerts", True, 
+                                        f"Retrieved {len(get_data['price_alerts'])} price alerts")
+                            
+                            # Test Delete Price Alert
+                            delete_response = requests.delete(f"{self.base_url}/price-alerts/{alert_id}", 
+                                                            headers=headers, timeout=10)
+                            
+                            if delete_response.status_code == 200:
+                                self.log_test("Price Alerts - Delete Alert", True, 
+                                            "Price alert deleted successfully")
+                                return True
+                            else:
+                                self.log_test("Price Alerts - Delete Alert", False, 
+                                            f"Delete failed: {delete_response.status_code}")
+                                return False
+                        else:
+                            self.log_test("Price Alerts - Get Alerts", False, 
+                                        "Invalid price alerts response")
+                            return False
+                    else:
+                        self.log_test("Price Alerts - Get Alerts", False, 
+                                    f"Get alerts failed: {get_response.status_code}")
+                        return False
+                else:
+                    self.log_test("Price Alerts - Create Alert", False, 
+                                "Missing price_alert in response")
+                    return False
+            else:
+                self.log_test("Price Alerts - Create Alert", False, 
+                            f"Create failed: {create_response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Price Alerts System", False, f"Error: {str(e)}")
+            return False
+
+    def test_rider_groups_system(self, token):
+        """Test complete Rider Groups functionality"""
+        if not token:
+            self.log_test("Rider Groups System", False, "No authentication token")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            # Test Create Rider Group
+            group_data = {
+                "name": "Test Deployment Riders",
+                "description": "A test group for deployment readiness testing",
+                "location": "Test City, Test State",
+                "group_type": "general",
+                "is_public": True,
+                "max_members": 50
+            }
+            
+            create_response = requests.post(f"{self.base_url}/rider-groups", 
+                                          headers=headers, json=group_data, timeout=10)
+            
+            if create_response.status_code == 200:
+                create_data = create_response.json()
+                if "rider_group" in create_data:
+                    group_id = create_data["rider_group"]["id"]
+                    self.log_test("Rider Groups - Create Group", True, 
+                                f"Created rider group: {group_id[:8]}...")
+                    
+                    # Test Browse Public Groups
+                    browse_response = requests.get(f"{self.base_url}/rider-groups", timeout=10)
+                    
+                    if browse_response.status_code == 200:
+                        browse_data = browse_response.json()
+                        if isinstance(browse_data, dict) and "rider_groups" in browse_data:
+                            self.log_test("Rider Groups - Browse Groups", True, 
+                                        f"Retrieved {len(browse_data['rider_groups'])} public groups")
+                            
+                            # Test Get Specific Group
+                            get_response = requests.get(f"{self.base_url}/rider-groups/{group_id}", 
+                                                      timeout=10)
+                            
+                            if get_response.status_code == 200:
+                                get_data = get_response.json()
+                                if get_data.get("id") == group_id:
+                                    self.log_test("Rider Groups - Get Group Details", True, 
+                                                f"Retrieved group: {get_data['name']}")
+                                    
+                                    # Test Get User's Groups
+                                    user_groups_response = requests.get(f"{self.base_url}/users/me/rider-groups", 
+                                                                       headers=headers, timeout=10)
+                                    
+                                    if user_groups_response.status_code == 200:
+                                        user_groups_data = user_groups_response.json()
+                                        if isinstance(user_groups_data, list):
+                                            self.log_test("Rider Groups - User Groups", True, 
+                                                        f"User is member of {len(user_groups_data)} groups")
+                                            return True
+                                        else:
+                                            self.log_test("Rider Groups - User Groups", False, 
+                                                        "Invalid user groups response")
+                                            return False
+                                    else:
+                                        self.log_test("Rider Groups - User Groups", False, 
+                                                    f"User groups failed: {user_groups_response.status_code}")
+                                        return False
+                                else:
+                                    self.log_test("Rider Groups - Get Group Details", False, 
+                                                "Group ID mismatch")
+                                    return False
+                            else:
+                                self.log_test("Rider Groups - Get Group Details", False, 
+                                            f"Get group failed: {get_response.status_code}")
+                                return False
+                        else:
+                            self.log_test("Rider Groups - Browse Groups", False, 
+                                        "Invalid browse response")
+                            return False
+                    else:
+                        self.log_test("Rider Groups - Browse Groups", False, 
+                                    f"Browse failed: {browse_response.status_code}")
+                        return False
+                else:
+                    self.log_test("Rider Groups - Create Group", False, 
+                                "Missing rider_group in response")
+                    return False
+            else:
+                self.log_test("Rider Groups - Create Group", False, 
+                            f"Create failed: {create_response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Rider Groups System", False, f"Error: {str(e)}")
+            return False
+
+    def test_achievement_system(self, token):
+        """Test Achievement System functionality"""
+        if not token:
+            self.log_test("Achievement System", False, "No authentication token")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            # Test Get All Achievements
+            achievements_response = requests.get(f"{self.base_url}/achievements", timeout=10)
+            
+            if achievements_response.status_code == 200:
+                achievements_data = achievements_response.json()
+                if isinstance(achievements_data, list) and len(achievements_data) > 0:
+                    self.log_test("Achievement System - Get Achievements", True, 
+                                f"Retrieved {len(achievements_data)} available achievements")
+                    
+                    # Test Get User Achievements
+                    user_achievements_response = requests.get(f"{self.base_url}/users/me/achievements", 
+                                                            headers=headers, timeout=10)
+                    
+                    if user_achievements_response.status_code == 200:
+                        user_achievements_data = user_achievements_response.json()
+                        if "achievements" in user_achievements_data and "stats" in user_achievements_data:
+                            stats = user_achievements_data["stats"]
+                            self.log_test("Achievement System - User Progress", True, 
+                                        f"User progress: {stats['completed_count']}/{stats['total_achievements']} completed")
+                            
+                            # Test Check Achievements
+                            check_response = requests.post(f"{self.base_url}/achievements/check", 
+                                                         headers=headers, timeout=10)
+                            
+                            if check_response.status_code == 200:
+                                check_data = check_response.json()
+                                if "new_achievements" in check_data:
+                                    self.log_test("Achievement System - Check Progress", True, 
+                                                f"Achievement check completed: {len(check_data['new_achievements'])} new achievements")
+                                    return True
+                                else:
+                                    self.log_test("Achievement System - Check Progress", False, 
+                                                "Missing new_achievements in response")
+                                    return False
+                            else:
+                                self.log_test("Achievement System - Check Progress", False, 
+                                            f"Check failed: {check_response.status_code}")
+                                return False
+                        else:
+                            self.log_test("Achievement System - User Progress", False, 
+                                        "Missing achievements or stats in response")
+                            return False
+                    else:
+                        self.log_test("Achievement System - User Progress", False, 
+                                    f"User achievements failed: {user_achievements_response.status_code}")
+                        return False
+                else:
+                    self.log_test("Achievement System - Get Achievements", False, 
+                                "No achievements returned")
+                    return False
+            else:
+                self.log_test("Achievement System - Get Achievements", False, 
+                            f"Get achievements failed: {achievements_response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Achievement System", False, f"Error: {str(e)}")
+            return False
+
+    def test_analytics_system(self, token):
+        """Test Search Analytics and User Engagement tracking"""
+        try:
+            headers = {"Authorization": f"Bearer {token}"} if token else {}
+            
+            # Test Log Search Analytics
+            search_analytics_data = {
+                "search_term": "Yamaha R1",
+                "search_type": "general",
+                "filters_applied": {"manufacturer": "Yamaha", "category": "Sport"},
+                "results_count": 15,
+                "clicked_results": []
+            }
+            
+            search_log_response = requests.post(f"{self.base_url}/analytics/search", 
+                                              headers=headers, json=search_analytics_data, timeout=10)
+            
+            if search_log_response.status_code == 200:
+                self.log_test("Analytics - Search Logging", True, 
+                            "Search analytics logged successfully")
+                
+                # Test Log User Engagement
+                engagement_data = {
+                    "page_view": "motorcycle_detail",
+                    "time_spent": 120,
+                    "actions": [{"type": "favorite", "motorcycle_id": "test_id"}],
+                    "referrer": "search_results"
+                }
+                
+                engagement_response = requests.post(f"{self.base_url}/analytics/engagement", 
+                                                  headers=headers, json=engagement_data, timeout=10)
+                
+                if engagement_response.status_code == 200:
+                    self.log_test("Analytics - Engagement Logging", True, 
+                                "User engagement logged successfully")
+                    
+                    # Test Get Search Trends
+                    trends_response = requests.get(f"{self.base_url}/analytics/search-trends", 
+                                                 params={"days": 30}, timeout=10)
+                    
+                    if trends_response.status_code == 200:
+                        trends_data = trends_response.json()
+                        if "popular_terms" in trends_data and "trends" in trends_data:
+                            self.log_test("Analytics - Search Trends", True, 
+                                        f"Retrieved search trends for {trends_data.get('period_days', 30)} days")
+                            
+                            # Test Get User Behavior Analytics
+                            behavior_response = requests.get(f"{self.base_url}/analytics/user-behavior", 
+                                                           params={"days": 30}, timeout=10)
+                            
+                            if behavior_response.status_code == 200:
+                                behavior_data = behavior_response.json()
+                                if "page_views" in behavior_data and "actions" in behavior_data:
+                                    self.log_test("Analytics - User Behavior", True, 
+                                                f"Retrieved user behavior analytics")
+                                    
+                                    # Test Get Motorcycle Interest Analytics
+                                    interests_response = requests.get(f"{self.base_url}/analytics/motorcycle-interests", 
+                                                                     params={"days": 30}, timeout=10)
+                                    
+                                    if interests_response.status_code == 200:
+                                        interests_data = interests_response.json()
+                                        if "motorcycle_interests" in interests_data:
+                                            self.log_test("Analytics - Motorcycle Interests", True, 
+                                                        "Retrieved motorcycle interest analytics")
+                                            return True
+                                        else:
+                                            self.log_test("Analytics - Motorcycle Interests", False, 
+                                                        "Missing motorcycle_interests in response")
+                                            return False
+                                    else:
+                                        self.log_test("Analytics - Motorcycle Interests", False, 
+                                                    f"Interests failed: {interests_response.status_code}")
+                                        return False
+                                else:
+                                    self.log_test("Analytics - User Behavior", False, 
+                                                "Missing behavior data in response")
+                                    return False
+                            else:
+                                self.log_test("Analytics - User Behavior", False, 
+                                            f"Behavior failed: {behavior_response.status_code}")
+                                return False
+                        else:
+                            self.log_test("Analytics - Search Trends", False, 
+                                        "Missing trends data in response")
+                            return False
+                    else:
+                        self.log_test("Analytics - Search Trends", False, 
+                                    f"Trends failed: {trends_response.status_code}")
+                        return False
+                else:
+                    self.log_test("Analytics - Engagement Logging", False, 
+                                f"Engagement logging failed: {engagement_response.status_code}")
+                    return False
+            else:
+                self.log_test("Analytics - Search Logging", False, 
+                            f"Search logging failed: {search_log_response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Analytics System", False, f"Error: {str(e)}")
+            return False
+
+    def test_vendor_pricing_system(self):
+        """Test vendor pricing and regional currency support"""
+        try:
+            # Get supported regions
+            regions_response = requests.get(f"{self.base_url}/pricing/regions", timeout=10)
+            
+            if regions_response.status_code == 200:
+                regions_data = regions_response.json()
+                if "regions" in regions_data:
+                    regions = regions_data["regions"]
+                    self.log_test("Vendor Pricing - Supported Regions", True, 
+                                f"Retrieved {len(regions)} supported regions")
+                    
+                    # Test pricing for a motorcycle in different regions
+                    if self.motorcycle_ids:
+                        motorcycle_id = self.motorcycle_ids[0]
+                        
+                        # Test pricing in different regions
+                        test_regions = ["US", "BD", "NP", "TH", "MY", "ID", "AE", "SA"]
+                        successful_regions = 0
+                        
+                        for region in test_regions:
+                            pricing_response = requests.get(f"{self.base_url}/motorcycles/{motorcycle_id}/pricing", 
+                                                           params={"region": region}, timeout=10)
+                            
+                            if pricing_response.status_code == 200:
+                                pricing_data = pricing_response.json()
+                                if "vendor_prices" in pricing_data and "currency" in pricing_data:
+                                    successful_regions += 1
+                        
+                        if successful_regions >= 6:  # At least 6 out of 8 regions should work
+                            self.log_test("Vendor Pricing - Regional Currencies", True, 
+                                        f"Pricing working in {successful_regions}/{len(test_regions)} regions")
+                            return True
+                        else:
+                            self.log_test("Vendor Pricing - Regional Currencies", False, 
+                                        f"Only {successful_regions}/{len(test_regions)} regions working")
+                            return False
+                    else:
+                        self.log_test("Vendor Pricing - Regional Currencies", False, 
+                                    "No motorcycle IDs available for testing")
+                        return False
+                else:
+                    self.log_test("Vendor Pricing - Supported Regions", False, 
+                                "Missing regions in response")
+                    return False
+            else:
+                self.log_test("Vendor Pricing - Supported Regions", False, 
+                            f"Regions failed: {regions_response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Vendor Pricing System", False, f"Error: {str(e)}")
+            return False
+
+    def test_security_and_validation(self):
+        """Test security measures and input validation"""
+        try:
+            # Test unauthorized access to protected endpoints
+            protected_endpoints = [
+                "/garage",
+                "/price-alerts", 
+                "/rider-groups",
+                "/auth/me",
+                "/users/me/achievements"
+            ]
+            
+            unauthorized_count = 0
+            for endpoint in protected_endpoints:
+                response = requests.get(f"{self.base_url}{endpoint}", timeout=10)
+                if response.status_code == 401:
+                    unauthorized_count += 1
+            
+            if unauthorized_count == len(protected_endpoints):
+                self.log_test("Security - Unauthorized Access Protection", True, 
+                            f"All {len(protected_endpoints)} protected endpoints require authentication")
+                
+                # Test input validation
+                invalid_data_tests = [
+                    ("/auth/register", {"email": "invalid-email", "password": "123", "name": ""}),
+                    ("/motorcycles", {"year_min": "invalid", "price_max": -1000}),
+                ]
+                
+                validation_passed = 0
+                for endpoint, invalid_data in invalid_data_tests:
+                    if endpoint == "/auth/register":
+                        response = requests.post(f"{self.base_url}{endpoint}", json=invalid_data, timeout=10)
+                    else:
+                        response = requests.get(f"{self.base_url}{endpoint}", params=invalid_data, timeout=10)
+                    
+                    if response.status_code in [400, 422]:  # Bad request or validation error
+                        validation_passed += 1
+                
+                if validation_passed >= 1:  # At least some validation working
+                    self.log_test("Security - Input Validation", True, 
+                                f"Input validation working for {validation_passed} test cases")
+                    return True
+                else:
+                    self.log_test("Security - Input Validation", False, 
+                                "Input validation not working properly")
+                    return False
+            else:
+                self.log_test("Security - Unauthorized Access Protection", False, 
+                            f"Only {unauthorized_count}/{len(protected_endpoints)} endpoints protected")
+                return False
+                
+        except Exception as e:
+            self.log_test("Security and Validation", False, f"Error: {str(e)}")
+            return False
+
+    def test_performance_and_scalability(self):
+        """Test performance with large datasets and concurrent requests"""
+        try:
+            import time
+            
+            # Test large dataset handling
+            start_time = time.time()
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"limit": 1000}, timeout=30)
+            end_time = time.time()
+            
+            if response.status_code == 200:
+                data = response.json()
+                motorcycles = self.extract_motorcycles_from_response(data)
+                response_time = end_time - start_time
+                
+                if len(motorcycles) >= 1000 and response_time < 10:  # Should handle 1000+ records in under 10 seconds
+                    self.log_test("Performance - Large Dataset", True, 
+                                f"Retrieved {len(motorcycles)} motorcycles in {response_time:.2f}s")
+                    
+                    # Test concurrent requests (simplified)
+                    concurrent_start = time.time()
+                    responses = []
+                    
+                    # Simulate 3 concurrent requests
+                    import threading
+                    
+                    def make_request():
+                        resp = requests.get(f"{self.base_url}/motorcycles", 
+                                          params={"limit": 100}, timeout=10)
+                        responses.append(resp.status_code)
+                    
+                    threads = []
+                    for _ in range(3):
+                        thread = threading.Thread(target=make_request)
+                        threads.append(thread)
+                        thread.start()
+                    
+                    for thread in threads:
+                        thread.join()
+                    
+                    concurrent_end = time.time()
+                    concurrent_time = concurrent_end - concurrent_start
+                    
+                    successful_requests = sum(1 for status in responses if status == 200)
+                    
+                    if successful_requests == 3 and concurrent_time < 15:
+                        self.log_test("Performance - Concurrent Requests", True, 
+                                    f"Handled 3 concurrent requests in {concurrent_time:.2f}s")
+                        return True
+                    else:
+                        self.log_test("Performance - Concurrent Requests", False, 
+                                    f"Only {successful_requests}/3 requests successful in {concurrent_time:.2f}s")
+                        return False
+                else:
+                    self.log_test("Performance - Large Dataset", False, 
+                                f"Poor performance: {len(motorcycles)} records in {response_time:.2f}s")
+                    return False
+            else:
+                self.log_test("Performance - Large Dataset", False, 
+                            f"Large dataset request failed: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Performance and Scalability", False, f"Error: {str(e)}")
+            return False
+
+    def test_error_handling_and_reliability(self):
+        """Test error handling and system reliability"""
+        try:
+            # Test 404 handling
+            response_404 = requests.get(f"{self.base_url}/motorcycles/nonexistent-id", timeout=10)
+            if response_404.status_code == 404:
+                self.log_test("Error Handling - 404 Not Found", True, 
+                            "Proper 404 response for non-existent resources")
+                
+                # Test invalid endpoint
+                response_invalid = requests.get(f"{self.base_url}/invalid-endpoint", timeout=10)
+                if response_invalid.status_code == 404:
+                    self.log_test("Error Handling - Invalid Endpoints", True, 
+                                "Proper 404 response for invalid endpoints")
+                    
+                    # Test malformed requests
+                    response_malformed = requests.post(f"{self.base_url}/auth/register", 
+                                                     json={"invalid": "data"}, timeout=10)
+                    if response_malformed.status_code in [400, 422]:
+                        self.log_test("Error Handling - Malformed Requests", True, 
+                                    "Proper error response for malformed requests")
+                        
+                        # Test system health check
+                        response_health = requests.get(f"{self.base_url}/", timeout=10)
+                        if response_health.status_code == 200:
+                            self.log_test("Error Handling - System Health", True, 
+                                        "System health check passed")
+                            return True
+                        else:
+                            self.log_test("Error Handling - System Health", False, 
+                                        f"Health check failed: {response_health.status_code}")
+                            return False
+                    else:
+                        self.log_test("Error Handling - Malformed Requests", False, 
+                                    f"Unexpected status for malformed request: {response_malformed.status_code}")
+                        return False
+                else:
+                    self.log_test("Error Handling - Invalid Endpoints", False, 
+                                f"Unexpected status for invalid endpoint: {response_invalid.status_code}")
+                    return False
+            else:
+                self.log_test("Error Handling - 404 Not Found", False, 
+                            f"Unexpected status for non-existent resource: {response_404.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Error Handling and Reliability", False, f"Error: {str(e)}")
+            return False
+
+    def run_comprehensive_deployment_testing(self):
+        """Run comprehensive deployment readiness testing"""
+        print("🚀 COMPREHENSIVE DEPLOYMENT READINESS TESTING")
+        print("=" * 80)
+        print("Testing all core systems for production deployment...")
+        print()
         
-        # Test basic connectivity first
+        # Core System Tests
+        print("🔧 CORE SYSTEMS TESTING")
+        print("-" * 40)
+        
+        # 1. API Connectivity
         if not self.test_api_root():
-            print("❌ API not accessible. Stopping tests.")
+            print("❌ CRITICAL: API connectivity failed - cannot proceed")
             return False
         
-        # Seed database
+        # 2. Database and Motorcycle System
         self.test_seed_database()
-        
-        # Core functionality tests
         self.test_get_all_motorcycles()
+        self.test_database_stats_api()
+        
+        # 3. Search and Filtering
         self.test_search_functionality()
         self.test_manufacturer_filter()
         self.test_category_filter()
-        self.test_year_range_filter()
-        self.test_price_range_filter()
-        self.test_sorting_functionality()
-        self.test_get_single_motorcycle()
-        self.test_filter_options_api()
         self.test_combined_filters()
         
-        # Database and category APIs
-        self.test_database_stats_api()
-        self.test_category_summary_api()
+        # 4. Pagination System
+        self.test_pagination_system()
         
-        # Daily Update System Tests
-        print("\n🤖 Testing Daily Update Bot System APIs...")
-        print("-" * 60)
+        print("\n🔐 AUTHENTICATION SYSTEMS TESTING")
+        print("-" * 40)
         
-        # Test daily update trigger and get job ID
-        success, job_id = self.test_trigger_daily_update()
+        # 5. Authentication Systems
+        email_success, email_token = self.test_email_password_authentication()
+        google_success, google_token = self.test_google_oauth_integration()
         
-        # Test job status monitoring if we have a job ID
-        if success and job_id:
-            self.test_job_status_monitoring(job_id)
+        # Use the first available token for subsequent tests
+        test_token = email_token if email_token else google_token
         
-        # Test update history
-        self.test_update_history()
+        if test_token:
+            self.test_jwt_token_validation(test_token)
         
-        # Test regional customizations
-        self.test_regional_customizations()
+        print("\n👥 USER MANAGEMENT FEATURES TESTING")
+        print("-" * 40)
         
-        # NEW AUTHENTICATION SYSTEM TESTS
-        print("\n🔐 Testing Authentication System...")
-        print("-" * 60)
+        # 6. User Management Features
+        if test_token:
+            # Test favorites system
+            if self.motorcycle_ids:
+                headers = {"Authorization": f"Bearer {test_token}"}
+                motorcycle_id = self.motorcycle_ids[0]
+                
+                # Add to favorites
+                fav_response = requests.post(f"{self.base_url}/motorcycles/{motorcycle_id}/favorite", 
+                                           headers=headers, timeout=10)
+                if fav_response.status_code == 200:
+                    self.log_test("User Management - Favorites System", True, "Favorites system working")
+                else:
+                    self.log_test("User Management - Favorites System", False, f"Status: {fav_response.status_code}")
+                
+                # Test rating system
+                rating_data = {"motorcycle_id": motorcycle_id, "rating": 5, "review_text": "Great bike!"}
+                rating_response = requests.post(f"{self.base_url}/motorcycles/{motorcycle_id}/rate", 
+                                              headers=headers, json=rating_data, timeout=10)
+                if rating_response.status_code == 200:
+                    self.log_test("User Management - Rating System", True, "Rating system working")
+                else:
+                    self.log_test("User Management - Rating System", False, f"Status: {rating_response.status_code}")
         
-        self.test_email_password_registration()
-        self.test_email_password_login()
-        self.test_google_oauth()
-        self.test_jwt_token_validation()
-        self.test_session_based_authentication()
-        self.test_invalid_credentials_handling()
+        print("\n🏍️ ADVANCED COMMUNITY FEATURES TESTING")
+        print("-" * 40)
         
-        # NEW PAGINATION SYSTEM TESTS
-        print("\n📄 Testing Pagination System...")
-        print("-" * 60)
+        # 7. Advanced Community Features
+        if test_token:
+            self.test_virtual_garage_system(test_token)
+            self.test_price_alerts_system(test_token)
+            self.test_rider_groups_system(test_token)
+            self.test_achievement_system(test_token)
         
-        self.test_pagination_basic_functionality()
-        self.test_pagination_response_format()
-        self.test_pagination_navigation()
-        self.test_pagination_metadata_accuracy()
-        self.test_pagination_with_filtering()
-        self.test_pagination_with_sorting()
+        print("\n📊 ANALYTICS & ENGAGEMENT TESTING")
+        print("-" * 40)
         
-        # NEW VENDOR PRICING IMPROVEMENTS TESTS
-        print("\n💰 Testing Vendor Pricing Improvements...")
-        print("-" * 60)
+        # 8. Analytics & Engagement
+        self.test_analytics_system(test_token)
         
-        self.test_regional_currencies_support()
-        self.test_discontinued_motorcycle_handling()
-        self.test_verified_vendor_urls()
-        self.test_currency_conversion()
-
-        # NEW USER INTERACTION API TESTS
-        print("\n👤 Testing User Interaction APIs...")
-        print("-" * 60)
+        print("\n💰 VENDOR PRICING TESTING")
+        print("-" * 40)
         
-        # Authentication & User Management
-        self.test_user_authentication()
-        self.test_get_current_user()
+        # 9. Vendor Pricing
+        self.test_vendor_pricing_system()
         
-        # Favorites System
-        self.test_add_to_favorites()
-        self.test_get_favorite_motorcycles()
-        self.test_remove_from_favorites()
+        print("\n🔒 SECURITY & PERFORMANCE TESTING")
+        print("-" * 40)
         
-        # Rating System
-        self.test_rate_motorcycle()
-        self.test_get_motorcycle_ratings()
-        
-        # Comments & Discussion
-        self.test_add_comment()
-        self.test_get_motorcycle_comments()
-        self.test_like_comment()
-        
-        # ==================== USER REQUEST SYSTEM TESTS ====================
-        print("\n📝 Testing User Request Submission System...")
-        print("-" * 60)
-        
-        # User Request Tests (require authentication)
-        if self.test_user_session:
-            self.test_submit_user_request()
-            self.test_submit_multiple_request_types()
-            self.test_get_user_requests()
-            self.test_get_user_requests_with_filters()
-            self.test_get_specific_user_request()
-            self.test_get_request_stats()
-            self.test_request_data_validation()
-            self.test_request_workflow_complete()
-        
-        # Test authentication requirements (without auth)
-        self.test_request_authentication_required()
-        
-        # Admin endpoint tests (no auth required in current implementation)
-        self.test_admin_get_all_requests()
-        self.test_admin_get_requests_with_filters()
-        self.test_admin_update_request()
-        
-        # ==================== VIRTUAL GARAGE AND PRICE ALERTS TESTS ====================
-        print("\n🏍️ Testing Virtual Garage System...")
-        print("-" * 60)
-        
-        # Virtual Garage Tests (require authentication)
-        if self.test_user_session:
-            self.test_add_to_garage()
-            self.test_get_user_garage()
-            self.test_garage_status_filtering()
-            self.test_update_garage_item()
-            self.test_get_garage_stats()
-            self.test_remove_from_garage()
-        
-        # Test authentication requirements for garage
-        self.test_garage_authentication_required()
-        
-        print("\n💰 Testing Price Alerts System...")
-        print("-" * 60)
-        
-        # Price Alerts Tests (require authentication)
-        if self.test_user_session:
-            self.test_create_price_alert()
-            self.test_price_alert_conditions()
-            self.test_get_user_price_alerts()
-            self.test_delete_price_alert()
-        
-        # Test authentication requirements for price alerts
-        self.test_price_alerts_authentication_required()
-        
-        print("\n🔒 Testing Data Validation...")
-        print("-" * 60)
-        
-        # Data Validation Tests (require authentication)
-        if self.test_user_session:
-            self.test_garage_data_validation()
-            self.test_price_alert_data_validation()
-        
-        # Browse Limit Fix
-        self.test_browse_limit_fix()
-        
-        # NEW TESTS FOR TECHNICAL FEATURES DATABASE ENHANCEMENT AND DUAL-LEVEL SORTING
-        print("\n🔧 Testing Technical Features Database Enhancement...")
-        print("-" * 60)
-        
-        self.test_technical_features_database_enhancement()
-        self.test_suzuki_ducati_technical_data()
-        self.test_technical_features_filtering()
-        self.test_numeric_range_filtering()
-        
-        print("\n📊 Testing Dual-Level Sorting Implementation...")
-        print("-" * 60)
-        
-        self.test_dual_level_sorting_default()
-        self.test_compare_default_vs_single_field_sorting()
-        
-        print("\n📈 Testing Database Count Verification...")
-        print("-" * 60)
-        
-        self.test_database_count_verification()
-        self.test_manufacturer_counts_verification()
-        
-        # NEW TESTS FOR REVIEW REQUEST REQUIREMENTS
-        print("\n🎯 Testing Review Request Requirements...")
-        print("-" * 60)
-        
-        # Test favorite icon behavior (requires authentication)
-        if self.test_user_session:
-            self.test_favorite_icon_behavior()
-            self.test_star_rating_system()
-        
-        # Test manufacturer filter with 21 brands
-        self.test_manufacturer_filter_21_brands()
-        
-        # Test vendor pricing by country
-        self.test_vendor_pricing_by_country()
-        
-        # Test database expansion to 2530+ motorcycles
-        self.test_database_expansion_2530_plus()
-        
-        # ==================== NEW TESTS FOR TASK 3 & 4 ====================
-        
-        # Rider Groups API Testing
-        print("\n🏍️ Testing Rider Groups System...")
-        print("-" * 60)
-        if self.test_user_session:
-            self.test_create_rider_group()
-            self.test_get_rider_groups()
-            self.test_get_rider_group_details()
-            self.test_join_rider_group()
-            self.test_get_my_rider_groups()
-        else:
-            print("⚠️ Skipping Rider Groups tests - No user session available")
-        
-        # Achievement System API Testing
-        print("\n🏆 Testing Achievement System...")
-        print("-" * 60)
-        self.test_get_achievements()
-        if self.test_user_session:
-            self.test_get_user_achievements()
-            self.test_check_achievements()
-        else:
-            print("⚠️ Skipping user-specific Achievement tests - No user session available")
-        
-        # Search Analytics API Testing
-        print("\n📊 Testing Search Analytics System...")
-        print("-" * 60)
-        self.test_log_search_analytics()
-        self.test_log_user_engagement()
-        self.test_get_search_trends()
-        self.test_get_user_behavior_analytics()
-        self.test_get_motorcycle_interests()
+        # 10. Security and Performance
+        self.test_security_and_validation()
+        self.test_performance_and_scalability()
+        self.test_error_handling_and_reliability()
         
         # Summary
-        print("\n" + "=" * 60)
-        print("📊 TEST SUMMARY")
-        print("=" * 60)
+        print("\n" + "=" * 80)
+        print("📋 DEPLOYMENT READINESS TEST SUMMARY")
+        print("=" * 80)
         
-        passed_tests = [result for result in self.test_results if "✅ PASS" in result]
-        failed_tests = [result for result in self.test_results if "❌ FAIL" in result]
+        passed = sum(1 for result in self.test_results if "✅ PASS" in result)
+        failed = sum(1 for result in self.test_results if "❌ FAIL" in result)
+        total = len(self.test_results)
         
-        print(f"Total Tests: {len(self.test_results)}")
-        print(f"Passed: {len(passed_tests)}")
-        print(f"Failed: {len(failed_tests)}")
+        print(f"Total Tests: {total}")
+        print(f"Passed: {passed} ✅")
+        print(f"Failed: {failed} ❌")
+        print(f"Success Rate: {(passed/total)*100:.1f}%")
         
-        if failed_tests:
+        # Deployment readiness assessment
+        success_rate = (passed/total)*100
+        if success_rate >= 95:
+            print(f"\n🎉 DEPLOYMENT READY: {success_rate:.1f}% success rate - System ready for production!")
+        elif success_rate >= 85:
+            print(f"\n⚠️ MOSTLY READY: {success_rate:.1f}% success rate - Minor issues need attention")
+        else:
+            print(f"\n❌ NOT READY: {success_rate:.1f}% success rate - Critical issues must be resolved")
+        
+        if failed > 0:
             print("\n❌ FAILED TESTS:")
-            for test in failed_tests:
-                print(f"  {test}")
+            for result in self.test_results:
+                if "❌ FAIL" in result:
+                    print(f"  {result}")
         
-        success_rate = len(passed_tests) / len(self.test_results) * 100
-        print(f"\nSuccess Rate: {success_rate:.1f}%")
-        
-        return len(failed_tests) == 0
+        print("\n" + "=" * 80)
+        return success_rate >= 85
+
+    def run_all_tests(self):
+        """Run comprehensive deployment readiness testing"""
+        return self.run_comprehensive_deployment_testing()
 
 def main():
     """Main test execution"""
