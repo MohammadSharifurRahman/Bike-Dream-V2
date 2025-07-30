@@ -913,7 +913,7 @@ frontend:
 
   - task: "Hide Unavailable Toggle Component Integration"
     implemented: true
-    working: false
+    working: true
     file: "/app/frontend/src/App.js"
     stuck_count: 2
     priority: "high"
@@ -928,6 +928,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "❌ CONFIRMED JAVASCRIPT ERROR BLOCKING TOGGLE: Hide Unavailable toggle is visually present with proper styling and label, but the same JavaScript runtime error ('Cannot read properties of null (reading 'contains')') prevents interaction. Toggle element found but webpack-dev-server-client-overlay iframe intercepts all pointer events. Component implementation appears correct but is completely non-functional due to the blocking JavaScript error that must be fixed first."
+      - working: true
+        agent: "testing"
+        comment: "✅ HIDE UNAVAILABLE TOGGLE FUNCTIONAL AFTER JAVASCRIPT FIXES: Critical JavaScript errors have been resolved! Toggle component is now fully operational: (1) Toggle visually present with proper 'Hide Unavailable Bikes' label and styling, (2) Toggle checkbox input correctly identified and functional, (3) Direct checkbox interaction works perfectly (OFF→ON state change confirmed), (4) Multiple rapid clicks work without errors, (5) No more webpack error overlays blocking interactions, (6) Component properly integrated on homepage. Minor: Container click handler may need adjustment, but core toggle functionality via checkbox works flawlessly. The JavaScript runtime error fixes have successfully restored toggle functionality."
 
   - task: "Site-wide Search Integration"
     implemented: true
