@@ -6147,6 +6147,14 @@ const MainAppContent = () => {
           />
         )}
       </div>
+    );
+};
+
+// App wrapper component
+function App() {
+  return (
+    <AuthProvider>
+      <MainAppContent />
     </AuthProvider>
   );
 }
