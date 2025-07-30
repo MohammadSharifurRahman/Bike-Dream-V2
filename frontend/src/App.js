@@ -6133,7 +6133,7 @@ function App() {
         {/* Phase 3: Admin Dashboard */}
         {showAdminDashboard && (
           <AdminDashboard
-            user={{ name: 'Admin User', role: 'Admin' }}
+            user={useAuth().user}
             onClose={() => setShowAdminDashboard(false)}
           />
         )}
