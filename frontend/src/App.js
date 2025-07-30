@@ -5918,6 +5918,9 @@ function App() {
               <HeroCarousel onViewChange={setCurrentView} />
             </div>
 
+            {/* Phase 3: Scrolling Banner */}
+            <ScrollingBanner />
+
             {/* Search Bar Section */}
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
               <div className="text-center mb-6">
