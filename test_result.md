@@ -210,6 +210,30 @@ NEW PRIORITY FIXES NEEDED:
         comment: "✅ AUTHENTICATION ERROR HANDLING VERIFIED: Invalid login credentials properly rejected with 401 status. Unauthorized access to protected endpoints returns 401 status. Registration validation working for email format and password requirements. Proper error messages returned for authentication failures. Security measures implemented to prevent unauthorized access to user data and protected functionality."
 
 backend:
+  - task: "Rating Display Issue Fix"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Priority 1 issue: Motorcycle rating fields exist (average_rating, total_ratings) but no sample rating data is populated in database. Backend tests show fields present but all values are 0. Need to seed sample ratings for existing motorcycles."
+
+  - task: "Duplicate Listings Elimination"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Priority 3 issue: Homepage and category pages show duplicate motorcycle models (e.g., multiple Kawasaki Ninja H2 entries for different years with same image). Need to modify API to return only one entry per model with lowest price, while preserving multi-year data in vendor-specific sections."
+
   - task: "Scrolling Text Banner Management API"
     implemented: true
     working: true
