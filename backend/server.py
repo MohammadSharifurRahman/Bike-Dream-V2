@@ -429,6 +429,30 @@ class UserAchievement(BaseModel):
     progress: int = 0  # current progress towards achievement
     is_completed: bool = False
 
+# Search Analytics Models for User Engagement Tracking
+class SearchAnalytics(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: Optional[str] = None  # None for anonymous users
+    session_id: Optional[str] = None
+    search_term: str
+    search_type: str = "general"  # "general", "manufacturer", "category", "price_range"
+    filters_applied: dict = Field(default_factory=dict)
+    results_count: int = 0
+    user_location: Optional[str] = None
+    user_agent: Optional[str] = None
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    clicked_results: List[str] = Field(default_factory=list)  # motorcycle IDs that were clicked
+
+class UserEngagement(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: Optional[str] = None
+    session_id: str
+    page_view: str  # page visited
+    time_spent: Optional[int] = None  # seconds spent on page
+    actions: List[dict] = Field(default_factory=list)  # user actions like clicks, favorites, etc.
+    referrer: Optional[str] = None
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
 # Daily Update Scheduler
 class DailyUpdateScheduler:
     def __init__(self):
