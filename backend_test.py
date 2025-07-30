@@ -5565,6 +5565,457 @@ class MotorcycleAPITester:
         """Run comprehensive deployment readiness testing"""
         return self.run_comprehensive_deployment_testing()
 
+    # PHASE 2 SPECIFIC TESTS - Motorcycle Comparison API
+    def test_motorcycle_comparison_single_bike(self):
+        """Test POST /api/motorcycles/compare with single motorcycle ID"""
+        if not self.motorcycle_ids:
+            self.log_test("Motorcycle Comparison - Single Bike", False, "No motorcycle IDs available")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            payload = {"motorcycle_ids": [motorcycle_id]}
+            
+            response = requests.post(f"{self.base_url}/motorcycles/compare", 
+                                   json=payload, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                required_keys = ["comparison_id", "motorcycles", "comparison_count", "generated_at", "comparison_categories"]
+                missing_keys = [key for key in required_keys if key not in data]
+                
+                if missing_keys:
+                    self.log_test("Motorcycle Comparison - Single Bike", False, f"Missing keys: {missing_keys}")
+                    return False
+                
+                if (data["comparison_count"] == 1 and 
+                    len(data["motorcycles"]) == 1 and
+                    isinstance(data["comparison_categories"], list)):
+                    
+                    # Verify motorcycle structure
+                    motorcycle = data["motorcycles"][0]
+                    required_sections = ["technical_specs", "features", "pricing", "ratings", "metadata"]
+                    missing_sections = [section for section in required_sections if section not in motorcycle]
+                    
+                    if missing_sections:
+                        self.log_test("Motorcycle Comparison - Single Bike", False, f"Missing sections: {missing_sections}")
+                        return False
+                    
+                    self.log_test("Motorcycle Comparison - Single Bike", True, 
+                                f"Successfully compared 1 motorcycle: {motorcycle.get('manufacturer')} {motorcycle.get('model')}")
+                    return True
+                else:
+                    self.log_test("Motorcycle Comparison - Single Bike", False, "Invalid comparison structure")
+                    return False
+            else:
+                self.log_test("Motorcycle Comparison - Single Bike", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Motorcycle Comparison - Single Bike", False, f"Error: {str(e)}")
+            return False
+
+    def test_motorcycle_comparison_two_bikes(self):
+        """Test POST /api/motorcycles/compare with 2 motorcycle IDs"""
+        if len(self.motorcycle_ids) < 2:
+            self.log_test("Motorcycle Comparison - Two Bikes", False, "Need at least 2 motorcycle IDs")
+            return False
+        
+        try:
+            payload = {"motorcycle_ids": self.motorcycle_ids[:2]}
+            
+            response = requests.post(f"{self.base_url}/motorcycles/compare", 
+                                   json=payload, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data["comparison_count"] == 2 and 
+                    len(data["motorcycles"]) == 2):
+                    
+                    bike1 = data["motorcycles"][0]
+                    bike2 = data["motorcycles"][1]
+                    self.log_test("Motorcycle Comparison - Two Bikes", True, 
+                                f"Successfully compared 2 motorcycles: {bike1.get('manufacturer')} {bike1.get('model')} vs {bike2.get('manufacturer')} {bike2.get('model')}")
+                    return True
+                else:
+                    self.log_test("Motorcycle Comparison - Two Bikes", False, "Invalid comparison count")
+                    return False
+            else:
+                self.log_test("Motorcycle Comparison - Two Bikes", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Motorcycle Comparison - Two Bikes", False, f"Error: {str(e)}")
+            return False
+
+    def test_motorcycle_comparison_three_bikes(self):
+        """Test POST /api/motorcycles/compare with 3 motorcycle IDs (maximum allowed)"""
+        if len(self.motorcycle_ids) < 3:
+            self.log_test("Motorcycle Comparison - Three Bikes", False, "Need at least 3 motorcycle IDs")
+            return False
+        
+        try:
+            payload = {"motorcycle_ids": self.motorcycle_ids[:3]}
+            
+            response = requests.post(f"{self.base_url}/motorcycles/compare", 
+                                   json=payload, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data["comparison_count"] == 3 and 
+                    len(data["motorcycles"]) == 3):
+                    
+                    bikes = [f"{bike.get('manufacturer')} {bike.get('model')}" for bike in data["motorcycles"]]
+                    self.log_test("Motorcycle Comparison - Three Bikes", True, 
+                                f"Successfully compared 3 motorcycles: {', '.join(bikes)}")
+                    return True
+                else:
+                    self.log_test("Motorcycle Comparison - Three Bikes", False, "Invalid comparison count")
+                    return False
+            else:
+                self.log_test("Motorcycle Comparison - Three Bikes", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Motorcycle Comparison - Three Bikes", False, f"Error: {str(e)}")
+            return False
+
+    def test_motorcycle_comparison_too_many_bikes(self):
+        """Test POST /api/motorcycles/compare with more than 3 motorcycle IDs (should return error)"""
+        if len(self.motorcycle_ids) < 4:
+            # Create dummy IDs for this test
+            test_ids = self.motorcycle_ids + ["dummy_id_1", "dummy_id_2"]
+        else:
+            test_ids = self.motorcycle_ids[:4]
+        
+        try:
+            payload = {"motorcycle_ids": test_ids}
+            
+            response = requests.post(f"{self.base_url}/motorcycles/compare", 
+                                   json=payload, timeout=15)
+            
+            if response.status_code == 400:
+                data = response.json()
+                if "Maximum 3 motorcycles" in data.get("detail", ""):
+                    self.log_test("Motorcycle Comparison - Too Many Bikes", True, 
+                                "Correctly rejected request with more than 3 motorcycles")
+                    return True
+                else:
+                    self.log_test("Motorcycle Comparison - Too Many Bikes", False, 
+                                f"Wrong error message: {data.get('detail')}")
+                    return False
+            else:
+                self.log_test("Motorcycle Comparison - Too Many Bikes", False, 
+                            f"Expected 400 status, got: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Motorcycle Comparison - Too Many Bikes", False, f"Error: {str(e)}")
+            return False
+
+    def test_motorcycle_comparison_empty_list(self):
+        """Test POST /api/motorcycles/compare with empty list (should return error)"""
+        try:
+            payload = {"motorcycle_ids": []}
+            
+            response = requests.post(f"{self.base_url}/motorcycles/compare", 
+                                   json=payload, timeout=15)
+            
+            if response.status_code == 400:
+                data = response.json()
+                if "At least one motorcycle ID is required" in data.get("detail", ""):
+                    self.log_test("Motorcycle Comparison - Empty List", True, 
+                                "Correctly rejected empty motorcycle list")
+                    return True
+                else:
+                    self.log_test("Motorcycle Comparison - Empty List", False, 
+                                f"Wrong error message: {data.get('detail')}")
+                    return False
+            else:
+                self.log_test("Motorcycle Comparison - Empty List", False, 
+                            f"Expected 400 status, got: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Motorcycle Comparison - Empty List", False, f"Error: {str(e)}")
+            return False
+
+    def test_motorcycle_comparison_duplicate_ids(self):
+        """Test POST /api/motorcycles/compare with duplicate motorcycle IDs (should remove duplicates)"""
+        if not self.motorcycle_ids:
+            self.log_test("Motorcycle Comparison - Duplicate IDs", False, "No motorcycle IDs available")
+            return False
+        
+        try:
+            # Use same ID multiple times
+            motorcycle_id = self.motorcycle_ids[0]
+            payload = {"motorcycle_ids": [motorcycle_id, motorcycle_id, motorcycle_id]}
+            
+            response = requests.post(f"{self.base_url}/motorcycles/compare", 
+                                   json=payload, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data["comparison_count"] == 1 and 
+                    len(data["motorcycles"]) == 1):
+                    
+                    self.log_test("Motorcycle Comparison - Duplicate IDs", True, 
+                                "Successfully removed duplicates and returned 1 unique motorcycle")
+                    return True
+                else:
+                    self.log_test("Motorcycle Comparison - Duplicate IDs", False, 
+                                f"Expected 1 motorcycle, got {data['comparison_count']}")
+                    return False
+            else:
+                self.log_test("Motorcycle Comparison - Duplicate IDs", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Motorcycle Comparison - Duplicate IDs", False, f"Error: {str(e)}")
+            return False
+
+    def test_motorcycle_comparison_invalid_id(self):
+        """Test POST /api/motorcycles/compare with invalid motorcycle ID (should return 404)"""
+        try:
+            payload = {"motorcycle_ids": ["invalid_motorcycle_id_12345"]}
+            
+            response = requests.post(f"{self.base_url}/motorcycles/compare", 
+                                   json=payload, timeout=15)
+            
+            if response.status_code == 404:
+                data = response.json()
+                if "not found" in data.get("detail", "").lower():
+                    self.log_test("Motorcycle Comparison - Invalid ID", True, 
+                                "Correctly returned 404 for invalid motorcycle ID")
+                    return True
+                else:
+                    self.log_test("Motorcycle Comparison - Invalid ID", False, 
+                                f"Wrong error message: {data.get('detail')}")
+                    return False
+            else:
+                self.log_test("Motorcycle Comparison - Invalid ID", False, 
+                            f"Expected 404 status, got: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Motorcycle Comparison - Invalid ID", False, f"Error: {str(e)}")
+            return False
+
+    def test_motorcycle_comparison_mixed_valid_invalid(self):
+        """Test POST /api/motorcycles/compare with mix of valid and invalid IDs"""
+        if not self.motorcycle_ids:
+            self.log_test("Motorcycle Comparison - Mixed Valid/Invalid", False, "No motorcycle IDs available")
+            return False
+        
+        try:
+            # Mix valid and invalid IDs
+            payload = {"motorcycle_ids": [self.motorcycle_ids[0], "invalid_id_12345"]}
+            
+            response = requests.post(f"{self.base_url}/motorcycles/compare", 
+                                   json=payload, timeout=15)
+            
+            if response.status_code == 404:
+                data = response.json()
+                if "not found" in data.get("detail", "").lower():
+                    self.log_test("Motorcycle Comparison - Mixed Valid/Invalid", True, 
+                                "Correctly returned 404 when any motorcycle ID is invalid")
+                    return True
+                else:
+                    self.log_test("Motorcycle Comparison - Mixed Valid/Invalid", False, 
+                                f"Wrong error message: {data.get('detail')}")
+                    return False
+            else:
+                self.log_test("Motorcycle Comparison - Mixed Valid/Invalid", False, 
+                            f"Expected 404 status, got: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Motorcycle Comparison - Mixed Valid/Invalid", False, f"Error: {str(e)}")
+            return False
+
+    def test_motorcycle_comparison_response_structure(self):
+        """Test detailed response structure of motorcycle comparison API"""
+        if not self.motorcycle_ids:
+            self.log_test("Motorcycle Comparison - Response Structure", False, "No motorcycle IDs available")
+            return False
+        
+        try:
+            payload = {"motorcycle_ids": self.motorcycle_ids[:2]}
+            
+            response = requests.post(f"{self.base_url}/motorcycles/compare", 
+                                   json=payload, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check top-level structure
+                required_keys = ["comparison_id", "motorcycles", "comparison_count", "generated_at", "comparison_categories"]
+                missing_keys = [key for key in required_keys if key not in data]
+                
+                if missing_keys:
+                    self.log_test("Motorcycle Comparison - Response Structure", False, f"Missing top-level keys: {missing_keys}")
+                    return False
+                
+                # Check comparison categories
+                expected_categories = [
+                    "Technical Specifications",
+                    "Features & Technology", 
+                    "Pricing & Availability",
+                    "Ratings & Reviews",
+                    "Additional Information"
+                ]
+                
+                if not all(cat in data["comparison_categories"] for cat in expected_categories):
+                    self.log_test("Motorcycle Comparison - Response Structure", False, "Missing expected comparison categories")
+                    return False
+                
+                # Check motorcycle structure
+                if data["motorcycles"]:
+                    motorcycle = data["motorcycles"][0]
+                    required_sections = {
+                        "technical_specs": ["engine_displacement_cc", "horsepower", "torque_nm", "top_speed_kmh"],
+                        "features": ["transmission_type", "engine_type", "braking_system", "abs_available"],
+                        "pricing": ["base_price_usd", "availability", "vendor_pricing"],
+                        "ratings": ["average_rating", "total_ratings", "rating_distribution", "comments_count"],
+                        "metadata": ["user_interest_score"]
+                    }
+                    
+                    for section, expected_fields in required_sections.items():
+                        if section not in motorcycle:
+                            self.log_test("Motorcycle Comparison - Response Structure", False, f"Missing section: {section}")
+                            return False
+                        
+                        # Check some key fields in each section
+                        section_data = motorcycle[section]
+                        if not isinstance(section_data, dict):
+                            self.log_test("Motorcycle Comparison - Response Structure", False, f"Section {section} is not a dict")
+                            return False
+                
+                self.log_test("Motorcycle Comparison - Response Structure", True, 
+                            "Response structure is complete with all required sections and fields")
+                return True
+            else:
+                self.log_test("Motorcycle Comparison - Response Structure", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Motorcycle Comparison - Response Structure", False, f"Error: {str(e)}")
+            return False
+
+    def test_motorcycle_comparison_vendor_pricing(self):
+        """Test that vendor pricing is included in comparison response"""
+        if not self.motorcycle_ids:
+            self.log_test("Motorcycle Comparison - Vendor Pricing", False, "No motorcycle IDs available")
+            return False
+        
+        try:
+            payload = {"motorcycle_ids": [self.motorcycle_ids[0]]}
+            
+            response = requests.post(f"{self.base_url}/motorcycles/compare", 
+                                   json=payload, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if data["motorcycles"]:
+                    motorcycle = data["motorcycles"][0]
+                    pricing = motorcycle.get("pricing", {})
+                    vendor_pricing = pricing.get("vendor_pricing", {})
+                    
+                    if "vendors" in vendor_pricing and "message" in vendor_pricing:
+                        self.log_test("Motorcycle Comparison - Vendor Pricing", True, 
+                                    f"Vendor pricing included: {vendor_pricing['message']}")
+                        return True
+                    else:
+                        self.log_test("Motorcycle Comparison - Vendor Pricing", False, 
+                                    "Vendor pricing structure incomplete")
+                        return False
+                else:
+                    self.log_test("Motorcycle Comparison - Vendor Pricing", False, "No motorcycles in response")
+                    return False
+            else:
+                self.log_test("Motorcycle Comparison - Vendor Pricing", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Motorcycle Comparison - Vendor Pricing", False, f"Error: {str(e)}")
+            return False
+
+    def test_motorcycle_comparison_ratings_aggregation(self):
+        """Test that ratings and comments are properly aggregated in comparison"""
+        if not self.motorcycle_ids:
+            self.log_test("Motorcycle Comparison - Ratings Aggregation", False, "No motorcycle IDs available")
+            return False
+        
+        try:
+            payload = {"motorcycle_ids": [self.motorcycle_ids[0]]}
+            
+            response = requests.post(f"{self.base_url}/motorcycles/compare", 
+                                   json=payload, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if data["motorcycles"]:
+                    motorcycle = data["motorcycles"][0]
+                    ratings = motorcycle.get("ratings", {})
+                    
+                    required_rating_fields = ["average_rating", "total_ratings", "rating_distribution", "comments_count"]
+                    missing_fields = [field for field in required_rating_fields if field not in ratings]
+                    
+                    if missing_fields:
+                        self.log_test("Motorcycle Comparison - Ratings Aggregation", False, 
+                                    f"Missing rating fields: {missing_fields}")
+                        return False
+                    
+                    # Check rating distribution structure
+                    rating_dist = ratings["rating_distribution"]
+                    if not isinstance(rating_dist, dict) or not all(str(i) in rating_dist for i in range(1, 6)):
+                        self.log_test("Motorcycle Comparison - Ratings Aggregation", False, 
+                                    "Rating distribution structure invalid")
+                        return False
+                    
+                    self.log_test("Motorcycle Comparison - Ratings Aggregation", True, 
+                                f"Ratings properly aggregated: {ratings['total_ratings']} ratings, {ratings['comments_count']} comments")
+                    return True
+                else:
+                    self.log_test("Motorcycle Comparison - Ratings Aggregation", False, "No motorcycles in response")
+                    return False
+            else:
+                self.log_test("Motorcycle Comparison - Ratings Aggregation", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Motorcycle Comparison - Ratings Aggregation", False, f"Error: {str(e)}")
+            return False
+
+    def run_phase_2_tests(self):
+        """Run Phase 2 specific tests - Motorcycle Comparison API"""
+        print("\n🔍 TESTING PHASE 2: MOTORCYCLE COMPARISON API")
+        print("-" * 60)
+        
+        # Ensure we have motorcycle IDs for testing
+        if not self.motorcycle_ids:
+            if not self.test_get_all_motorcycles():
+                print("❌ Cannot get motorcycle IDs for comparison testing")
+                return False
+        
+        # Run all comparison tests
+        test_methods = [
+            self.test_motorcycle_comparison_single_bike,
+            self.test_motorcycle_comparison_two_bikes,
+            self.test_motorcycle_comparison_three_bikes,
+            self.test_motorcycle_comparison_too_many_bikes,
+            self.test_motorcycle_comparison_empty_list,
+            self.test_motorcycle_comparison_duplicate_ids,
+            self.test_motorcycle_comparison_invalid_id,
+            self.test_motorcycle_comparison_mixed_valid_invalid,
+            self.test_motorcycle_comparison_response_structure,
+            self.test_motorcycle_comparison_vendor_pricing,
+            self.test_motorcycle_comparison_ratings_aggregation
+        ]
+        
+        passed = 0
+        total = len(test_methods)
+        
+        for test_method in test_methods:
+            if test_method():
+                passed += 1
+        
+        success_rate = (passed / total) * 100
+        print(f"\n📊 Phase 2 Test Results: {passed}/{total} passed ({success_rate:.1f}%)")
+        
+        return success_rate >= 85
+
     # PHASE 1 SPECIFIC TESTS - Auto-Suggestions and Hide Unavailable Filter
     def test_search_auto_suggestions_api(self):
         """Test GET /api/motorcycles/search/suggestions - Phase 1 Feature"""
