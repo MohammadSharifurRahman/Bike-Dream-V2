@@ -820,19 +820,21 @@ const ScrollingBanner = () => {
   return (
     <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 overflow-hidden">
       <div className="relative whitespace-nowrap">
-        <div className="animate-marquee inline-block">
+        <div 
+          className="inline-block"
+          style={{
+            animation: 'marquee 30s linear infinite'
+          }}
+        >
           <span className="text-sm font-medium">
             🎉 {scrollingText} 🎉 {scrollingText} 
           </span>
         </div>
       </div>
-      <style jsx>{`
+      <style>{`
         @keyframes marquee {
           0% { transform: translateX(100%); }
           100% { transform: translateX(-100%); }
-        }
-        .animate-marquee {
-          animation: marquee 30s linear infinite;
         }
       `}</style>
     </div>
