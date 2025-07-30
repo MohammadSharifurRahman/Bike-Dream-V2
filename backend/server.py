@@ -2809,6 +2809,59 @@ async def seed_ratings_only():
         logging.error(f"Error seeding ratings: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Rating seeding failed: {str(e)}")
 
+@api_router.post("/motorcycles/use-base64-images")
+async def use_base64_images():
+    """Replace external image URLs with base64 encoded placeholder images to avoid CORS issues"""
+    try:
+        # Create a simple base64 encoded motorcycle silhouette for different types
+        # This is a minimal SVG converted to base64 that will always load
+        
+        motorcycle_svg_base64 = {
+            "sport": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjE4MCIgcj0iNDAiIGZpbGw9IiM0QjVDNjgiLz4KPGNpcmNsZSBjeD0iMzAwIiBjeT0iMTgwIiByPSI0MCIgZmlsbD0iIzRCNUM2OCIvPgo8cGF0aCBkPSJNMTAwIDEwMEwyMDAgODBMMzAwIDEwMEwzMDAgMTQwSDEwMFYxMDBaIiBmaWxsPSIjMzc0MzUxIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iNDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzZCNzI4MCI+U3BvcnQgTW90b3JjeWNsZTwvdGV4dD4KPC9zdmc+",
+            
+            "cruiser": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjgwIiBjeT0iMTkwIiByPSI0NSIgZmlsbD0iIzRCNUM2OCIvPgo8Y2lyY2xlIGN4PSIzMjAiIGN5PSIxOTAiIHI9IjQ1IiBmaWxsPSIjNEI1QzY4Ii8+CjxwYXRoIGQ9Ik04MCA5MEwyMDAgMTAwTDMyMCA5MEwzMjAgMTQ1SDgwVjkwWiIgZmlsbD0iIzM3NDM1MSIvPgo8dGV4dCB4PSIyMDAiIHk9IjQwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiM2QjcyODAiPkNydWlzZXIgTW90b3JjeWNsZTwvdGV4dD4KPHN2Zz4=",
+            
+            "commuter": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjkwIiBjeT0iMTg1IiByPSIzNSIgZmlsbD0iIzRCNUM2OCIvPgo8Y2lyY2xlIGN4PSIzMTAiIGN5PSIxODUiIHI9IjM1IiBmaWxsPSIjNEI1QzY4Ii8+CjxwYXRoIGQ9Ik05MCA5NUwyMDAgMTA1TDMxMCA5NUwzMTAgMTUwSDkwVjk1WiIgZmlsbD0iIzM3NDM1MSIvPgo8dGV4dCB4PSIyMDAiIHk9IjQwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiM2QjcyODAiPkNvbW11dGVyIE1vdG9yY3ljbGU8L3RleHQ+Cjwvc3ZnPg==",
+            
+            "default": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9Ijk1IiBjeT0iMTg1IiByPSI0MCIgZmlsbD0iIzRCNUM2OCIvPgo8Y2lyY2xlIGN4PSIzMDUiIGN5PSIxODUiIHI9IjQwIiBmaWxsPSIjNEI1QzY4Ii8+CjxwYXRoIGQ9Ik05NSAxMDBMMjAwIDkwTDMwNSAxMDBMMzA1IDE0NUg5NVYxMDBaIiBmaWxsPSIjMzc0MzUxIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iNDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzZCNzI4MCI+TW90b3JjeWNsZTwvdGV4dD4KPHN2Zz4="
+        }
+        
+        updated_count = 0
+        
+        # Get all motorcycles
+        all_motorcycles = await db.motorcycles.find({}).to_list(None)
+        
+        for motorcycle in all_motorcycles:
+            category = motorcycle.get('category', '').lower()
+            
+            # Choose appropriate base64 image based on category
+            if 'sport' in category:
+                new_image = motorcycle_svg_base64["sport"]
+            elif 'cruiser' in category:
+                new_image = motorcycle_svg_base64["cruiser"]
+            elif 'commuter' in category or 'standard' in category:
+                new_image = motorcycle_svg_base64["commuter"]
+            else:
+                new_image = motorcycle_svg_base64["default"]
+            
+            # Update motorcycle with base64 image
+            await db.motorcycles.update_one(
+                {"id": motorcycle["id"]},
+                {"$set": {"image_url": new_image}}
+            )
+            updated_count += 1
+        
+        return {
+            "message": f"Successfully updated {updated_count} motorcycles with base64 encoded images",
+            "updated_count": updated_count,
+            "total_processed": len(all_motorcycles),
+            "status": "Base64 images updated - no CORS issues!"
+        }
+        
+    except Exception as e:
+        logging.error(f"Error updating to base64 images: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Base64 image update failed: {str(e)}")
+
 @api_router.post("/motorcycles/fix-images")
 async def fix_motorcycle_images():
     """Fix motorcycle images with fast-loading, reliable image URLs"""
