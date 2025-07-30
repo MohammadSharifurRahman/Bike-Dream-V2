@@ -2340,7 +2340,7 @@ async def get_motorcycles(
     limit: Optional[int] = Query(25, le=100),  # Changed default to 25 for pagination
     skip: Optional[int] = Query(0),
     page: Optional[int] = Query(1, ge=1),  # Added page parameter
-    region: Optional[str] = Query("US", description="Region for pricing")
+    region: Optional[str] = Query(None, description="Filter by region availability (country code)")
 ):
     query = {}
     
