@@ -2520,6 +2520,120 @@ async def get_filter_options():
         "price_range": price_range[0] if price_range else {"min_price": 1000, "max_price": 200000}
     }
 
+@api_router.post("/motorcycles/seed/ratings")
+async def seed_ratings_only():
+    """Add sample ratings to existing motorcycles in the database"""
+    try:
+        # Sample users for ratings
+        sample_users = [
+            {"id": "user_1", "name": "Alex Thompson", "picture": "https://ui-avatars.com/api/?name=Alex+Thompson&background=random"},
+            {"id": "user_2", "name": "Sarah Chen", "picture": "https://ui-avatars.com/api/?name=Sarah+Chen&background=random"},
+            {"id": "user_3", "name": "Mike Rodriguez", "picture": "https://ui-avatars.com/api/?name=Mike+Rodriguez&background=random"},
+            {"id": "user_4", "name": "Emma Wilson", "picture": "https://ui-avatars.com/api/?name=Emma+Wilson&background=random"},
+            {"id": "user_5", "name": "David Kumar", "picture": "https://ui-avatars.com/api/?name=David+Kumar&background=random"},
+            {"id": "user_6", "name": "Lisa Johnson", "picture": "https://ui-avatars.com/api/?name=Lisa+Johnson&background=random"},
+            {"id": "user_7", "name": "Chris Park", "picture": "https://ui-avatars.com/api/?name=Chris+Park&background=random"},
+            {"id": "user_8", "name": "Anna Kowalski", "picture": "https://ui-avatars.com/api/?name=Anna+Kowalski&background=random"}
+        ]
+        
+        # Sample reviews by category
+        sample_reviews = {
+            'Sport': [
+                "Incredible acceleration and handling! Perfect for track days.",
+                "Amazing power delivery and cornering capabilities.",
+                "Outstanding performance bike with excellent build quality.",
+                "Love the aggressive styling and responsive engine.",
+                "Great for experienced riders who want pure performance."
+            ],
+            'Cruiser': [
+                "Comfortable for long rides with great build quality.",
+                "Perfect touring bike with excellent comfort.",
+                "Smooth ride and classic styling that never gets old.",
+                "Great for highway cruising and weekend trips.",
+                "Reliable and comfortable with that classic rumble."
+            ],
+            'Adventure': [
+                "Perfect for both on-road and off-road adventures.",
+                "Great versatility and excellent suspension travel.",
+                "Comfortable upright position for long distance touring.",
+                "Handles well both on pavement and gravel roads.",
+                "Excellent bike for exploring remote destinations."
+            ]
+        }
+        
+        # Get existing motorcycles without ratings
+        motorcycles_without_ratings = await db.motorcycles.find({
+            "$or": [
+                {"total_ratings": {"$eq": 0}},
+                {"total_ratings": {"$exists": False}},
+                {"average_rating": {"$eq": 0}},
+                {"average_rating": {"$exists": False}}
+            ]
+        }).to_list(2000)
+        
+        print(f"Found {len(motorcycles_without_ratings)} motorcycles without ratings")
+        
+        import random
+        ratings_added = 0
+        
+        for motorcycle in motorcycles_without_ratings:
+            if random.random() < 0.6:  # 60% chance to get ratings
+                category = motorcycle.get('category', 'Sport')
+                
+                # Generate 1-5 ratings for this motorcycle
+                num_ratings = random.randint(1, 5)
+                total_rating = 0
+                
+                for i in range(num_ratings):
+                    # Generate rating (biased towards higher ratings: 3-5 stars)
+                    rating = random.choices([3, 4, 5], weights=[1, 3, 4])[0]
+                    total_rating += rating
+                    
+                    # Select random user and review
+                    user = random.choice(sample_users)
+                    review_texts = sample_reviews.get(category, sample_reviews['Sport'])
+                    review_text = random.choice(review_texts)
+                    
+                    # Create rating document
+                    rating_doc = {
+                        "id": str(uuid.uuid4()),
+                        "user_id": user["id"],
+                        "user_name": user["name"],
+                        "user_picture": user["picture"],
+                        "motorcycle_id": motorcycle["id"],
+                        "rating": rating,
+                        "review_text": review_text,
+                        "created_at": datetime.utcnow(),
+                        "updated_at": datetime.utcnow()
+                    }
+                    
+                    # Insert rating
+                    await db.ratings.insert_one(rating_doc)
+                
+                # Update motorcycle with average rating
+                average_rating = total_rating / num_ratings
+                await db.motorcycles.update_one(
+                    {"id": motorcycle["id"]},
+                    {
+                        "$set": {
+                            "average_rating": round(average_rating, 1),
+                            "total_ratings": num_ratings
+                        }
+                    }
+                )
+                ratings_added += 1
+        
+        return {
+            "message": f"Successfully added sample ratings to {ratings_added} motorcycles",
+            "motorcycles_processed": len(motorcycles_without_ratings),
+            "ratings_added": ratings_added,
+            "status": "Sample ratings seeding complete!"
+        }
+        
+    except Exception as e:
+        logging.error(f"Error seeding ratings: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Rating seeding failed: {str(e)}")
+
 @api_router.post("/motorcycles/seed")
 async def seed_motorcycles():
     """Seed the database with comprehensive motorcycle data (1000+ motorcycles)"""
