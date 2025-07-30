@@ -4657,6 +4657,42 @@ function App() {
     fetchMotorcycles(1);
   };
 
+  // Handlers for Phase 2 - Motorcycle Comparison
+  const handleAddToComparison = (motorcycle) => {
+    if (comparisonList.length >= 3) {
+      alert('You can only compare up to 3 motorcycles at once.');
+      return;
+    }
+    
+    // Check if motorcycle is already in comparison list
+    if (comparisonList.find(item => item.id === motorcycle.id)) {
+      alert('This motorcycle is already in your comparison list.');
+      return;
+    }
+    
+    setComparisonList([...comparisonList, motorcycle]);
+  };
+
+  const handleRemoveFromComparison = (motorcycleId) => {
+    setComparisonList(comparisonList.filter(item => item.id !== motorcycleId));
+  };
+
+  const handleClearComparison = () => {
+    setComparisonList([]);
+  };
+
+  const handleShowComparison = () => {
+    if (comparisonList.length === 0) {
+      alert('Please add at least one motorcycle to compare.');
+      return;
+    }
+    setShowComparison(true);
+  };
+
+  const handleCloseComparison = () => {
+    setShowComparison(false);
+  };
+
   const fetchCategories = async () => {
     try {
       const response = await axios.get(`${API}/motorcycles/categories/summary`);
