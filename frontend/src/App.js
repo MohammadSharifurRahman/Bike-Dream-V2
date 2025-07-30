@@ -2486,6 +2486,656 @@ const FilterSidebar = ({ filters, onFilterChange, filterOptions, availableFeatur
   </div>
 );
 
+// Community Page Component (Rider Groups)
+const CommunityPage = () => {
+  const { user } = useContext(AuthContext);
+  const [riderGroups, setRiderGroups] = useState([]);
+  const [myGroups, setMyGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedType, setSelectedType] = useState('');
+  const [createFormData, setCreateFormData] = useState({
+    name: '',
+    description: '',
+    location: '',
+    group_type: 'general',
+    is_public: true,
+    max_members: ''
+  });
+
+  // Fetch public rider groups
+  const fetchRiderGroups = async () => {
+    try {
+      let url = `${API}/rider-groups?limit=20`;
+      if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+      if (selectedType) url += `&group_type=${selectedType}`;
+      
+      const response = await axios.get(url);
+      setRiderGroups(response.data.rider_groups || []);
+    } catch (error) {
+      console.error('Error fetching rider groups:', error);
+    }
+  };
+
+  // Fetch user's joined groups
+  const fetchMyGroups = async () => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      const response = await axios.get(`${API}/users/me/rider-groups`, { headers });
+      setMyGroups(response.data.rider_groups || []);
+    } catch (error) {
+      console.error('Error fetching my groups:', error);
+    }
+  };
+
+  // Create new rider group
+  const handleCreateGroup = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      const formDataCopy = { ...createFormData };
+      if (!formDataCopy.max_members) formDataCopy.max_members = null;
+      else formDataCopy.max_members = parseInt(formDataCopy.max_members);
+      
+      await axios.post(`${API}/rider-groups`, formDataCopy, { headers });
+      
+      // Reset form and refresh data
+      setCreateFormData({
+        name: '',
+        description: '',
+        location: '',
+        group_type: 'general',
+        is_public: true,
+        max_members: ''
+      });
+      setShowCreateForm(false);
+      
+      await Promise.all([fetchRiderGroups(), fetchMyGroups()]);
+      alert('Rider group created successfully!');
+    } catch (error) {
+      console.error('Error creating group:', error);
+      alert('Error creating group. Please try again.');
+    }
+  };
+
+  // Join a rider group
+  const handleJoinGroup = async (groupId) => {
+    if (!user) {
+      alert('Please log in to join groups');
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      await axios.post(`${API}/rider-groups/${groupId}/join`, {}, { headers });
+      
+      await Promise.all([fetchRiderGroups(), fetchMyGroups()]);
+      alert('Successfully joined the group!');
+    } catch (error) {
+      console.error('Error joining group:', error);
+      const message = error.response?.data?.detail || 'Error joining group. Please try again.';
+      alert(message);
+    }
+  };
+
+  // Leave a rider group
+  const handleLeaveGroup = async (groupId) => {
+    if (!confirm('Are you sure you want to leave this group?')) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      await axios.post(`${API}/rider-groups/${groupId}/leave`, {}, { headers });
+      
+      await Promise.all([fetchRiderGroups(), fetchMyGroups()]);
+      alert('Successfully left the group!');
+    } catch (error) {
+      console.error('Error leaving group:', error);
+      alert('Error leaving group. Please try again.');
+    }
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchRiderGroups(), fetchMyGroups()]);
+      setLoading(false);
+    };
+    
+    loadData();
+  }, [user, searchTerm, selectedType]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading community...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">Rider Community</h1>
+              <p className="text-gray-600 mt-2">Connect with fellow motorcycle enthusiasts</p>
+            </div>
+            {user && (
+              <button
+                onClick={() => setShowCreateForm(!showCreateForm)}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                {showCreateForm ? 'Cancel' : 'Create Group'}
+              </button>
+            )}
+          </div>
+
+          {/* Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            <div>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search groups..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Group Types</option>
+                <option value="location">Location-based</option>
+                <option value="brand">Brand/Model</option>
+                <option value="riding_style">Riding Style</option>
+                <option value="general">General</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Create Group Form */}
+        {showCreateForm && user && (
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Create New Rider Group</h2>
+            <form onSubmit={handleCreateGroup} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Group Name</label>
+                  <input
+                    type="text"
+                    value={createFormData.name}
+                    onChange={(e) => setCreateFormData({...createFormData, name: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                    minLength={3}
+                    maxLength={100}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Group Type</label>
+                  <select
+                    value={createFormData.group_type}
+                    onChange={(e) => setCreateFormData({...createFormData, group_type: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="general">General</option>
+                    <option value="location">Location-based</option>
+                    <option value="brand">Brand/Model</option>
+                    <option value="riding_style">Riding Style</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={createFormData.description}
+                  onChange={(e) => setCreateFormData({...createFormData, description: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={4}
+                  required
+                  minLength={10}
+                  maxLength={1000}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location (Optional)</label>
+                  <input
+                    type="text"
+                    value={createFormData.location}
+                    onChange={(e) => setCreateFormData({...createFormData, location: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., California, USA"
+                    maxLength={200}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Max Members (Optional)</label>
+                  <input
+                    type="number"
+                    value={createFormData.max_members}
+                    onChange={(e) => setCreateFormData({...createFormData, max_members: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    min="2"
+                    max="1000"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="is_public"
+                  checked={createFormData.is_public}
+                  onChange={(e) => setCreateFormData({...createFormData, is_public: e.target.checked})}
+                  className="mr-2"
+                />
+                <label htmlFor="is_public" className="text-sm text-gray-700">Make this group public</label>
+              </div>
+
+              <div className="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateForm(false)}
+                  className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Create Group
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* My Groups */}
+        {user && myGroups.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg mb-8">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-800">My Groups</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+              {myGroups.map((group) => (
+                <div key={group.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-bold text-gray-800">{group.name}</h3>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      group.is_creator ? 'bg-purple-100 text-purple-800' :
+                      group.user_role === 'admin' ? 'bg-blue-100 text-blue-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {group.is_creator ? 'CREATOR' : group.user_role.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 mb-3 text-sm">{group.description}</p>
+                  <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
+                    <span>{group.member_count} members</span>
+                    <span className="capitalize">{group.group_type.replace('_', ' ')}</span>
+                  </div>
+                  {group.location && (
+                    <div className="text-sm text-gray-500 mb-3">📍 {group.location}</div>
+                  )}
+                  {!group.is_creator && (
+                    <button
+                      onClick={() => handleLeaveGroup(group.id)}
+                      className="w-full bg-red-50 text-red-600 px-3 py-2 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
+                    >
+                      Leave Group
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Public Groups */}
+        <div className="bg-white rounded-xl shadow-lg">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-800">Discover Groups</h2>
+          </div>
+          
+          {riderGroups.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="text-gray-400 text-6xl mb-4">👥</div>
+              <h3 className="text-lg font-medium text-gray-800 mb-2">No groups found</h3>
+              <p className="text-gray-600 mb-4">Try adjusting your search or create the first group!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+              {riderGroups.map((group) => {
+                const isMyGroup = myGroups.some(mg => mg.id === group.id);
+                return (
+                  <div key={group.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-lg font-bold text-gray-800">{group.name}</h3>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        group.group_type === 'location' ? 'bg-green-100 text-green-800' :
+                        group.group_type === 'brand' ? 'bg-blue-100 text-blue-800' :
+                        group.group_type === 'riding_style' ? 'bg-purple-100 text-purple-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {group.group_type.replace('_', ' ').toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 mb-3 text-sm">{group.description}</p>
+                    <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
+                      <span>{group.member_count} members</span>
+                      {group.max_members && (
+                        <span>Max: {group.max_members}</span>
+                      )}
+                    </div>
+                    {group.location && (
+                      <div className="text-sm text-gray-500 mb-3">📍 {group.location}</div>
+                    )}
+                    <div className="text-xs text-gray-400 mb-3">
+                      Created {new Date(group.created_at).toLocaleDateString()}
+                    </div>
+                    
+                    {user && !isMyGroup ? (
+                      <button
+                        onClick={() => handleJoinGroup(group.id)}
+                        className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                      >
+                        Join Group
+                      </button>
+                    ) : isMyGroup ? (
+                      <div className="w-full bg-green-50 text-green-600 px-3 py-2 rounded-lg text-center text-sm font-medium">
+                        ✅ Already a Member
+                      </div>
+                    ) : (
+                      <div className="w-full bg-gray-50 text-gray-500 px-3 py-2 rounded-lg text-center text-sm font-medium">
+                        Login to Join
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Achievements Page Component
+const AchievementsPage = () => {
+  const { user } = useContext(AuthContext);
+  const [achievements, setAchievements] = useState([]);
+  const [userStats, setUserStats] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  // Fetch user achievements and progress
+  const fetchUserAchievements = async () => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      const response = await axios.get(`${API}/users/me/achievements`, { headers });
+      setAchievements(response.data.achievements || []);
+      setUserStats(response.data.stats || {});
+    } catch (error) {
+      console.error('Error fetching achievements:', error);
+    }
+  };
+
+  // Check for new achievements
+  const checkAchievements = async () => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const sessionId = localStorage.getItem('session_id');
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+      
+      const response = await axios.post(`${API}/achievements/check`, {}, { headers });
+      
+      if (response.data.new_achievements && response.data.new_achievements.length > 0) {
+        alert(`🎉 Congratulations! You earned ${response.data.new_achievements.length} new achievement(s)!`);
+        await fetchUserAchievements(); // Refresh data
+      }
+    } catch (error) {
+      console.error('Error checking achievements:', error);
+    }
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await fetchUserAchievements();
+      setLoading(false);
+    };
+    
+    if (user) {
+      loadData();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Authentication Required</h2>
+          <p className="text-gray-600 mb-6">Please log in to view your achievements.</p>
+          <button
+            onClick={() => {/* You'd trigger auth modal here */}}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Login / Sign Up
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading achievements...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Group achievements by category
+  const achievementsByCategory = achievements.reduce((acc, achievement) => {
+    const category = achievement.category || 'general';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(achievement);
+    return acc;
+  }, {});
+
+  const categories = {
+    social: { name: 'Social', icon: '👥', color: 'blue' },
+    collection: { name: 'Collection', icon: '🏍️', color: 'green' },
+    activity: { name: 'Activity', icon: '⚡', color: 'purple' },
+    general: { name: 'General', icon: '🎯', color: 'gray' }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">Your Achievements</h1>
+              <p className="text-gray-600 mt-2">Track your progress and unlock rewards</p>
+            </div>
+            <button
+              onClick={checkAchievements}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              Check for New Achievements
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+            <div className="bg-blue-50 p-4 rounded-lg text-center">
+              <div className="text-2xl font-bold text-blue-600">{userStats.completed_count || 0}</div>
+              <div className="text-sm text-gray-600">Completed</div>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg text-center">
+              <div className="text-2xl font-bold text-green-600">{userStats.total_achievements || 0}</div>
+              <div className="text-sm text-gray-600">Total Available</div>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg text-center">
+              <div className="text-2xl font-bold text-purple-600">{userStats.completion_rate || 0}%</div>
+              <div className="text-sm text-gray-600">Completion Rate</div>
+            </div>
+            <div className="bg-yellow-50 p-4 rounded-lg text-center">
+              <div className="text-2xl font-bold text-yellow-600">{userStats.total_points || 0}</div>
+              <div className="text-sm text-gray-600">Points Earned</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Achievements by Category */}
+        {Object.entries(achievementsByCategory).map(([categoryKey, categoryAchievements]) => {
+          const category = categories[categoryKey] || categories.general;
+          
+          return (
+            <div key={categoryKey} className="bg-white rounded-xl shadow-lg mb-8">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                  <span className="mr-2 text-2xl">{category.icon}</span>
+                  {category.name} Achievements
+                </h2>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+                {categoryAchievements.map((achievement) => (
+                  <div key={achievement.id} className={`border-2 rounded-lg p-4 transition-all ${
+                    achievement.completed 
+                      ? 'border-green-200 bg-green-50' 
+                      : 'border-gray-200 bg-white hover:shadow-md'
+                  }`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-3xl">{achievement.icon}</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500">{achievement.points}pts</span>
+                        {achievement.completed && (
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                            ✅ COMPLETED
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">{achievement.name}</h3>
+                    <p className="text-gray-600 text-sm mb-4">{achievement.description}</p>
+                    
+                    {/* Progress Bar */}
+                    <div className="mb-3">
+                      <div className="flex justify-between text-sm text-gray-500 mb-1">
+                        <span>Progress</span>
+                        <span>{achievement.progress || 0} / {achievement.requirement_value}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all ${
+                            achievement.completed ? 'bg-green-500' : 'bg-blue-500'
+                          }`}
+                          style={{ 
+                            width: `${Math.min(100, ((achievement.progress || 0) / achievement.requirement_value) * 100)}%` 
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    {achievement.completed && achievement.earned_at && (
+                      <div className="text-xs text-green-600 font-medium">
+                        Completed {new Date(achievement.earned_at).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 // Virtual Garage Page Component
 const VirtualGaragePage = () => {
   const { user } = useContext(AuthContext);
