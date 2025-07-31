@@ -5735,10 +5735,13 @@ const MainAppContent = () => {
         fetchMotorcycles(1);
       }, 100);
     } else if (currentView === 'home') {
-      // For home page, refetch categories and stats
+      // For home page, refetch categories and stats immediately
       setTimeout(() => {
+        console.log('Refetching homepage data for region:', newRegion);
         fetchCategories();
         fetchDatabaseStats();
+        // Also refresh filter options to ensure consistency
+        fetchFilterOptions();
       }, 100);
     }
   };
