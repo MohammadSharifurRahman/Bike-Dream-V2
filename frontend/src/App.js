@@ -5908,16 +5908,19 @@ const MainAppContent = () => {
 
   // New useEffect for search term, hide unavailable, and region changes
   useEffect(() => {
+    console.log('useEffect triggered - currentView:', currentView, 'searchTerm:', searchTerm, 'selectedRegion:', selectedRegion, 'hideUnavailable:', hideUnavailable);
+    
     if (currentView === 'browse') {
       setCurrentPage(1);
       fetchMotorcycles(1);
     }
     // Also update categories and stats when hideUnavailable or selectedRegion changes (affects homepage)
     if (currentView === 'home') {
+      console.log('Updating homepage data due to filter changes');
       fetchCategories();
       fetchDatabaseStats(); // Update stats too!
     }
-  }, [searchTerm, hideUnavailable, selectedRegion]);
+  }, [searchTerm, hideUnavailable, selectedRegion, currentView]);
 
   // Handle route changes
   useEffect(() => {
