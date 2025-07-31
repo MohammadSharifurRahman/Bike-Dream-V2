@@ -5858,6 +5858,445 @@ class MotorcycleAPITester:
         
         return all(result for _, result in issues)
 
+    # PRIORITY TESTS FOR REVIEW REQUEST
+    def test_search_suggestions_api(self):
+        """Test /api/motorcycles/search/suggestions with various queries"""
+        search_queries = [
+            ("yamaha", "manufacturer search - should return Yamaha with count"),
+            ("honda", "manufacturer search - should return Honda with count"),
+            ("ninja", "model search - should return multiple Ninja suggestions"),
+            ("ducati", "manufacturer search - should return Ducati with count"),
+            ("r1", "model search - should return R1 suggestions"),
+            ("cbr", "model search - should return CBR suggestions")
+        ]
+        
+        all_passed = True
+        for query, description in search_queries:
+            try:
+                response = requests.get(f"{self.base_url}/motorcycles/search/suggestions", 
+                                      params={"q": query}, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    if ("suggestions" in data and "query" in data and "total" in data):
+                        suggestions = data["suggestions"]
+                        if len(suggestions) > 0:
+                            # Check suggestion structure
+                            first_suggestion = suggestions[0]
+                            required_fields = ["value", "type", "display_text", "count"]
+                            missing_fields = [field for field in required_fields if field not in first_suggestion]
+                            
+                            if missing_fields:
+                                self.log_test(f"Search Suggestions - {description}", False, 
+                                            f"Missing fields in suggestion: {missing_fields}")
+                                all_passed = False
+                            else:
+                                self.log_test(f"Search Suggestions - {description}", True, 
+                                            f"Found {len(suggestions)} suggestions for '{query}'")
+                        else:
+                            self.log_test(f"Search Suggestions - {description}", False, 
+                                        f"No suggestions returned for '{query}'")
+                            all_passed = False
+                    else:
+                        self.log_test(f"Search Suggestions - {description}", False, 
+                                    "Invalid response structure")
+                        all_passed = False
+                else:
+                    self.log_test(f"Search Suggestions - {description}", False, 
+                                f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Search Suggestions - {description}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_region_filtering(self):
+        """Test /api/motorcycles endpoint with region parameter"""
+        regions = ["IN", "US", "JP", "DE", "All"]
+        all_passed = True
+        region_counts = {}
+        
+        for region in regions:
+            try:
+                params = {"region": region, "limit": 100}
+                response = requests.get(f"{self.base_url}/motorcycles", params=params, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    motorcycles = self.extract_motorcycles_from_response(data)
+                    
+                    if motorcycles is not None:
+                        count = len(motorcycles)
+                        region_counts[region] = count
+                        self.log_test(f"Region Filter - {region}", True, 
+                                    f"Found {count} motorcycles for region {region}")
+                    else:
+                        self.log_test(f"Region Filter - {region}", False, 
+                                    "Invalid response format")
+                        all_passed = False
+                else:
+                    self.log_test(f"Region Filter - {region}", False, 
+                                f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Region Filter - {region}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        # Verify that different regions return different counts
+        if len(set(region_counts.values())) > 1:
+            self.log_test("Region Filter - Count Variation", True, 
+                        f"Different regions return different counts: {region_counts}")
+        else:
+            self.log_test("Region Filter - Count Variation", False, 
+                        "All regions return same count - filtering may not be working")
+            all_passed = False
+        
+        return all_passed
+
+    def test_categories_summary_with_region(self):
+        """Test /api/motorcycles/categories/summary with region and hide_unavailable parameters"""
+        test_cases = [
+            ({"region": "IN"}, "India region filter"),
+            ({"region": "US"}, "US region filter"),
+            ({"hide_unavailable": "true"}, "Hide unavailable filter"),
+            ({"region": "JP", "hide_unavailable": "true"}, "Japan region with hide unavailable"),
+        ]
+        
+        all_passed = True
+        for params, description in test_cases:
+            try:
+                response = requests.get(f"{self.base_url}/motorcycles/categories/summary", 
+                                      params=params, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    if isinstance(data, list) and len(data) > 0:
+                        # Verify category structure
+                        first_category = data[0]
+                        required_keys = ["category", "count", "featured_motorcycles"]
+                        missing_keys = [key for key in required_keys if key not in first_category]
+                        
+                        if missing_keys:
+                            self.log_test(f"Categories Summary - {description}", False, 
+                                        f"Missing keys: {missing_keys}")
+                            all_passed = False
+                        else:
+                            total_count = sum(cat["count"] for cat in data)
+                            self.log_test(f"Categories Summary - {description}", True, 
+                                        f"Retrieved {len(data)} categories with {total_count} total motorcycles")
+                    else:
+                        self.log_test(f"Categories Summary - {description}", False, 
+                                    "No categories returned or invalid format")
+                        all_passed = False
+                else:
+                    self.log_test(f"Categories Summary - {description}", False, 
+                                f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Categories Summary - {description}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_stats_api_with_region(self):
+        """Test /api/stats endpoint with region parameter"""
+        regions = ["IN", "US", "JP", "DE"]
+        all_passed = True
+        stats_counts = {}
+        
+        for region in regions:
+            try:
+                params = {"region": region}
+                response = requests.get(f"{self.base_url}/stats", params=params, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    required_keys = ["total_motorcycles", "manufacturers", "categories", "year_range"]
+                    missing_keys = [key for key in required_keys if key not in data]
+                    
+                    if missing_keys:
+                        self.log_test(f"Stats API - {region} region", False, 
+                                    f"Missing keys: {missing_keys}")
+                        all_passed = False
+                    else:
+                        total_count = data["total_motorcycles"]
+                        stats_counts[region] = total_count
+                        self.log_test(f"Stats API - {region} region", True, 
+                                    f"Total motorcycles: {total_count}")
+                else:
+                    self.log_test(f"Stats API - {region} region", False, 
+                                f"Status: {response.status_code}")
+                    all_passed = False
+            except Exception as e:
+                self.log_test(f"Stats API - {region} region", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        # Verify that different regions return different counts
+        if len(set(stats_counts.values())) > 1:
+            self.log_test("Stats API - Regional Count Variation", True, 
+                        f"Different regions return different counts: {stats_counts}")
+        else:
+            self.log_test("Stats API - Regional Count Variation", False, 
+                        "All regions return same count - regional filtering may not be working")
+            all_passed = False
+        
+        return all_passed
+
+    def test_image_urls_accessibility(self):
+        """Test that motorcycle images from /api/motorcycles are accessible"""
+        try:
+            response = requests.get(f"{self.base_url}/motorcycles", 
+                                  params={"limit": 10}, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                motorcycles = self.extract_motorcycles_from_response(data)
+                
+                if motorcycles and len(motorcycles) > 0:
+                    accessible_images = 0
+                    total_images = 0
+                    
+                    for moto in motorcycles[:5]:  # Test first 5 motorcycles
+                        image_url = moto.get("image_url")
+                        if image_url:
+                            total_images += 1
+                            try:
+                                img_response = requests.head(image_url, timeout=5)
+                                if img_response.status_code == 200:
+                                    accessible_images += 1
+                                    self.log_test(f"Image URL - {moto.get('manufacturer', 'Unknown')} {moto.get('model', 'Unknown')}", 
+                                                True, f"Image accessible (Status: {img_response.status_code})")
+                                else:
+                                    self.log_test(f"Image URL - {moto.get('manufacturer', 'Unknown')} {moto.get('model', 'Unknown')}", 
+                                                False, f"Image not accessible (Status: {img_response.status_code})")
+                            except Exception as e:
+                                self.log_test(f"Image URL - {moto.get('manufacturer', 'Unknown')} {moto.get('model', 'Unknown')}", 
+                                            False, f"Image request failed: {str(e)}")
+                    
+                    if accessible_images > 0:
+                        self.log_test("Image URLs Accessibility", True, 
+                                    f"{accessible_images}/{total_images} images accessible")
+                        return True
+                    else:
+                        self.log_test("Image URLs Accessibility", False, 
+                                    f"No images accessible out of {total_images} tested")
+                        return False
+                else:
+                    self.log_test("Image URLs Accessibility", False, "No motorcycles found to test images")
+                    return False
+            else:
+                self.log_test("Image URLs Accessibility", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Image URLs Accessibility", False, f"Error: {str(e)}")
+            return False
+
+    def test_authentication_endpoints(self):
+        """Test login/register endpoints"""
+        all_passed = True
+        
+        # Test user registration
+        try:
+            register_data = {
+                "email": "test.user@bykedream.com",
+                "password": "SecurePassword123!",
+                "name": "Test User"
+            }
+            
+            response = requests.post(f"{self.base_url}/auth/register", 
+                                   json=register_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "token" in data and "user" in data:
+                    self.log_test("Authentication - User Registration", True, 
+                                f"User registered successfully: {data['user']['name']}")
+                    self.auth_token = data["token"]
+                else:
+                    self.log_test("Authentication - User Registration", False, 
+                                "Missing token or user in response")
+                    all_passed = False
+            elif response.status_code == 400 and "already exists" in response.text:
+                self.log_test("Authentication - User Registration", True, 
+                            "User already exists (expected for repeated tests)")
+            else:
+                self.log_test("Authentication - User Registration", False, 
+                            f"Status: {response.status_code}, Response: {response.text}")
+                all_passed = False
+        except Exception as e:
+            self.log_test("Authentication - User Registration", False, f"Error: {str(e)}")
+            all_passed = False
+        
+        # Test user login
+        try:
+            login_data = {
+                "email": "test.user@bykedream.com",
+                "password": "SecurePassword123!"
+            }
+            
+            response = requests.post(f"{self.base_url}/auth/login", 
+                                   json=login_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "token" in data and "user" in data:
+                    self.log_test("Authentication - User Login", True, 
+                                f"User logged in successfully: {data['user']['name']}")
+                    self.auth_token = data["token"]
+                else:
+                    self.log_test("Authentication - User Login", False, 
+                                "Missing token or user in response")
+                    all_passed = False
+            else:
+                self.log_test("Authentication - User Login", False, 
+                            f"Status: {response.status_code}, Response: {response.text}")
+                all_passed = False
+        except Exception as e:
+            self.log_test("Authentication - User Login", False, f"Error: {str(e)}")
+            all_passed = False
+        
+        return all_passed
+
+    def test_motorcycle_details_endpoint(self):
+        """Test individual motorcycle details endpoint"""
+        if not self.motorcycle_ids:
+            self.log_test("Motorcycle Details", False, "No motorcycle IDs available for testing")
+            return False
+        
+        try:
+            motorcycle_id = self.motorcycle_ids[0]
+            response = requests.get(f"{self.base_url}/motorcycles/{motorcycle_id}", timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, dict) and data.get("id") == motorcycle_id:
+                    # Check for required fields
+                    required_fields = ["id", "manufacturer", "model", "year", "category", 
+                                     "price_usd", "description", "image_url"]
+                    missing_fields = [field for field in required_fields if field not in data]
+                    
+                    if missing_fields:
+                        self.log_test("Motorcycle Details", False, 
+                                    f"Missing required fields: {missing_fields}")
+                        return False
+                    else:
+                        self.log_test("Motorcycle Details", True, 
+                                    f"Retrieved complete details for {data['manufacturer']} {data['model']}")
+                        return True
+                else:
+                    self.log_test("Motorcycle Details", False, 
+                                "Invalid response or ID mismatch")
+                    return False
+            else:
+                self.log_test("Motorcycle Details", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Motorcycle Details", False, f"Error: {str(e)}")
+            return False
+
+    def test_motorcycle_comparison_functionality(self):
+        """Test motorcycle comparison functionality"""
+        if len(self.motorcycle_ids) < 2:
+            self.log_test("Motorcycle Comparison", False, "Need at least 2 motorcycle IDs for testing")
+            return False
+        
+        try:
+            # Test comparison with 2 motorcycles
+            comparison_ids = self.motorcycle_ids[:2]
+            response = requests.post(f"{self.base_url}/motorcycles/compare", 
+                                   json=comparison_ids, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                required_keys = ["comparison_id", "motorcycles", "comparison_count", 
+                               "generated_at", "comparison_categories"]
+                missing_keys = [key for key in required_keys if key not in data]
+                
+                if missing_keys:
+                    self.log_test("Motorcycle Comparison", False, 
+                                f"Missing keys: {missing_keys}")
+                    return False
+                
+                if (data["comparison_count"] == 2 and 
+                    len(data["motorcycles"]) == 2 and
+                    len(data["comparison_categories"]) > 0):
+                    
+                    self.log_test("Motorcycle Comparison", True, 
+                                f"Successfully compared {data['comparison_count']} motorcycles")
+                    return True
+                else:
+                    self.log_test("Motorcycle Comparison", False, 
+                                "Invalid comparison data structure")
+                    return False
+            else:
+                self.log_test("Motorcycle Comparison", False, f"Status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Motorcycle Comparison", False, f"Error: {str(e)}")
+            return False
+
+    def test_user_favorites_garage_functionality(self):
+        """Test favorites/garage functionality"""
+        if not hasattr(self, 'auth_token') or not self.auth_token:
+            self.log_test("User Favorites/Garage", False, "No authentication token available")
+            return False
+        
+        if not self.motorcycle_ids:
+            self.log_test("User Favorites/Garage", False, "No motorcycle IDs available")
+            return False
+        
+        all_passed = True
+        headers = {"Authorization": f"Bearer {self.auth_token}"}
+        motorcycle_id = self.motorcycle_ids[0]
+        
+        # Test adding to garage
+        try:
+            garage_data = {
+                "motorcycle_id": motorcycle_id,
+                "status": "wishlist",
+                "notes": "Test garage item"
+            }
+            
+            response = requests.post(f"{self.base_url}/garage", 
+                                   headers=headers, json=garage_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "garage_item" in data:
+                    self.log_test("Garage - Add Item", True, 
+                                f"Added motorcycle to garage: {data['message']}")
+                    self.garage_item_id = data["garage_item"]["id"]
+                else:
+                    self.log_test("Garage - Add Item", False, "Missing garage_item in response")
+                    all_passed = False
+            else:
+                self.log_test("Garage - Add Item", False, 
+                            f"Status: {response.status_code}, Response: {response.text}")
+                all_passed = False
+        except Exception as e:
+            self.log_test("Garage - Add Item", False, f"Error: {str(e)}")
+            all_passed = False
+        
+        # Test getting garage items
+        try:
+            response = requests.get(f"{self.base_url}/garage", headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "garage_items" in data:
+                    garage_items = data["garage_items"]
+                    self.log_test("Garage - Get Items", True, 
+                                f"Retrieved {len(garage_items)} garage items")
+                else:
+                    self.log_test("Garage - Get Items", False, "Missing garage_items in response")
+                    all_passed = False
+            else:
+                self.log_test("Garage - Get Items", False, f"Status: {response.status_code}")
+                all_passed = False
+        except Exception as e:
+            self.log_test("Garage - Get Items", False, f"Error: {str(e)}")
+            all_passed = False
+        
+        return all_passed
+
     def run_all_tests(self):
         """Run comprehensive deployment readiness testing"""
         return self.run_comprehensive_deployment_testing()
