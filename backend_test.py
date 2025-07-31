@@ -6298,8 +6298,112 @@ class MotorcycleAPITester:
         return all_passed
 
     def run_all_tests(self):
-        """Run comprehensive deployment readiness testing"""
-        return self.run_comprehensive_deployment_testing()
+        """Run all tests and return summary"""
+        print("🚀 Starting Comprehensive Backend API Testing for Byke-Dream Motorcycle Database")
+        print("=" * 80)
+        
+        # Test basic connectivity first
+        if not self.test_api_root():
+            print("❌ API connectivity failed. Stopping tests.")
+            return False
+        
+        # Seed database if needed
+        self.test_seed_database()
+        
+        # Core CRUD operations
+        self.test_get_all_motorcycles()
+        self.test_get_single_motorcycle()
+        
+        print("\n🎯 PRIORITY TESTS FOR REVIEW REQUEST")
+        print("-" * 50)
+        
+        # PRIORITY TESTS FROM REVIEW REQUEST
+        self.test_search_suggestions_api()
+        self.test_region_filtering()
+        self.test_categories_summary_with_region()
+        self.test_stats_api_with_region()
+        self.test_image_urls_accessibility()
+        self.test_authentication_endpoints()
+        self.test_motorcycle_details_endpoint()
+        self.test_motorcycle_comparison_functionality()
+        self.test_user_favorites_garage_functionality()
+        
+        print("\n📋 ADDITIONAL COMPREHENSIVE TESTS")
+        print("-" * 50)
+        
+        # Search and filtering
+        self.test_search_functionality()
+        self.test_manufacturer_filter()
+        self.test_category_filter()
+        self.test_year_range_filter()
+        self.test_price_range_filter()
+        self.test_combined_filters()
+        
+        # Sorting
+        self.test_sorting_functionality()
+        
+        # API endpoints
+        self.test_filter_options_api()
+        self.test_database_stats_api()
+        self.test_category_summary_api()
+        
+        # Daily Update System
+        success, job_id = self.test_trigger_daily_update()
+        if success and job_id:
+            self.test_job_status_monitoring(job_id)
+        self.test_update_history()
+        self.test_regional_customizations()
+        
+        # User interaction features
+        self.test_user_authentication()
+        self.test_get_current_user()
+        self.test_add_to_favorites()
+        self.test_get_favorite_motorcycles()
+        self.test_remove_from_favorites()
+        self.test_rate_motorcycle()
+        self.test_get_motorcycle_ratings()
+        self.test_add_comment()
+        self.test_get_motorcycle_comments()
+        self.test_like_comment()
+        
+        # Browse limit fix
+        self.test_browse_limit_fix()
+        
+        # Technical features database enhancement
+        self.test_technical_features_database_enhancement()
+        self.test_suzuki_ducati_technical_data()
+        self.test_technical_features_filtering()
+        self.test_numeric_range_filtering()
+        
+        # Dual-level sorting implementation
+        self.test_dual_level_sorting_default()
+        self.test_dual_level_sorting_comparison()
+        self.test_single_field_sorting_still_works()
+        
+        # Database count verification
+        self.test_database_count_verification()
+        
+        # Print summary
+        print("\n" + "=" * 80)
+        print("📊 TEST SUMMARY")
+        print("=" * 80)
+        
+        passed = sum(1 for result in self.test_results if "✅ PASS" in result)
+        failed = sum(1 for result in self.test_results if "❌ FAIL" in result)
+        total = len(self.test_results)
+        
+        print(f"Total Tests: {total}")
+        print(f"Passed: {passed} ✅")
+        print(f"Failed: {failed} ❌")
+        print(f"Success Rate: {(passed/total)*100:.1f}%")
+        
+        if failed > 0:
+            print("\n❌ FAILED TESTS:")
+            for result in self.test_results:
+                if "❌ FAIL" in result:
+                    print(f"  {result}")
+        
+        return failed == 0
 
     # PHASE 2 SPECIFIC TESTS - Motorcycle Comparison API
     def test_motorcycle_comparison_single_bike(self):
