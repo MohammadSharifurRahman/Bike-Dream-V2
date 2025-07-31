@@ -5647,27 +5647,45 @@ const MainAppContent = () => {
 
   // Handlers for new search functionality
   const handleSearchSelect = (suggestion) => {
+    console.log('Search suggestion selected:', suggestion);
     setSearchTerm(suggestion.value);
     setCurrentPage(1);
+    
+    // Update search filters based on suggestion type
+    const newFilters = { ...filters };
+    newFilters.search = suggestion.value;
+    
     // If it's a manufacturer suggestion, also set the manufacturer filter
     if (suggestion.type === 'manufacturer') {
-      setFilters({
-        ...filters,
-        manufacturer: suggestion.value
-      });
+      newFilters.manufacturer = suggestion.value;
+    } else {
+      // For model searches, clear manufacturer filter to get broader results
+      delete newFilters.manufacturer;
     }
-    // Trigger refetch with new search
-    fetchMotorcycles(1);
+    
+    setFilters(newFilters);
+    
+    // Trigger refetch with new search - delay slightly to ensure state is updated
+    setTimeout(() => {
+      fetchMotorcycles(1);
+    }, 100);
   };
 
   const handleSearchChange = (value) => {
     setSearchTerm(value);
-    // If search is cleared, also clear manufacturer filter
-    if (!value.trim()) {
+    // If search is cleared, also clear related filters
+    if (!value || !value.trim()) {
       const newFilters = { ...filters };
       delete newFilters.search;
       delete newFilters.manufacturer;
       setFilters(newFilters);
+      
+      // If we're on browse page, refetch to show all results
+      if (currentView === 'browse') {
+        setTimeout(() => {
+          fetchMotorcycles(1);
+        }, 100);
+      }
     }
   };
 
