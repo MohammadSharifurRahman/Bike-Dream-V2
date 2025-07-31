@@ -5689,6 +5689,13 @@ const MainAppContent = () => {
     }
   };
 
+  const handleHideUnavailableToggle = (isHidden) => {
+    setHideUnavailable(isHidden);
+    setCurrentPage(1);
+    // Trigger refetch with new filter
+    fetchMotorcycles(1);
+  };
+
   const handleRegionChange = (newRegion) => {
     console.log('Region changed from', selectedRegion, 'to', newRegion);
     setSelectedRegion(newRegion);
