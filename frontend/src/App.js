@@ -5689,11 +5689,24 @@ const MainAppContent = () => {
     }
   };
 
-  const handleHideUnavailableToggle = (isHidden) => {
-    setHideUnavailable(isHidden);
+  const handleRegionChange = (newRegion) => {
+    console.log('Region changed from', selectedRegion, 'to', newRegion);
+    setSelectedRegion(newRegion);
     setCurrentPage(1);
-    // Trigger refetch with new filter
-    fetchMotorcycles(1);
+    
+    // Force immediate update for both views
+    if (currentView === 'browse') {
+      // For browse page, refetch motorcycles immediately
+      setTimeout(() => {
+        fetchMotorcycles(1);
+      }, 100);
+    } else if (currentView === 'home') {
+      // For home page, refetch categories and stats
+      setTimeout(() => {
+        fetchCategories();
+        fetchDatabaseStats();
+      }, 100);
+    }
   };
 
   // Handlers for Phase 2 - Motorcycle Comparison
