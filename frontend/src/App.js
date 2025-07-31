@@ -262,6 +262,13 @@ const AutoCompleteSearchBar = ({
       clearTimeout(debounceTimeout);
     }
 
+    // If empty search, hide suggestions immediately
+    if (!value || value.trim().length === 0) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
     // Set new timeout for debounced search
     const timeout = setTimeout(() => {
       fetchSuggestions(value);
