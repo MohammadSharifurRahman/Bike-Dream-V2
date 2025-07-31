@@ -14,7 +14,7 @@ import sys
 from typing import Dict, List, Any
 
 # Backend URL from environment
-BACKEND_URL = "https://41bb3a57-f1f7-421b-9e7b-d4c8df40f9b3.preview.emergentagent.com/api"
+BACKEND_URL = "https://b4e17258-5cf1-4bb8-a561-56760731f05a.preview.emergentagent.com/api"
 
 class ExpandedDatabaseTester:
     def __init__(self):
