@@ -5682,10 +5682,20 @@ const MainAppContent = () => {
     
     setFilters(newFilters);
     
-    // Trigger refetch with new search - delay slightly to ensure state is updated
-    setTimeout(() => {
-      fetchMotorcycles(1);
-    }, 100);
+    // If we're on homepage, navigate to browse page to show search results
+    if (currentView === 'home') {
+      setCurrentView('browse');
+      window.history.pushState({}, '', '/browse');
+      // Delay slightly to ensure state is updated, then fetch
+      setTimeout(() => {
+        fetchMotorcycles(1);
+      }, 100);
+    } else {
+      // If we're already on browse page, just refetch
+      setTimeout(() => {
+        fetchMotorcycles(1);
+      }, 100);
+    }
   };
 
   const handleSearchChange = (value) => {
