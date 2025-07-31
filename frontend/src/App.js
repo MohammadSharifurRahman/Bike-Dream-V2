@@ -3029,20 +3029,33 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
   const [isLoading, setIsLoading] = useState(true);
   
   const handleImageError = () => {
+    console.log(`Image failed to load: ${imgSrc}`);
     setHasError(true);
     setIsLoading(false);
   };
   
   const handleImageLoad = () => {
+    console.log(`Image loaded successfully: ${imgSrc}`);
     setIsLoading(false);
     setHasError(false);
   };
   
   useEffect(() => {
-    setImgSrc(src);
-    setHasError(false);
-    setIsLoading(true);
-  }, [src]);
+    if (src !== imgSrc) {
+      setImgSrc(src);
+      setHasError(false);
+      setIsLoading(true);
+    }
+  }, [src, imgSrc]);
+  
+  // If no src provided, show error immediately
+  if (!src || src.trim() === '') {
+    return (
+      <div className={`${className} bg-gray-200 flex items-center justify-center`}>
+        <span className="text-gray-400 text-sm">No image</span>
+      </div>
+    );
+  }
   
   if (hasError) {
     return (
@@ -3055,16 +3068,17 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
   return (
     <div className="relative">
       {isLoading && (
-        <div className={`${className} bg-gray-200 animate-pulse flex items-center justify-center`}>
+        <div className={`${className} bg-gray-200 animate-pulse flex items-center justify-center absolute inset-0 z-10`}>
           <span className="text-gray-400 text-sm">Loading...</span>
         </div>
       )}
       <img 
         src={imgSrc}
         alt={alt}
-        className={`${className} ${isLoading ? 'hidden' : ''}`}
+        className={`${className}`}
         onError={handleImageError}
         onLoad={handleImageLoad}
+        loading="lazy"
       />
     </div>
   );
