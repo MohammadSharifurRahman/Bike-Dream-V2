@@ -3034,6 +3034,7 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
   const [imgSrc, setImgSrc] = useState(src);
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const imgRef = useRef(null);
   
   const handleImageError = () => {
     console.log(`Image failed to load: ${imgSrc}`);
@@ -3047,6 +3048,7 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
     setHasError(false);
   };
   
+  // Reset loading state when src changes
   useEffect(() => {
     if (src !== imgSrc) {
       setImgSrc(src);
@@ -3054,6 +3056,19 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
       setIsLoading(true);
     }
   }, [src, imgSrc]);
+  
+  // Add a fallback timeout to prevent infinite loading
+  useEffect(() => {
+    if (isLoading && imgSrc) {
+      const timeout = setTimeout(() => {
+        console.log(`Image loading timeout for: ${imgSrc}`);
+        setHasError(true);
+        setIsLoading(false);
+      }, 10000); // 10 second timeout
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [isLoading, imgSrc]);
   
   // If no src provided, show error immediately
   if (!src || src.trim() === '') {
@@ -3080,12 +3095,14 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
         </div>
       )}
       <img 
+        ref={imgRef}
         src={imgSrc}
         alt={alt}
         className={`${className}`}
         onError={handleImageError}
         onLoad={handleImageLoad}
         loading="lazy"
+        crossOrigin="anonymous"
       />
     </div>
   );
