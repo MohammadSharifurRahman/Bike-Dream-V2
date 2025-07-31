@@ -6377,7 +6377,7 @@ class MotorcycleAPITester:
         
         # Dual-level sorting implementation
         self.test_dual_level_sorting_default()
-        self.test_single_field_sorting_still_works()
+        self.test_compare_default_vs_single_field_sorting()
         
         # Database count verification
         self.test_database_count_verification()
