@@ -5739,8 +5739,14 @@ const MainAppContent = () => {
   };
 
   const handleRegionChange = (newRegion) => {
-    console.log('Region changed from', selectedRegion, 'to', newRegion);
-    setSelectedRegion(newRegion);
+    console.log('Region selection changed to:', newRegion);
+    setPendingRegion(newRegion);
+    // Don't apply immediately - wait for "Narrow the list" button
+  };
+
+  const handleNarrowList = () => {
+    console.log('Narrow the list clicked - applying region filter:', pendingRegion);
+    setSelectedRegion(pendingRegion);
     setCurrentPage(1);
     
     // Force immediate update for both views
@@ -5752,7 +5758,7 @@ const MainAppContent = () => {
     } else if (currentView === 'home') {
       // For home page, refetch categories and stats immediately
       setTimeout(() => {
-        console.log('Refetching homepage data for region:', newRegion);
+        console.log('Refetching homepage data for region:', pendingRegion);
         fetchCategories();
         fetchDatabaseStats();
         // Also refresh filter options to ensure consistency
