@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: bike-dream-api
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 8001
+      - key: DEBUG
+        value: false
+    healthCheckPath: /api/stats
