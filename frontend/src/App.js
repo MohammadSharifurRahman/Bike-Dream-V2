@@ -6139,6 +6139,8 @@ const MainAppContent = () => {
                 placeholder="Search motorcycles, brands, and models..."
                 onSearchSelect={handleSearchSelect}
                 onSearchChange={handleSearchChange}
+                selectedRegion={pendingRegion}
+                onNarrowList={handleNarrowList}
                 className="mb-4"
               />
               <div className="flex justify-center">
