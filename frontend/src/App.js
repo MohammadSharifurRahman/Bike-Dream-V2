@@ -6153,7 +6153,7 @@ const MainAppContent = () => {
               {/* Country Filter */}
               <div className="flex justify-center mt-4">
                 <CountryFilterSelect
-                  selectedRegion={selectedRegion}
+                  selectedRegion={pendingRegion}
                   onRegionChange={handleRegionChange}
                 />
               </div>
