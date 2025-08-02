@@ -368,15 +368,18 @@ backend:
 
   - task: "Sorting System Issues"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
         comment: "❌ SORTING SYSTEM ISSUES: Sorting functionality returning 'Insufficient data to verify sorting' errors for all sort options (year, price, horsepower). This suggests either sorting is not working properly or the response format has changed. Dual-level sorting and single-field sorting both affected. Sorting system needs investigation and potential fixes."
+      - working: true
+        agent: "testing"
+        comment: "✅ SORTING SYSTEM FULLY FUNCTIONAL: Comprehensive testing confirms sorting functionality is working correctly. Year sorting (desc) working perfectly - motorcycles sorted from newest to oldest (2025, 2025, 2025...). Price sorting working with paginated response format. Horsepower sorting operational. The API now consistently returns paginated responses with proper sorting applied to the 'motorcycles' array. All sorting options (year, price, horsepower) verified and functional with both ascending and descending order support."
 
   - task: "Scrolling Text Banner Management API"
     implemented: true
