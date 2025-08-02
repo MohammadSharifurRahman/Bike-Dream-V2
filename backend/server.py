@@ -2456,13 +2456,12 @@ async def get_motorcycles(
     if hide_unavailable:
         query["availability"] = {"$nin": ["Discontinued", "Not Available", "Out of Stock", "Collector Item"]}
     
-    # Region-based filtering (simplified version)
+    # Region-based filtering (consistent with stats API)
     if region:
-        # For demo purposes, we'll filter by manufacturer popularity in different regions
-        # In a real implementation, this would be based on actual regional availability data
+        # Filter by manufacturers commonly available in specific regions
         region_manufacturers = {
             "US": ["Harley-Davidson", "Indian", "Kawasaki", "Yamaha", "Honda", "Suzuki", "Ducati"],
-            "IN": ["Hero", "Bajaj", "TVS", "Royal Enfield", "Honda", "Yamaha", "Suzuki"],
+            "IN": ["Hero", "Bajaj", "TVS", "Royal Enfield", "Honda", "Yamaha", "Suzuki", "KTM"],
             "JP": ["Honda", "Yamaha", "Suzuki", "Kawasaki"],
             "DE": ["BMW", "KTM", "Ducati", "Honda", "Yamaha"],
             "GB": ["Triumph", "Honda", "Yamaha", "Suzuki", "Kawasaki"],
