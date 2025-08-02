@@ -6290,6 +6290,8 @@ const MainAppContent = () => {
                     placeholder="Search motorcycles, brands, and models..."
                     onSearchSelect={handleSearchSelect}
                     onSearchChange={handleSearchChange}
+                    selectedRegion={pendingRegion}
+                    onNarrowList={handleNarrowList}
                   />
                   <div className="flex justify-between items-center">
                     <HideUnavailableToggle
