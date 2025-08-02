@@ -5766,14 +5766,12 @@ const MainAppContent = () => {
         fetchMotorcycles(1);
       }, 100);
     } else if (currentView === 'home') {
-      // For home page, refetch categories, stats, and featured motorcycles
+      // For home page, refetch categories, stats, and filter options
       setTimeout(() => {
         console.log('Refetching all homepage data for region:', pendingRegion);
         fetchCategories();
         fetchDatabaseStats();
         fetchFilterOptions();
-        // Also refetch featured motorcycles if they exist
-        fetchFeaturedMotorcycles();
       }, 100);
     }
   };
