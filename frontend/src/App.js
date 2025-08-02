@@ -5754,6 +5754,29 @@ const MainAppContent = () => {
     // Don't apply immediately - wait for "Narrow the list" button
   };
 
+  const handleNarrowList = () => {
+    console.log('Narrow the list clicked - applying region filter:', pendingRegion);
+    setSelectedRegion(pendingRegion);
+    setCurrentPage(1);
+    
+    // Force immediate update for both views
+    if (currentView === 'browse') {
+      // For browse page, refetch motorcycles immediately
+      setTimeout(() => {
+        fetchMotorcycles(1);
+      }, 100);
+    } else if (currentView === 'home') {
+      // For home page, refetch categories and stats immediately
+      setTimeout(() => {
+        console.log('Refetching homepage data for region:', pendingRegion);
+        fetchCategories();
+        fetchDatabaseStats();
+        // Also refresh filter options to ensure consistency
+        fetchFilterOptions();
+      }, 100);
+    }
+  };
+
   const handleApplyRegionFilter = () => {
     console.log('Apply Region Filter clicked - applying region filter:', pendingRegion);
     setSelectedRegion(pendingRegion);
