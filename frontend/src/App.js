@@ -6309,7 +6309,7 @@ const MainAppContent = () => {
                   {/* Country Filter for Browse Page */}
                   <div className="flex justify-center">
                     <CountryFilterSelect
-                      selectedRegion={selectedRegion}
+                      selectedRegion={pendingRegion}
                       onRegionChange={handleRegionChange}
                     />
                   </div>
