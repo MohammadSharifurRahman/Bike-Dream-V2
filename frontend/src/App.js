@@ -216,12 +216,14 @@ const StarRating = ({ rating, onRatingChange, readOnly = false }) => {
   );
 };
 
-// AutoComplete Search Bar Component
+// AutoComplete Search Bar Component with Narrow List Button
 const AutoCompleteSearchBar = ({ 
   placeholder = "Search motorcycles and brands...", 
   onSearchSelect = () => {}, 
   onSearchChange = () => {},
-  className = "" 
+  className = "",
+  selectedRegion = "",
+  onNarrowList = () => {}
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState([]);
