@@ -6344,6 +6344,7 @@ const MainAppContent = () => {
                     <CountryFilterSelect
                       selectedRegion={pendingRegion}
                       onRegionChange={handleRegionChange}
+                      onApplyFilter={handleApplyRegionFilter}
                     />
                   </div>
                 </div>
