@@ -22,13 +22,17 @@ import time
 import random
 
 
+# Load environment variables - try multiple locations
 ROOT_DIR = Path(__file__).parent
+# First try to load from project root
+load_dotenv(ROOT_DIR.parent / '.env')
+# Then try to load from api directory (backward compatibility)
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+# MongoDB connection with default fallback
+mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+db = client[os.environ.get('DB_NAME', 'test_database')]
 
 # Create the main app without a prefix
 app = FastAPI()
