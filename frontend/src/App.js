@@ -5562,6 +5562,7 @@ const MainAppContent = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [hideUnavailable, setHideUnavailable] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState(''); // Country filter state
+  const [pendingRegion, setPendingRegion] = useState(''); // Region selected but not yet applied
   
   // New states for Phase 2 features - Motorcycle Comparison
   const [comparisonList, setComparisonList] = useState([]);
