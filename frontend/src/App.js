@@ -451,7 +451,7 @@ const HideUnavailableToggle = ({ isHidden, onToggle, className = "" }) => {
 };
 
 // Country/Region Filter Component
-const CountryFilterSelect = ({ selectedRegion, onRegionChange, className = "" }) => {
+const CountryFilterSelect = ({ selectedRegion, onRegionChange, onApplyFilter, className = "" }) => {
   const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -496,9 +496,19 @@ const CountryFilterSelect = ({ selectedRegion, onRegionChange, className = "" })
           </option>
         ))}
       </select>
+      
+      {/* Apply Filter Button */}
+      <button
+        onClick={() => onApplyFilter && onApplyFilter()}
+        className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors shadow-sm whitespace-nowrap"
+        title="Apply region filter to update motorcycle listings"
+      >
+        Apply Filter
+      </button>
+      
       {selectedRegion && (
         <span className="text-xs text-gray-500">
-          Showing region-specific pricing and availability
+          Selected: {regions.find(r => r.code === selectedRegion)?.name || selectedRegion}
         </span>
       )}
     </div>
