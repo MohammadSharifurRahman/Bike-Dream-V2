@@ -481,7 +481,7 @@ const CountryFilterSelect = ({ selectedRegion, onRegionChange, onApplyFilter, cl
   return (
     <div className={`flex items-center space-x-3 ${className}`}>
       <label htmlFor="region-select" className="text-sm font-medium text-gray-700">
-        Show motorcycles available in:
+        Show motorcycles available in: <span className="text-xs text-gray-500 font-normal">(This feature works for some countries only)</span>
       </label>
       <select
         id="region-select"
