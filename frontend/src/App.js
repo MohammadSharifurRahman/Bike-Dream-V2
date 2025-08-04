@@ -3053,15 +3053,24 @@ const UserActivityPage = ({ onBack }) => {
   );
 };
 
-// Enhanced Image Component with Error Handling
-const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true }) => {
+// Enhanced Image Component with Dynamic Fetching and Error Handling
+const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true, manufacturer, model, category }) => {
   const [imgSrc, setImgSrc] = useState(src);
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [dynamicImageTried, setDynamicImageTried] = useState(false);
   const imgRef = useRef(null);
   
   const handleImageError = () => {
     console.log(`Image failed to load: ${imgSrc}`);
+    
+    // If we haven't tried dynamic image yet and we have manufacturer/model info
+    if (!dynamicImageTried && manufacturer && model) {
+      setDynamicImageTried(true);
+      tryDynamicImage();
+      return;
+    }
+    
     setHasError(true);
     setIsLoading(false);
   };
@@ -3072,12 +3081,103 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
     setHasError(false);
   };
   
+  const tryDynamicImage = async () => {
+    try {
+      // Try to get a better image for this specific motorcycle
+      const fallbackImages = getFallbackImageByCategory(manufacturer, category);
+      if (fallbackImages.length > 0) {
+        const randomImage = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
+        setImgSrc(randomImage);
+        setIsLoading(true);
+        setHasError(false);
+      }
+    } catch (error) {
+      console.log('Dynamic image fetch failed:', error);
+      setHasError(true);
+      setIsLoading(false);
+    }
+  };
+  
+  const getFallbackImageByCategory = (manufacturer, category) => {
+    const manufacturerLower = (manufacturer || '').toLowerCase();
+    const categoryLower = (category || '').toLowerCase();
+    
+    // Manufacturer-specific authentic images
+    const manufacturerImages = {
+      'yamaha': [
+        "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.unsplash.com/photo-1531327431456-837da4b1d562?w=400&h=250&fit=crop&auto=format&q=80",
+      ],
+      'honda': [
+        "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/1416169/pexels-photo-1416169.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+      ],
+      'kawasaki': [
+        "https://images.unsplash.com/photo-1611873189125-324514ebd94e?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=400&h=250&fit=crop&auto=format&q=80",
+      ],
+      'ducati': [
+        "https://images.unsplash.com/photo-1659465493788-046d031bcd35?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+      ],
+      'royal enfield': [
+        "https://images.unsplash.com/photo-1694271558638-7a6f4c8879b0?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.unsplash.com/photo-1694956792421-e946fff94564?w=400&h=250&fit=crop&auto=format&q=80",
+      ],
+      'harley-davidson': [
+        "https://images.unsplash.com/photo-1653554919017-fb4a40f7364b?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/33222522/pexels-photo-33222522.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+      ]
+    };
+    
+    // Category-specific fallback images
+    const categoryImages = {
+      'sport': [
+        "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.unsplash.com/photo-1531327431456-837da4b1d562?w=400&h=250&fit=crop&auto=format&q=80",
+      ],
+      'cruiser': [
+        "https://images.unsplash.com/photo-1659465493788-046d031bcd35?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+      ],
+      'commuter': [
+        "https://images.pexels.com/photos/2629412/pexels-photo-2629412.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/1416169/pexels-photo-1416169.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+      ],
+      'touring': [
+        "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.unsplash.com/photo-1611873189125-324514ebd94e?w=400&h=250&fit=crop&auto=format&q=80",
+      ]
+    };
+    
+    // First try manufacturer-specific images
+    for (const mfgKey in manufacturerImages) {
+      if (manufacturerLower.includes(mfgKey)) {
+        return manufacturerImages[mfgKey];
+      }
+    }
+    
+    // Then try category-specific images
+    for (const catKey in categoryImages) {
+      if (categoryLower.includes(catKey)) {
+        return categoryImages[catKey];
+      }
+    }
+    
+    // Final fallback - general motorcycle images
+    return [
+      "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=400&h=250&fit=crop&auto=format&q=80",
+      "https://images.unsplash.com/photo-1531327431456-837da4b1d562?w=400&h=250&fit=crop&auto=format&q=80",
+    ];
+  };
+  
   // Reset loading state when src changes
   useEffect(() => {
     if (src !== imgSrc) {
       setImgSrc(src);
       setHasError(false);
       setIsLoading(true);
+      setDynamicImageTried(false);
     }
   }, [src, imgSrc]);
   
@@ -3086,13 +3186,17 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
     if (isLoading && imgSrc) {
       const timeout = setTimeout(() => {
         console.log(`Image loading timeout for: ${imgSrc}`);
-        setHasError(true);
-        setIsLoading(false);
+        if (!dynamicImageTried && manufacturer) {
+          tryDynamicImage();
+        } else {
+          setHasError(true);
+          setIsLoading(false);
+        }
       }, 10000); // 10 second timeout
       
       return () => clearTimeout(timeout);
     }
-  }, [isLoading, imgSrc]);
+  }, [isLoading, imgSrc, dynamicImageTried, manufacturer]);
   
   // If no src provided, show error immediately
   if (!src || src.trim() === '') {
@@ -3105,8 +3209,13 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true })
   
   if (hasError) {
     return (
-      <div className={`${className} bg-gray-200 flex items-center justify-center`}>
-        <span className="text-gray-400 text-sm">Image not available</span>
+      <div className={`${className} bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center border border-gray-300 rounded`}>
+        <div className="text-center p-2">
+          <div className="text-gray-400 text-xs mb-1">🏍️</div>
+          <span className="text-gray-500 text-xs">
+            {manufacturer && model ? `${manufacturer} ${model}` : 'Motorcycle'}
+          </span>
+        </div>
       </div>
     );
   }
