@@ -3335,6 +3335,9 @@ const MotorcycleCard = ({ motorcycle, onClick, showFavoriteButton = true, onAddT
           src={motorcycle.image_url}
           alt={`${motorcycle.manufacturer} ${motorcycle.model}`}
           className="w-full h-64 object-cover rounded-t-xl"
+          manufacturer={motorcycle.manufacturer}
+          model={motorcycle.model}
+          category={motorcycle.category}
         />
         <div className="absolute top-4 right-4 bg-black bg-opacity-75 text-white px-3 py-1 rounded-full text-sm">
           {motorcycle.availability}
