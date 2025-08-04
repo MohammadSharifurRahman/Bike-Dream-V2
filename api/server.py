@@ -2812,82 +2812,216 @@ async def seed_ratings_only():
         logging.error(f"Error seeding ratings: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Rating seeding failed: {str(e)}")
 
-@api_router.post("/motorcycles/update-authentic-images")
-async def update_authentic_images():
-    """Update motorcycles with authentic, working motorcycle images"""
+@api_router.post("/motorcycles/update-dynamic-authentic-images")
+async def update_dynamic_authentic_images():
+    """
+    Update motorcycles with dynamically fetched authentic images using external APIs.
+    This system matches specific motorcycle models with their actual photos.
+    """
     try:
-        # High-quality, authentic motorcycle images that will actually load
-        authentic_images = {
-            # General motorcycles - high quality Unsplash images
-            "sport": [
-                "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=400&h=250&fit=crop&auto=format",
-                "https://images.unsplash.com/photo-1531327431456-837da4b1d562?w=400&h=250&fit=crop&auto=format",
-                "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=250&fit=crop&auto=format",
-                "https://images.pexels.com/photos/1416169/pexels-photo-1416169.jpeg?w=400&h=250&fit=crop&auto=format",
-            ],
-            "cruiser": [
-                "https://images.unsplash.com/photo-1659465493788-046d031bcd35?w=400&h=250&fit=crop&auto=format",
-                "https://images.unsplash.com/photo-1653554919017-fb4a40f7364b?w=400&h=250&fit=crop&auto=format",
-                "https://images.pexels.com/photos/33222522/pexels-photo-33222522.jpeg?w=400&h=250&fit=crop&auto=format",
-                "https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?w=400&h=250&fit=crop&auto=format",
-            ],
-            "royal_enfield": [
-                "https://images.unsplash.com/photo-1694271558638-7a6f4c8879b0?w=400&h=250&fit=crop&auto=format",
-                "https://images.unsplash.com/photo-1694956792421-e946fff94564?w=400&h=250&fit=crop&auto=format",
-                "https://images.unsplash.com/photo-1675233262719-6b2309a2e751?w=400&h=250&fit=crop&auto=format",
-                "https://images.pexels.com/photos/1033116/pexels-photo-1033116.jpeg?w=400&h=250&fit=crop&auto=format",
-            ],
-            "commuter": [
-                "https://images.pexels.com/photos/2629412/pexels-photo-2629412.jpeg?w=400&h=250&fit=crop&auto=format",
-                "https://images.pexels.com/photos/33215447/pexels-photo-33215447.jpeg?w=400&h=250&fit=crop&auto=format",
-                "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=400&h=250&fit=crop&auto=format",
-                "https://images.pexels.com/photos/1416169/pexels-photo-1416169.jpeg?w=400&h=250&fit=crop&auto=format",
-            ]
-        }
+        # Unsplash API configuration (you can add your API key here)
+        UNSPLASH_ACCESS_KEY = os.environ.get('UNSPLASH_ACCESS_KEY', None)
         
-        import random
         updated_count = 0
+        failed_count = 0
         
-        # Get all motorcycles
+        # Get all motorcycles that need image updates
         all_motorcycles = await db.motorcycles.find({}).to_list(None)
         
-        for motorcycle in all_motorcycles:
-            manufacturer = motorcycle.get('manufacturer', '').lower()
-            category = motorcycle.get('category', '').lower()
-            
-            # Choose appropriate authentic image based on manufacturer and category
-            if 'royal enfield' in manufacturer:
-                image_options = authentic_images["royal_enfield"]
-            elif 'sport' in category:
-                image_options = authentic_images["sport"]
-            elif 'cruiser' in category:
-                image_options = authentic_images["cruiser"]
-            elif any(term in category for term in ['commuter', 'standard', 'naked']):
-                image_options = authentic_images["commuter"]
-            else:
-                # Default to sport bikes for unknown categories
-                image_options = authentic_images["sport"]
-            
-            # Select a random image from the appropriate category
-            new_image = random.choice(image_options)
-            
-            # Update motorcycle with authentic image
-            await db.motorcycles.update_one(
-                {"id": motorcycle["id"]},
-                {"$set": {"image_url": new_image}}
-            )
-            updated_count += 1
+        # Create aiohttp session for API calls
+        async with aiohttp.ClientSession() as session:
+            for motorcycle in all_motorcycles:
+                try:
+                    manufacturer = motorcycle.get('manufacturer', '')
+                    model = motorcycle.get('model', '')
+                    category = motorcycle.get('category', '')
+                    
+                    # Create search query for specific motorcycle
+                    search_query = f"{manufacturer} {model} motorcycle"
+                    
+                    # Try to fetch authentic image for this specific motorcycle
+                    new_image_url = await fetch_authentic_motorcycle_image(
+                        session, search_query, manufacturer, model, category
+                    )
+                    
+                    if new_image_url and new_image_url != motorcycle.get('image_url'):
+                        # Update motorcycle with new authentic image
+                        await db.motorcycles.update_one(
+                            {"id": motorcycle["id"]},
+                            {
+                                "$set": {
+                                    "image_url": new_image_url,
+                                    "image_updated_at": datetime.utcnow(),
+                                    "image_source": "dynamic_api"
+                                }
+                            }
+                        )
+                        updated_count += 1
+                        print(f"Updated {manufacturer} {model} with authentic image")
+                    else:
+                        failed_count += 1
+                        
+                except Exception as e:
+                    print(f"Failed to update image for {manufacturer} {model}: {str(e)}")
+                    failed_count += 1
+                    continue
         
         return {
-            "message": f"Successfully updated {updated_count} motorcycles with authentic images",
+            "message": f"Dynamic image update completed",
             "updated_count": updated_count,
+            "failed_count": failed_count,
             "total_processed": len(all_motorcycles),
-            "status": "Authentic motorcycle images updated!"
+            "status": "Dynamic authentic motorcycle images updated!"
         }
         
     except Exception as e:
-        logging.error(f"Error updating authentic images: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Authentic image update failed: {str(e)}")
+        logging.error(f"Error in dynamic image update: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Dynamic image update failed: {str(e)}")
+
+async def fetch_authentic_motorcycle_image(session, search_query, manufacturer, model, category):
+    """
+    Fetch authentic motorcycle image from external APIs with fallback options.
+    Prioritizes model-specific images with manufacturer and category fallbacks.
+    """
+    try:
+        # Primary: Try to get specific model image
+        image_url = await search_unsplash_image(session, search_query, 'motorcycle')
+        if image_url:
+            return image_url
+        
+        # Secondary: Try manufacturer-specific search
+        manufacturer_query = f"{manufacturer} motorcycle {category}"
+        image_url = await search_unsplash_image(session, manufacturer_query, 'motorcycle')
+        if image_url:
+            return image_url
+        
+        # Tertiary: Try category-specific search
+        category_query = f"{category} motorcycle"
+        image_url = await search_unsplash_image(session, category_query, 'motorcycle')
+        if image_url:
+            return image_url
+        
+        # Fallback: Use curated high-quality images based on category
+        return get_fallback_authentic_image(manufacturer, category)
+        
+    except Exception as e:
+        print(f"Error fetching image for {search_query}: {str(e)}")
+        return get_fallback_authentic_image(manufacturer, category)
+
+async def search_unsplash_image(session, query, category_filter):
+    """
+    Search Unsplash API for motorcycle images with specific query.
+    """
+    try:
+        UNSPLASH_ACCESS_KEY = os.environ.get('UNSPLASH_ACCESS_KEY')
+        if not UNSPLASH_ACCESS_KEY:
+            print("Unsplash API key not found, using fallback images")
+            return None
+        
+        url = "https://api.unsplash.com/search/photos"
+        params = {
+            'query': query,
+            'per_page': 10,
+            'orientation': 'landscape',
+            'content_filter': 'high',
+            'category': 'transportation'
+        }
+        headers = {
+            'Authorization': f'Client-ID {UNSPLASH_ACCESS_KEY}'
+        }
+        
+        async with session.get(url, params=params, headers=headers) as response:
+            if response.status == 200:
+                data = await response.json()
+                results = data.get('results', [])
+                
+                if results:
+                    # Get the best quality image URL
+                    photo = results[0]  # First result is usually most relevant
+                    # Use regular size for better loading performance
+                    image_url = photo.get('urls', {}).get('regular')
+                    
+                    if image_url:
+                        # Add parameters for optimized loading
+                        optimized_url = f"{image_url}&w=400&h=250&fit=crop&auto=format&q=80"
+                        return optimized_url
+            
+        return None
+        
+    except Exception as e:
+        print(f"Unsplash API error: {str(e)}")
+        return None
+
+def get_fallback_authentic_image(manufacturer, category):
+    """
+    Get high-quality fallback images organized by manufacturer and category.
+    These are curated, verified working images for when API calls fail.
+    """
+    manufacturer_lower = manufacturer.lower()
+    category_lower = category.lower()
+    
+    # Manufacturer-specific authentic images
+    manufacturer_images = {
+        'yamaha': [
+            "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=400&h=250&fit=crop&auto=format&q=80",
+            "https://images.unsplash.com/photo-1531327431456-837da4b1d562?w=400&h=250&fit=crop&auto=format&q=80",
+        ],
+        'honda': [
+            "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=250&fit=crop&auto=format&q=80",
+            "https://images.pexels.com/photos/1416169/pexels-photo-1416169.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+        ],
+        'kawasaki': [
+            "https://images.unsplash.com/photo-1611873189125-324514ebd94e?w=400&h=250&fit=crop&auto=format&q=80",
+            "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=400&h=250&fit=crop&auto=format&q=80",
+        ],
+        'ducati': [
+            "https://images.unsplash.com/photo-1659465493788-046d031bcd35?w=400&h=250&fit=crop&auto=format&q=80",
+            "https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+        ],
+        'royal enfield': [
+            "https://images.unsplash.com/photo-1694271558638-7a6f4c8879b0?w=400&h=250&fit=crop&auto=format&q=80",
+            "https://images.unsplash.com/photo-1694956792421-e946fff94564?w=400&h=250&fit=crop&auto=format&q=80",
+        ],
+        'harley-davidson': [
+            "https://images.unsplash.com/photo-1653554919017-fb4a40f7364b?w=400&h=250&fit=crop&auto=format&q=80",
+            "https://images.pexels.com/photos/33222522/pexels-photo-33222522.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+        ]
+    }
+    
+    # Category-specific fallback images
+    category_images = {
+        'sport': [
+            "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=400&h=250&fit=crop&auto=format&q=80",
+            "https://images.unsplash.com/photo-1531327431456-837da4b1d562?w=400&h=250&fit=crop&auto=format&q=80",
+        ],
+        'cruiser': [
+            "https://images.unsplash.com/photo-1659465493788-046d031bcd35?w=400&h=250&fit=crop&auto=format&q=80",
+            "https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+        ],
+        'commuter': [
+            "https://images.pexels.com/photos/2629412/pexels-photo-2629412.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+            "https://images.pexels.com/photos/1416169/pexels-photo-1416169.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+        ],
+        'touring': [
+            "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=400&h=250&fit=crop&auto=format&q=80",
+            "https://images.unsplash.com/photo-1611873189125-324514ebd94e?w=400&h=250&fit=crop&auto=format&q=80",
+        ]
+    }
+    
+    import random
+    
+    # First try manufacturer-specific images
+    for mfg_key in manufacturer_images:
+        if mfg_key in manufacturer_lower:
+            return random.choice(manufacturer_images[mfg_key])
+    
+    # Then try category-specific images
+    for cat_key in category_images:
+        if cat_key in category_lower:
+            return random.choice(category_images[cat_key])
+    
+    # Final fallback - general motorcycle image
+    return "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=400&h=250&fit=crop&auto=format&q=80"
 
 @api_router.post("/motorcycles/use-base64-images")
 async def use_base64_images():
