@@ -579,48 +579,58 @@ class DailyUpdateBot:
             logger.error(f"Error fetching image for {search_query}: {str(e)}")
             return self.get_fallback_authentic_image(manufacturer, category)
 
-    async def search_unsplash_image(self, session, query, category_filter):
+    async def search_pexels_motorcycle_image(self, session, manufacturer, model, category):
         """
-        Search Unsplash API for motorcycle images with specific query.
+        Search Pexels API for motorcycle images with specific model queries.
+        Pexels often has better model-specific motorcycle photos than Unsplash.
         """
         try:
-            UNSPLASH_ACCESS_KEY = os.environ.get('UNSPLASH_ACCESS_KEY')
-            if not UNSPLASH_ACCESS_KEY:
-                logger.warning("Unsplash API key not found, using fallback images")
+            PEXELS_API_KEY = os.environ.get('PEXELS_API_KEY')
+            if not PEXELS_API_KEY:
+                logger.warning("Pexels API key not found, using model-specific mapping")
                 return None
             
-            url = "https://api.unsplash.com/search/photos"
-            params = {
-                'query': query,
-                'per_page': 10,
-                'orientation': 'landscape',
-                'content_filter': 'high',
-                'category': 'transportation'
-            }
-            headers = {
-                'Authorization': f'Client-ID {UNSPLASH_ACCESS_KEY}'
-            }
+            # Create more specific search queries
+            search_queries = [
+                f"{manufacturer} {model}",
+                f"{manufacturer} {model} motorcycle",
+                f"{manufacturer} {category}",
+                f"{manufacturer} motorcycle"
+            ]
             
-            async with session.get(url, params=params, headers=headers) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    results = data.get('results', [])
-                    
-                    if results:
-                        # Get the best quality image URL
-                        photo = results[0]  # First result is usually most relevant
-                        # Use regular size for better loading performance
-                        image_url = photo.get('urls', {}).get('regular')
-                        
-                        if image_url:
-                            # Add parameters for optimized loading
-                            optimized_url = f"{image_url}&w=400&h=250&fit=crop&auto=format&q=80"
-                            return optimized_url
+            for query in search_queries:
+                url = "https://api.pexels.com/v1/search"
+                params = {
+                    'query': query,
+                    'per_page': 15,
+                    'orientation': 'landscape'
+                }
+                headers = {
+                    'Authorization': PEXELS_API_KEY
+                }
                 
+                async with session.get(url, params=params, headers=headers) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        photos = data.get('photos', [])
+                        
+                        if photos:
+                            # Get the best quality image
+                            photo = photos[0]  # First result is usually most relevant
+                            image_url = photo.get('src', {}).get('large')
+                            
+                            if image_url:
+                                # Add optimization parameters
+                                optimized_url = f"{image_url}?auto=compress&cs=tinysrgb&w=400&h=250"
+                                return optimized_url
+                
+                # Small delay between API calls
+                await asyncio.sleep(0.2)
+                    
             return None
             
         except Exception as e:
-            logger.error(f"Unsplash API error: {str(e)}")
+            logger.error(f"Pexels API error: {str(e)}")
             return None
 
     def get_fallback_authentic_image(self, manufacturer, category):
