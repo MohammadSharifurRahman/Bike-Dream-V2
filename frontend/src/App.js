@@ -3102,51 +3102,56 @@ const MotorcycleImage = ({ src, alt, className, showPlaceholderOnError = true, m
     const manufacturerLower = (manufacturer || '').toLowerCase();
     const categoryLower = (category || '').toLowerCase();
     
-    // Manufacturer-specific authentic images
+    // Manufacturer-specific authentic images from Pexels (unique per manufacturer)
     const manufacturerImages = {
       'yamaha': [
-        "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=400&h=250&fit=crop&auto=format&q=80",
-        "https://images.unsplash.com/photo-1531327431456-837da4b1d562?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/1119796/pexels-photo-1119796.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
+        "https://images.pexels.com/photos/2449665/pexels-photo-2449665.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
       ],
       'honda': [
-        "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=250&fit=crop&auto=format&q=80",
-        "https://images.pexels.com/photos/1416169/pexels-photo-1416169.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/1119848/pexels-photo-1119848.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
+        "https://images.pexels.com/photos/1408221/pexels-photo-1408221.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
       ],
       'kawasaki': [
-        "https://images.unsplash.com/photo-1611873189125-324514ebd94e?w=400&h=250&fit=crop&auto=format&q=80",
-        "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/1142948/pexels-photo-1142948.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
+        "https://images.pexels.com/photos/1119792/pexels-photo-1119792.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
       ],
       'ducati': [
-        "https://images.unsplash.com/photo-1659465493788-046d031bcd35?w=400&h=250&fit=crop&auto=format&q=80",
-        "https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/1142399/pexels-photo-1142399.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
+        "https://images.pexels.com/photos/1119803/pexels-photo-1119803.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
+      ],
+      'suzuki': [
+        "https://images.pexels.com/photos/1408962/pexels-photo-1408962.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
+        "https://images.pexels.com/photos/1142555/pexels-photo-1142555.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
       ],
       'royal enfield': [
-        "https://images.unsplash.com/photo-1694271558638-7a6f4c8879b0?w=400&h=250&fit=crop&auto=format&q=80",
-        "https://images.unsplash.com/photo-1694956792421-e946fff94564?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/1142554/pexels-photo-1142554.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
+        "https://images.pexels.com/photos/1408963/pexels-photo-1408963.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
       ],
       'harley-davidson': [
-        "https://images.unsplash.com/photo-1653554919017-fb4a40f7364b?w=400&h=250&fit=crop&auto=format&q=80",
-        "https://images.pexels.com/photos/33222522/pexels-photo-33222522.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/1119841/pexels-photo-1119841.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
+        "https://images.pexels.com/photos/1119799/pexels-photo-1119799.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
       ]
     };
     
-    // Category-specific fallback images
+    // Category-specific fallback images from Pexels
     const categoryImages = {
       'sport': [
-        "https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=400&h=250&fit=crop&auto=format&q=80",
-        "https://images.unsplash.com/photo-1531327431456-837da4b1d562?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/1119796/pexels-photo-1119796.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
+        "https://images.pexels.com/photos/1142948/pexels-photo-1142948.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
+        "https://images.pexels.com/photos/1119848/pexels-photo-1119848.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
       ],
       'cruiser': [
-        "https://images.unsplash.com/photo-1659465493788-046d031bcd35?w=400&h=250&fit=crop&auto=format&q=80",
-        "https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/1119841/pexels-photo-1119841.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
+        "https://images.pexels.com/photos/1119799/pexels-photo-1119799.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
       ],
       'commuter': [
-        "https://images.pexels.com/photos/2629412/pexels-photo-2629412.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
-        "https://images.pexels.com/photos/1416169/pexels-photo-1416169.jpeg?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/2449665/pexels-photo-2449665.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
+        "https://images.pexels.com/photos/1416169/pexels-photo-1416169.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
       ],
       'touring': [
-        "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=400&h=250&fit=crop&auto=format&q=80",
-        "https://images.unsplash.com/photo-1611873189125-324514ebd94e?w=400&h=250&fit=crop&auto=format&q=80",
+        "https://images.pexels.com/photos/1408963/pexels-photo-1408963.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
+        "https://images.pexels.com/photos/1142554/pexels-photo-1142554.jpeg?auto=compress&cs=tinysrgb&w=400&h=250",
       ]
     };
     
