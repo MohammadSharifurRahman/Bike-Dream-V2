@@ -551,33 +551,21 @@ class DailyUpdateBot:
 
     async def fetch_authentic_motorcycle_image(self, session, search_query, manufacturer, model, category):
         """
-        Fetch authentic motorcycle image from external APIs with fallback options.
-        Prioritizes model-specific images with manufacturer and category fallbacks.
+        Fetch authentic motorcycle image using Pexels API with model-specific mapping.
+        Prioritizes model-specific images with comprehensive fallback system.
         """
         try:
-            # Primary: Try to get specific model image
-            image_url = await self.search_unsplash_image(session, search_query, 'motorcycle')
+            # Primary: Try to get specific model image from Pexels
+            image_url = await self.search_pexels_motorcycle_image(session, manufacturer, model, category)
             if image_url:
                 return image_url
             
-            # Secondary: Try manufacturer-specific search
-            manufacturer_query = f"{manufacturer} motorcycle {category}"
-            image_url = await self.search_unsplash_image(session, manufacturer_query, 'motorcycle')
-            if image_url:
-                return image_url
-            
-            # Tertiary: Try category-specific search
-            category_query = f"{category} motorcycle"
-            image_url = await self.search_unsplash_image(session, category_query, 'motorcycle')
-            if image_url:
-                return image_url
-            
-            # Fallback: Use curated high-quality images based on category
-            return self.get_fallback_authentic_image(manufacturer, category)
+            # Fallback: Use comprehensive model-specific mapping
+            return self.get_comprehensive_model_specific_image(manufacturer, model, category)
             
         except Exception as e:
-            logger.error(f"Error fetching image for {search_query}: {str(e)}")
-            return self.get_fallback_authentic_image(manufacturer, category)
+            logger.error(f"Error fetching image for {manufacturer} {model}: {str(e)}")
+            return self.get_comprehensive_model_specific_image(manufacturer, model, category)
 
     async def search_pexels_motorcycle_image(self, session, manufacturer, model, category):
         """
