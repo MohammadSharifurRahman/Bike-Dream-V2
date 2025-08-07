@@ -40,9 +40,10 @@ db = client[os.environ.get('DB_NAME', 'test_database')]
 
 # Create the main app without a prefix
 app = FastAPI()
-@app.get("/api/stats")
-def stats():
-    return {"status": "OK"}
+@app.get("/")
+async def root():
+    return {"message": "Bike Dream API is running. Visit /docs for Swagger UI."}
+
 
 def read_root():
     return {"message": "Welcome to Bike Dream"}
