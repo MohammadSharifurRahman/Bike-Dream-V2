@@ -11,7 +11,7 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
 import jwt
-from comprehensive_motorcycles import get_comprehensive_motorcycle_data
+from api.comprehensive_motorcycles import get_comprehensive_motorcycle_data
 from daily_update_bot import run_daily_update_job
 from vendor_pricing import vendor_pricing
 import asyncio
