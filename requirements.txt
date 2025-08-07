@@ -27,5 +27,3 @@ typer>=0.9.0
 schedule>=1.2.2
 gunicorn
 aiohttp==3.8.6
-schedule
-
