@@ -40,7 +40,10 @@ db = client[os.environ.get('DB_NAME', 'test_database')]
 
 # Create the main app without a prefix
 app = FastAPI()
-@app.get("/")
+@app.get("/api/stats")
+def stats():
+    return {"status": "OK"}
+
 def read_root():
     return {"message": "Welcome to Bike Dream"}
 # Create a router with the /api prefix
