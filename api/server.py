@@ -34,7 +34,7 @@ load_dotenv(ROOT_DIR.parent / '.env')
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection with default fallback
-mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+mongo_url = os.environ.get('mongo_uri', 'mongodb+srv://imsohel:Sharif224466@cluster0.zxgix5z.mongodb.net/bike-dream?retryWrites=true&w=majority&ssl=true')
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'test_database')]
 
