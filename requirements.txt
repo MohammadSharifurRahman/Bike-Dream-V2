@@ -29,5 +29,4 @@ gunicorn
 aiohttp==3.8.6
 asyncio==3.4.3
 schedule
-time
 random
