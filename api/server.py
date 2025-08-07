@@ -20,7 +20,11 @@ import schedule
 import threading
 import time
 import random
+from pymongo import MongoClient
 
+
+mongo_uri = os.getenv("MONGO_URI")
+client = MongoClient(mongo_uri)
 
 # Load environment variables - try multiple locations
 ROOT_DIR = Path(__file__).parent
